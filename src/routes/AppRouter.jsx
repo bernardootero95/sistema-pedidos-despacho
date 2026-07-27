@@ -4,14 +4,17 @@ import { useAuth } from "../context/AuthContext";
 import { LoginPage } from "../modules/auth/pages/LoginPage";
 import { MainLayout } from "../components/layout/MainLayout";
 import { DashboardPage } from "../modules/dashboard/pages/DashboardPage";
+import { ClientsPage } from "../modules/clients/pages/ClientsPage";
+import { ProductsPage } from "../modules/products/pages/ProductsPage";
+import { VehiclesPage } from "../modules/vehicles/pages/VehiclesPage";
 
-// Componente temporal para módulos en construcción (Fase 3)
+// Componente temporal únicamente para los 2 módulos operativos que haremos en el siguiente commit
 const PlaceholderModule = ({ title, desc }) => (
-  <div className="bg-white p-12 rounded-xl border border-slate-200 text-center max-w-xl mx-auto my-12">
+  <div className="bg-white p-12 rounded-xl border border-slate-200 text-center max-w-xl mx-auto my-12 shadow-sm">
     <h2 className="text-xl font-bold text-slate-800">{title}</h2>
     <p className="text-sm text-slate-500 mt-2">{desc}</p>
     <div className="mt-6 inline-block bg-primary/10 text-primary font-semibold text-xs px-4 py-2 rounded-lg">
-      Módulo listo para ser desarrollado en la Fase 3
+      Próximo a desarrollarse en el siguiente paso operativo
     </div>
   </div>
 );
@@ -35,13 +38,18 @@ export const AppRouter = () => {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
 
-          {/* Rutas operativas de la demostración */}
+          {/* Módulos de Catálogos (Ya integrados y funcionales para la presentación) */}
+          <Route path="/clientes" element={<ClientsPage />} />
+          <Route path="/productos" element={<ProductsPage />} />
+          <Route path="/vehiculos" element={<VehiclesPage />} />
+
+          {/* Rutas operativas (Pendientes para el cierre de la presentación) */}
           <Route
             path="/pedidos"
             element={
               <PlaceholderModule
                 title="Módulo: Toma de Pedidos"
-                desc="Aquí el Vendedor podrá buscar clientes, agregar productos y generar nuevas órdenes."
+                desc="Aquí el Vendedor podrá buscar clientes, agregar productos con cálculo automático y generar nuevas órdenes."
               />
             }
           />
@@ -50,34 +58,7 @@ export const AppRouter = () => {
             element={
               <PlaceholderModule
                 title="Módulo: Órdenes de Despacho"
-                desc="Aquí el Despachador podrá agrupar múltiples pedidos en un vehículo y trazar las rutas."
-              />
-            }
-          />
-          <Route
-            path="/clientes"
-            element={
-              <PlaceholderModule
-                title="Módulo: Gestión de Clientes"
-                desc="Listado, historial y creación de clientes multi-empresa."
-              />
-            }
-          />
-          <Route
-            path="/productos"
-            element={
-              <PlaceholderModule
-                title="Módulo: Catálogo de Productos"
-                desc="Administración de inventario, precios y categorías."
-              />
-            }
-          />
-          <Route
-            path="/vehiculos"
-            element={
-              <PlaceholderModule
-                title="Módulo: Flota de Vehículos"
-                desc="Control de conductores, placas y capacidad de carga en kg."
+                desc="Aquí el Despachador podrá agrupar múltiples pedidos pendientes en un vehículo y trazar la ruta del repartidor."
               />
             }
           />
