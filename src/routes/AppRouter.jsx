@@ -7,17 +7,8 @@ import { DashboardPage } from "../modules/dashboard/pages/DashboardPage";
 import { ClientsPage } from "../modules/clients/pages/ClientsPage";
 import { ProductsPage } from "../modules/products/pages/ProductsPage";
 import { VehiclesPage } from "../modules/vehicles/pages/VehiclesPage";
-
-// Componente temporal únicamente para los 2 módulos operativos que haremos en el siguiente commit
-const PlaceholderModule = ({ title, desc }) => (
-  <div className="bg-white p-12 rounded-xl border border-slate-200 text-center max-w-xl mx-auto my-12 shadow-sm">
-    <h2 className="text-xl font-bold text-slate-800">{title}</h2>
-    <p className="text-sm text-slate-500 mt-2">{desc}</p>
-    <div className="mt-6 inline-block bg-primary/10 text-primary font-semibold text-xs px-4 py-2 rounded-lg">
-      Próximo a desarrollarse en el siguiente paso operativo
-    </div>
-  </div>
-);
+import { OrdersPage } from "../modules/orders/pages/OrdersPage";
+import { DispatchesPage } from "../modules/dispatches/pages/DispatchesPage";
 
 export const AppRouter = () => {
   const { user } = useAuth();
@@ -38,30 +29,14 @@ export const AppRouter = () => {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
 
-          {/* Módulos de Catálogos (Ya integrados y funcionales para la presentación) */}
+          {/* Módulos de Catálogos */}
           <Route path="/clientes" element={<ClientsPage />} />
           <Route path="/productos" element={<ProductsPage />} />
           <Route path="/vehiculos" element={<VehiclesPage />} />
 
-          {/* Rutas operativas (Pendientes para el cierre de la presentación) */}
-          <Route
-            path="/pedidos"
-            element={
-              <PlaceholderModule
-                title="Módulo: Toma de Pedidos"
-                desc="Aquí el Vendedor podrá buscar clientes, agregar productos con cálculo automático y generar nuevas órdenes."
-              />
-            }
-          />
-          <Route
-            path="/despachos"
-            element={
-              <PlaceholderModule
-                title="Módulo: Órdenes de Despacho"
-                desc="Aquí el Despachador podrá agrupar múltiples pedidos pendientes en un vehículo y trazar la ruta del repartidor."
-              />
-            }
-          />
+          {/* Módulos Operativos (¡Completamente integrados para la presentación!) */}
+          <Route path="/pedidos" element={<OrdersPage />} />
+          <Route path="/despachos" element={<DispatchesPage />} />
         </Route>
 
         {/* Captura de rutas inexistentes */}
