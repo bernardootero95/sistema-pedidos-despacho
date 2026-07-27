@@ -11,7 +11,7 @@ $$ LANGUAGE plpgsql;
 CREATE TABLE IF NOT EXISTS roles (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(50) UNIQUE NOT NULL,
-    permisos JSONB DEFAULT '[]'::jsonb, -- Almacena módulos o permisos específicos (Ej: ["pedidos.crear", "vehiculos.ver"])
+    permisos JSONB DEFAULT '[]'::jsonb, -- Se irá poblando progresivamente en cada módulo desarrollado
     estado BOOLEAN DEFAULT true NOT NULL,
     creado TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     actualizado TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -23,13 +23,13 @@ CREATE TRIGGER set_timestamp_roles
 BEFORE UPDATE ON roles
 FOR EACH ROW EXECUTE FUNCTION actualizar_timestamp();
 
--- Insertar los 5 roles base solicitados
+-- Insertar los 5 roles base (Permisos en blanco para definirse por módulo, excepto acceso total)
 INSERT INTO roles (nombre, permisos) VALUES
 ('soporte', '["all"]'::jsonb),
 ('gerencia', '["all"]'::jsonb),
-('vendedor', '["pedidos.crear", "pedidos.ver", "clientes.ver"]'::jsonb),
-('despachador', '["pedidos.ver", "despachos.crear", "despachos.ver", "vehiculos.ver"]'::jsonb),
-('repartidor', '["despachos.mis_rutas"]'::jsonb)
+('vendedor', '[]'::jsonb),
+('despachador', '[]'::jsonb),
+('repartidor', '[]'::jsonb)
 ON CONFLICT (nombre) DO NOTHING;
 
 -- 3. TABLA DE PERFILES DE USUARIO (Vinculada a auth.users de Supabase)
