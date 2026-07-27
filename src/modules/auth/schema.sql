@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS perfiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     nombre_usuario VARCHAR(50) UNIQUE NOT NULL, -- Nombre corto para login sin @empresa.com
     nombre_completo VARCHAR(100) NOT NULL,
-    rol_id INTEGER REFERENCES roles(id) RESTRICT,
+    rol_id INTEGER REFERENCES roles(id) ON DELETE RESTRICT,
     estado BOOLEAN DEFAULT true NOT NULL,
     creado TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     actualizado TIMESTAMPTZ DEFAULT NOW() NOT NULL,
