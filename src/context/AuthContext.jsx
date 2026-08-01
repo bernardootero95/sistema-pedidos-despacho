@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { DEMO_DATA } from "../mock/demoData";
-import { tenantConfig } from "../config/tenant";
+import { supabase } from "../config/supabase";
+import { authService } from "../modules/auth/services/authService";
 
 const AuthContext = createContext();
 
@@ -9,59 +9,57 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar sesión guardada en localStorage para la demo
-    const savedUser = localStorage.getItem("demo_user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    } else {
-      // Iniciar por defecto con rol Gerencia para facilitar la demo al cliente
-      const defaultUser = DEMO_DATA.usuarios[0];
-      setUser(defaultUser);
-      localStorage.setItem("demo_user", JSON.stringify(defaultUser));
-    }
-    setLoading(false);
+    const initSession = async () => {
+      try {
+        const currentUser = await authService.getSession();
+        setUser(currentUser);
+      } catch (error) {
+        console.error("No se pudo restaurar la sesión:", error);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initSession();
+
+    // Listener para detectar caducidad de tokens o cierres de sesión desde otras pestañas
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        try {
+          const perfil = await authService.getPerfilCompleto(session.user.id);
+          setUser({ ...session.user, ...perfil });
+        } catch (error) {
+          console.error(
+            "Error al sincronizar perfil en AuthStateChange:",
+            error,
+          );
+        }
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  // Simulación de Login con validación de nombre de usuario sin correo
   const login = async (nombreUsuario, password) => {
-    // Para la presentación, validamos contra nuestro DEMO_DATA
-    const foundUser = DEMO_DATA.usuarios.find(
-      (u) =>
-        u.nombre_usuario.toLowerCase() === nombreUsuario.toLowerCase().trim(),
-    );
-
-    if (!foundUser) {
-      throw new Error(`El usuario "${nombreUsuario}" no existe en el sistema.`);
-    }
-
-    // Transformación transparente exigida: usuario -> usuario@empresa.com
-    const dominio = DEMO_DATA.empresa.dominio;
-    const correoGenerado = `${foundUser.nombre_usuario}@${dominio}`;
-    console.log(`[Auth Demo] Conectando internamente con: ${correoGenerado}`);
-
-    setUser(foundUser);
-    localStorage.setItem("demo_user", JSON.stringify(foundUser));
-    return foundUser;
+    const loggedUser = await authService.login(nombreUsuario, password);
+    setUser(loggedUser);
+    return loggedUser;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await authService.logout();
     setUser(null);
-    localStorage.removeItem("demo_user");
-  };
-
-  // Función exclusiva para la demo: permite al cliente cambiar de rol con 1 clic
-  const switchDemoRole = (rolNombre) => {
-    const newUser = DEMO_DATA.usuarios.find((u) => u.rol === rolNombre);
-    if (newUser) {
-      setUser(newUser);
-      localStorage.setItem("demo_user", JSON.stringify(newUser));
-    }
   };
 
   return (
-    <AuthContext.Provider
-      value={{ user, login, logout, switchDemoRole, loading }}
-    >
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { tenantConfig } from "../../../config/tenant";
-import { DEMO_DATA } from "../../../mock/demoData";
-import { ShieldAlert, LogIn, UserCheck, Building2 } from "lucide-react";
+import { ShieldAlert, LogIn, Building2 } from "lucide-react";
 
 export const LoginPage = () => {
-  const { login, switchDemoRole } = useAuth();
+  const { login } = useAuth();
 
   const [formData, setFormData] = useState({ nombreUsuario: "", password: "" });
   const [errors, setErrors] = useState({
@@ -19,17 +18,17 @@ export const LoginPage = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Validación inmediata al escribir o desenfocar (SOLID: Lógica de validación limpia)
+  const domain = import.meta.env.VITE_COMPANY_DOMAIN || "empresa.com";
+
   const validateField = (name, value) => {
     let errorMsg = "";
     if (name === "nombreUsuario") {
       if (!value.trim()) errorMsg = "El nombre de usuario es obligatorio.";
       else if (value.includes("@"))
-        errorMsg = "Ingresa solo el usuario, sin @dominio.com";
+        errorMsg = "Ingresa solo el usuario, sin el @dominio.";
     }
     if (name === "password") {
       if (!value.trim()) errorMsg = "La contraseña es obligatoria.";
-      else if (value.length < 4) errorMsg = "Mínimo 4 caracteres para la demo.";
     }
     return errorMsg;
   };
@@ -65,7 +64,6 @@ export const LoginPage = () => {
     setIsSubmitting(true);
     try {
       await login(formData.nombreUsuario, formData.password);
-      // La redirección la manejará el enrutador principal al detectar a 'user'
     } catch (error) {
       setErrors((prev) => ({ ...prev, general: error.message }));
     } finally {
@@ -82,19 +80,17 @@ export const LoginPage = () => {
         <h2 className="mt-4 text-center text-3xl font-extrabold text-slate-900">
           {tenantConfig.name}
         </h2>
-        <p className="mt-2 text-center text-sm text-slate-600">
-          Sistema Integrado de Pedidos y Despacho
+        <p className="mt-2 text-center text-sm text-slate-600 font-medium">
+          Acceso Seguro al Sistema Operativo
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-lg sm:rounded-xl sm:px-10 border border-slate-200">
           {errors.general && (
-            <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded flex items-center gap-3">
+            <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg flex items-center gap-3">
               <ShieldAlert className="text-red-500 w-5 h-5 flex-shrink-0" />
-              <p className="text-sm text-red-700 font-medium">
-                {errors.general}
-              </p>
+              <p className="text-sm text-red-700 font-bold">{errors.general}</p>
             </div>
           )}
 
@@ -112,22 +108,22 @@ export const LoginPage = () => {
                   name="nombreUsuario"
                   type="text"
                   autoComplete="username"
-                  placeholder="ej: gerente, vendedor1, despachos"
+                  placeholder="ej: juan.perez"
                   value={formData.nombreUsuario}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`block w-full rounded-lg border px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 transition-colors ${
+                  className={`block w-full rounded-xl sm:rounded-lg border px-4 py-3.5 sm:py-2.5 text-base sm:text-sm text-slate-900 focus:outline-none focus:ring-2 transition-colors ${
                     errors.nombreUsuario
                       ? "border-red-300 focus:border-red-500 focus:ring-red-200 bg-red-50/30"
                       : "border-slate-300 focus:border-primary focus:ring-primary/20"
                   }`}
                 />
-                <span className="absolute right-3 top-2.5 text-xs font-semibold text-slate-400 select-none">
-                  @{DEMO_DATA.empresa.dominio}
+                <span className="absolute right-3 top-3.5 sm:top-2.5 text-xs font-bold text-slate-400 select-none">
+                  @{domain}
                 </span>
               </div>
               {errors.nombreUsuario && (
-                <p className="mt-1.5 text-xs text-red-600 font-medium">
+                <p className="mt-1.5 text-xs text-red-600 font-bold">
                   {errors.nombreUsuario}
                 </p>
               )}
@@ -150,7 +146,7 @@ export const LoginPage = () => {
                   value={formData.password}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`block w-full rounded-lg border px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 transition-colors ${
+                  className={`block w-full rounded-xl sm:rounded-lg border px-4 py-3.5 sm:py-2.5 text-base sm:text-sm text-slate-900 focus:outline-none focus:ring-2 transition-colors ${
                     errors.password
                       ? "border-red-300 focus:border-red-500 focus:ring-red-200 bg-red-50/30"
                       : "border-slate-300 focus:border-primary focus:ring-primary/20"
@@ -158,7 +154,7 @@ export const LoginPage = () => {
                 />
               </div>
               {errors.password && (
-                <p className="mt-1.5 text-xs text-red-600 font-medium">
+                <p className="mt-1.5 text-xs text-red-600 font-bold">
                   {errors.password}
                 </p>
               )}
@@ -167,49 +163,12 @@ export const LoginPage = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all disabled:opacity-50"
+              className="w-full flex justify-center items-center gap-2 py-3.5 sm:py-2.5 px-4 border border-transparent rounded-xl sm:rounded-lg shadow-sm text-sm font-bold text-white bg-primary hover:bg-primary-hover active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all disabled:opacity-50 min-h-[48px] sm:min-h-0"
             >
-              <LogIn className="w-4 h-4" />
-              {isSubmitting ? "Verificando..." : "Iniciar Sesión"}
+              <LogIn className="w-5 h-5 sm:w-4 sm:h-4" />
+              {isSubmitting ? "Autenticando..." : "Ingresar al Sistema"}
             </button>
           </form>
-
-          {/* PANEL ESPECÍFICO PARA PRESENTACIÓN AL CLIENTE */}
-          <div className="mt-8 pt-6 border-t border-slate-200">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <UserCheck className="w-4 h-4 text-slate-500" />
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Acceso Rápido para Presentación (Demo)
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 text-center mb-4">
-              Haz clic en cualquier rol para ingresar al sistema
-              instantáneamente sin escribir contraseña:
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {DEMO_DATA.usuarios.map((u) => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => {
-                    setFormData({
-                      nombreUsuario: u.nombre_usuario,
-                      password: "demo",
-                    });
-                    switchDemoRole(u.rol);
-                  }}
-                  className="text-left px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all flex flex-col justify-center"
-                >
-                  <span className="font-bold text-slate-900 capitalize">
-                    {u.rol}
-                  </span>
-                  <span className="text-[10px] text-slate-500 truncate">
-                    {u.nombre_completo}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
