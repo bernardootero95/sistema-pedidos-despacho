@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { userService } from "../services/userService";
+import { UserForm } from "../components/UserForm";
 import {
   UserCog,
   Search,
@@ -8,19 +9,28 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-} from "lucide-react"; // <-- Cambiado de UsersCog a UserCog
+} from "lucide-react";
 
 export const UsersPage = () => {
   const [usuarios, setUsuarios] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const cargarUsuarios = async () => {
+  // Estado para el modal de creación
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const cargarDatos = async () => {
     try {
       setLoading(true);
-      const data = await userService.getUsuarios();
-      setUsuarios(data);
+      // Promise.all para cargar usuarios y roles en paralelo (Rendimiento)
+      const [usuariosData, rolesData] = await Promise.all([
+        userService.getUsuarios(),
+        userService.getRoles(),
+      ]);
+      setUsuarios(usuariosData);
+      setRoles(rolesData);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -29,11 +39,12 @@ export const UsersPage = () => {
   };
 
   useEffect(() => {
-    cargarUsuarios();
+    cargarDatos();
   }, []);
 
   const handleToggleEstado = async (userId, estadoActual) => {
     try {
+      // Optimistic UI update para fluidez sin esperas
       setUsuarios((prev) =>
         prev.map((u) =>
           u.id === userId ? { ...u, estado: !estadoActual } : u,
@@ -42,8 +53,13 @@ export const UsersPage = () => {
       await userService.toggleEstado(userId, !estadoActual);
     } catch (err) {
       alert(err.message);
-      cargarUsuarios();
+      cargarDatos();
     }
+  };
+
+  const handleFormSuccess = () => {
+    setIsFormOpen(false);
+    cargarDatos(); // Refrescamos la tabla para ver al nuevo usuario
   };
 
   const filteredUsers = usuarios.filter(
@@ -55,7 +71,7 @@ export const UsersPage = () => {
 
   const domain = import.meta.env.VITE_COMPANY_DOMAIN || "empresa.com";
 
-  if (loading) {
+  if (loading && usuarios.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-slate-500">
         <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
@@ -65,12 +81,20 @@ export const UsersPage = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 relative">
+      {/* MODAL DE CREACIÓN */}
+      {isFormOpen && (
+        <UserForm
+          roles={roles}
+          onSuccess={handleFormSuccess}
+          onCancel={() => setIsFormOpen(false)}
+        />
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <UserCog className="w-6 h-6 text-primary flex-shrink-0" />{" "}
-            {/* <-- Actualizado aquí */}
+            <UserCog className="w-6 h-6 text-primary flex-shrink-0" />
             <span>Gestión de Personal</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -78,11 +102,7 @@ export const UsersPage = () => {
           </p>
         </div>
         <button
-          onClick={() =>
-            alert(
-              "El formulario de creación se implementará en el siguiente módulo.",
-            )
-          }
+          onClick={() => setIsFormOpen(true)}
           className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white text-sm font-semibold rounded-xl sm:rounded-lg shadow-sm transition-all min-h-[44px]"
         >
           <PlusCircle className="w-4 h-4 flex-shrink-0" />

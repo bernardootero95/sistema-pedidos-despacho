@@ -45,18 +45,26 @@ export const userService = {
    * Alterna el acceso de un usuario al sistema (Activo / Inactivo)
    */
   async toggleEstado(userId, nuevoEstado) {
+    // Retiramos .single() para prevenir el colapso 406 si RLS bloquea la operación
     const { data, error } = await supabase
       .from("perfiles")
       .update({ estado: nuevoEstado })
       .eq("id", userId)
-      .select()
-      .single();
+      .select();
 
     if (error)
       throw new Error(
         "Error al actualizar el estado del usuario: " + error.message,
       );
-    return data;
+
+    // Validación manual de seguridad y existencia
+    if (!data || data.length === 0) {
+      throw new Error(
+        "Operación denegada. Verifica que tengas permisos (RLS) para modificar perfiles.",
+      );
+    }
+
+    return data[0];
   },
 
   /**
