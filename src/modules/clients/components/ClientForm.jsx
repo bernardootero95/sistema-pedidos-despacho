@@ -1,13 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { clientService } from "../services/clientService";
 import {
   validateClientField,
   validateClientForm,
 } from "../utils/clientValidations";
-import { X, Save, ShieldAlert, Building2, User } from "lucide-react";
+import { X, Save, ShieldAlert, Building2, User, Loader2 } from "lucide-react";
 
 export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
   const isEditing = !!clientToEdit;
+
+  // Estados de los catálogos dinámicos
+  const [tiposDoc, setTiposDoc] = useState([]);
+  const [municipios, setMunicipios] = useState([]);
+  const [loadingCatalogs, setLoadingCatalogs] = useState(true);
 
   const [formData, setFormData] = useState({
     numero_identificacion: clientToEdit?.numero_identificacion || "",
@@ -30,12 +35,37 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
 
+  // Carga asíncrona y paralela de catálogos
+  useEffect(() => {
+    const loadCatalogs = async () => {
+      try {
+        const [docsData, municipiosData] = await Promise.all([
+          clientService.getTiposIdentificacion(),
+          clientService.getMunicipios(),
+        ]);
+        setTiposDoc(docsData);
+        setMunicipios(municipiosData);
+      } catch (error) {
+        setServerError("No se pudieron cargar los catálogos del sistema.");
+      } finally {
+        setLoadingCatalogs(false);
+      }
+    };
+    loadCatalogs();
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Si cambiamos el tipo de organización, reseteamos los errores para evitar bloqueos visuales
+    // Al cambiar tipo de organización, reseteamos errores y limpiamos el tipo de documento si no aplica
     if (name === "tipo_organizacion") {
       setErrors({});
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        tipo_identificacion: "",
+      }));
+      return;
     }
 
     const newFormState = { ...formData, [name]: value };
@@ -62,12 +92,22 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
     e.preventDefault();
     setServerError("");
 
-    // Delegamos la validación global al utility file
     const newErrors = validateClientForm(formData);
 
-    // Marcar todos como tocados
+    // Validación Estricta: Asegurar que el municipio ingresado coincida exactamente con uno del catálogo
+    const muniText = formData.ciudad_municipio.trim();
+    const selectedMuni = municipios.find(
+      (m) => `${m.nombre} - ${m.departamento}` === muniText,
+    );
+
+    if (!selectedMuni && muniText) {
+      newErrors.ciudad_municipio =
+        "Por favor, selecciona una ciudad válida de la lista sugerida.";
+    }
+
     const allTouched = {};
     Object.keys(formData).forEach((key) => (allTouched[key] = true));
+
     setTouched(allTouched);
     setErrors(newErrors);
 
@@ -75,18 +115,17 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
 
     setIsSubmitting(true);
     try {
-      // Limpiar el payload: No enviar datos basura según el tipo de organización
       const isNatural = formData.tipo_organizacion === "natural";
       const payload = {
         numero_identificacion: formData.numero_identificacion.trim(),
         tipo_identificacion: formData.tipo_identificacion,
         tipo_organizacion: formData.tipo_organizacion,
         direccion: formData.direccion.trim(),
-        ciudad_municipio: formData.ciudad_municipio.trim(),
+        ciudad_municipio: muniText,
+        codigo_municipio: selectedMuni ? selectedMuni.codigo : null, // Guardamos el código DANE
         correo: formData.correo.trim() || null,
         telefono: formData.telefono.trim() || null,
 
-        // Asignación condicional
         primer_nombre: isNatural ? formData.primer_nombre.trim() : null,
         otros_nombres: isNatural ? formData.otros_nombres.trim() : null,
         primer_apellido: isNatural ? formData.primer_apellido.trim() : null,
@@ -112,10 +151,13 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
 
   const isNatural = formData.tipo_organizacion === "natural";
 
+  const documentosPermitidos = tiposDoc.filter((doc) =>
+    isNatural ? doc.aplica_natural : doc.aplica_juridica,
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl flex flex-col max-h-[95vh]">
-        {/* Cabecera del Modal */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-slate-900">
@@ -133,8 +175,16 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
           </button>
         </div>
 
-        {/* Cuerpo Scrollable */}
-        <div className="p-4 sm:p-5 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1 relative">
+          {loadingCatalogs && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+              <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
+              <p className="text-sm font-semibold text-slate-500">
+                Cargando catálogos del sistema...
+              </p>
+            </div>
+          )}
+
           {serverError && (
             <div className="mb-5 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-start gap-2 text-sm font-semibold">
               <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -148,7 +198,6 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
             className="space-y-6"
             noValidate
           >
-            {/* SECCIÓN 1: TIPO DE ORGANIZACIÓN */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -176,7 +225,6 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
               </button>
             </div>
 
-            {/* SECCIÓN 2: IDENTIFICACIÓN */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Datos de Identificación
@@ -194,15 +242,11 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
                     className={`w-full p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.tipo_identificacion ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
                   >
                     <option value="">Seleccione...</option>
-                    {isNatural ? (
-                      <>
-                        <option value="CC">Cédula de Ciudadanía</option>
-                        <option value="CE">Cédula de Extranjería</option>
-                        <option value="PASAPORTE">Pasaporte</option>
-                      </>
-                    ) : (
-                      <option value="NIT">NIT</option>
-                    )}
+                    {documentosPermitidos.map((doc) => (
+                      <option key={doc.id} value={doc.codigo}>
+                        {doc.codigo} - {doc.descripcion}
+                      </option>
+                    ))}
                   </select>
                   {errors.tipo_identificacion && (
                     <p className="mt-1 text-xs text-red-500 font-bold">
@@ -232,12 +276,10 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
               </div>
             </div>
 
-            {/* SECCIÓN 3: NOMBRES O RAZÓN SOCIAL */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 {isNatural ? "Nombres y Apellidos" : "Información Comercial"}
               </h3>
-
               {isNatural ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -337,7 +379,6 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
               )}
             </div>
 
-            {/* SECCIÓN 4: CONTACTO Y UBICACIÓN */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Contacto y Ubicación
@@ -361,6 +402,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
                     </p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Ciudad / Municipio *
@@ -368,17 +410,29 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
                   <input
                     type="text"
                     name="ciudad_municipio"
+                    list="municipios-list"
+                    autoComplete="off"
+                    placeholder="Escribe para buscar..."
                     value={formData.ciudad_municipio}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.ciudad_municipio ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
                   />
+                  <datalist id="municipios-list">
+                    {municipios.map((m) => (
+                      <option
+                        key={m.id}
+                        value={`${m.nombre} - ${m.departamento}`}
+                      />
+                    ))}
+                  </datalist>
                   {errors.ciudad_municipio && (
                     <p className="mt-1 text-xs text-red-500 font-bold">
                       {errors.ciudad_municipio}
                     </p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Teléfono
@@ -415,12 +469,11 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
           </form>
         </div>
 
-        {/* Footer */}
         <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 flex-shrink-0">
           <button
             type="button"
             onClick={onCancel}
-            disabled={isSubmitting}
+            disabled={isSubmitting || loadingCatalogs}
             className="px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
           >
             Cancelar
@@ -428,7 +481,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
           <button
             type="submit"
             form="client-form"
-            disabled={isSubmitting}
+            disabled={isSubmitting || loadingCatalogs}
             className="px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-bold rounded-lg shadow-sm flex items-center gap-2 transition-all"
           >
             <Save className="w-4 h-4" />
