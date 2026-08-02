@@ -42,29 +42,21 @@ export const userService = {
   },
 
   /**
-   * Alterna el acceso de un usuario al sistema (Activo / Inactivo)
+   * Alterna el acceso de un usuario al sistema (Activo / Inactivo) mediante RPC seguro
    */
   async toggleEstado(userId, nuevoEstado) {
-    // Retiramos .single() para prevenir el colapso 406 si RLS bloquea la operación
-    const { data, error } = await supabase
-      .from("perfiles")
-      .update({ estado: nuevoEstado })
-      .eq("id", userId)
-      .select();
+    // Usamos rpc() para invocar la función segura en el backend y evitar bloqueos RLS 403/406
+    const { data, error } = await supabase.rpc("toggle_user_status", {
+      p_user_id: userId,
+      p_new_status: nuevoEstado,
+    });
 
     if (error)
       throw new Error(
         "Error al actualizar el estado del usuario: " + error.message,
       );
 
-    // Validación manual de seguridad y existencia
-    if (!data || data.length === 0) {
-      throw new Error(
-        "Operación denegada. Verifica que tengas permisos (RLS) para modificar perfiles.",
-      );
-    }
-
-    return data[0];
+    return data;
   },
 
   /**
