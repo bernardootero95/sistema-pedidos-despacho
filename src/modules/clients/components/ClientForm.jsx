@@ -1,5 +1,9 @@
 import React, { useState } from "react";
 import { clientService } from "../services/clientService";
+import {
+  validateClientField,
+  validateClientForm,
+} from "../utils/clientValidations";
 import { X, Save, ShieldAlert, Building2, User } from "lucide-react";
 
 export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
@@ -26,53 +30,6 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  // Validaciones inmediatas dinámicas
-  const validateField = (name, value, currentFormState) => {
-    let errorMsg = "";
-    const isNatural = currentFormState.tipo_organizacion === "natural";
-
-    switch (name) {
-      case "numero_identificacion":
-        if (!value.trim())
-          errorMsg = "El número de identificación es obligatorio.";
-        break;
-      case "tipo_identificacion":
-        if (!value) errorMsg = "Selecciona un tipo.";
-        break;
-      case "tipo_organizacion":
-        if (!value) errorMsg = "Selecciona el tipo de organización.";
-        break;
-      case "direccion":
-        if (!value.trim()) errorMsg = "La dirección es obligatoria.";
-        break;
-      case "ciudad_municipio":
-        if (!value.trim()) errorMsg = "La ciudad/municipio es obligatoria.";
-        break;
-      case "correo":
-        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          errorMsg = "Formato de correo inválido.";
-        }
-        break;
-      // Validaciones condicionales para Persona Natural
-      case "primer_nombre":
-        if (isNatural && !value.trim())
-          errorMsg = "El primer nombre es obligatorio.";
-        break;
-      case "primer_apellido":
-        if (isNatural && !value.trim())
-          errorMsg = "El primer apellido es obligatorio.";
-        break;
-      // Validaciones condicionales para Persona Jurídica
-      case "razon_social":
-        if (!isNatural && !value.trim())
-          errorMsg = "La razón social es obligatoria.";
-        break;
-      default:
-        break;
-    }
-    return errorMsg;
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -87,7 +44,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
     if (touched[name]) {
       setErrors((prev) => ({
         ...prev,
-        [name]: validateField(name, value, newFormState),
+        [name]: validateClientField(name, value, newFormState),
       }));
     }
   };
@@ -97,7 +54,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
     setTouched((prev) => ({ ...prev, [name]: true }));
     setErrors((prev) => ({
       ...prev,
-      [name]: validateField(name, value, formData),
+      [name]: validateClientField(name, value, formData),
     }));
   };
 
@@ -105,12 +62,8 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
     e.preventDefault();
     setServerError("");
 
-    // Validar todos los campos antes de enviar
-    const newErrors = {};
-    Object.keys(formData).forEach((key) => {
-      const error = validateField(key, formData[key], formData);
-      if (error) newErrors[key] = error;
-    });
+    // Delegamos la validación global al utility file
+    const newErrors = validateClientForm(formData);
 
     // Marcar todos como tocados
     const allTouched = {};
@@ -163,7 +116,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl flex flex-col max-h-[95vh]">
         {/* Cabecera del Modal */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 shrink-0">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-slate-900">
               {isEditing ? "Editar Cliente" : "Registrar Nuevo Cliente"}
@@ -184,7 +137,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
         <div className="p-4 sm:p-5 overflow-y-auto flex-1">
           {serverError && (
             <div className="mb-5 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-start gap-2 text-sm font-semibold">
-              <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+              <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <p>{serverError}</p>
             </div>
           )}
@@ -195,7 +148,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
             className="space-y-6"
             noValidate
           >
-            {/* SECCIÓN 1: TIPO DE ORGANIZACIÓN (Selector visual) */}
+            {/* SECCIÓN 1: TIPO DE ORGANIZACIÓN */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -279,7 +232,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
               </div>
             </div>
 
-            {/* SECCIÓN 3: NOMBRES O RAZÓN SOCIAL (Dinámico) */}
+            {/* SECCIÓN 3: NOMBRES O RAZÓN SOCIAL */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 {isNatural ? "Nombres y Apellidos" : "Información Comercial"}
@@ -462,8 +415,8 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
           </form>
         </div>
 
-        {/* Footer (Acciones) */}
-        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 shrink-0">
+        {/* Footer */}
+        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 flex-shrink-0">
           <button
             type="button"
             onClick={onCancel}
