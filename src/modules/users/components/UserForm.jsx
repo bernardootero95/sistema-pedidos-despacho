@@ -125,7 +125,7 @@ export const UserForm = ({ roles, onSuccess, onCancel }) => {
         <div className="p-4 sm:p-5 overflow-y-auto">
           {serverError && (
             <div className="mb-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-start gap-2 text-sm font-semibold">
-              <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
               <p>{serverError}</p>
             </div>
           )}

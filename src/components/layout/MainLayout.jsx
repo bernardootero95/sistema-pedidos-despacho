@@ -86,14 +86,14 @@ export const MainLayout = () => {
       <aside
         className={`
         fixed md:static inset-y-0 left-0 z-50
-        w-64 bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800 flex-shrink-0
+        w-64 bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800 shrink-0
         transform transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"}
       `}
       >
         <div className="p-4 flex items-center justify-between bg-slate-950/50 border-b border-slate-800">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="p-2 bg-primary/20 text-primary rounded-lg flex-shrink-0">
+            <div className="p-2 bg-primary/20 text-primary rounded-lg shrink-0">
               <Building2 className="w-6 h-6" />
             </div>
             <div className="overflow-hidden">
@@ -130,7 +130,7 @@ export const MainLayout = () => {
                   }`
                 }
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
+                <Icon className="w-5 h-5 shrink-0" />
                 <span>{item.label}</span>
               </NavLink>
             );
@@ -149,7 +149,7 @@ export const MainLayout = () => {
           <button
             onClick={handleLogout}
             title="Cerrar Sesión"
-            className="p-2.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors flex-shrink-0"
+            className="p-2.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors shrink-0"
           >
             <LogOut className="w-5 h-5" />
           </button>
@@ -157,7 +157,7 @@ export const MainLayout = () => {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shadow-sm flex-shrink-0 z-10">
+        <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shadow-sm shrink-0 z-10">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(true)}

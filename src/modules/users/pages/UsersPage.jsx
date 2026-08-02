@@ -94,7 +94,7 @@ export const UsersPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <UserCog className="w-6 h-6 text-primary flex-shrink-0" />
+            <UserCog className="w-6 h-6 text-primary shrink-0" />
             <span>Gestión de Personal</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -103,9 +103,9 @@ export const UsersPage = () => {
         </div>
         <button
           onClick={() => setIsFormOpen(true)}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white text-sm font-semibold rounded-xl sm:rounded-lg shadow-sm transition-all min-h-[44px]"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white text-sm font-semibold rounded-xl sm:rounded-lg shadow-sm transition-all min-h-11"
         >
-          <PlusCircle className="w-4 h-4 flex-shrink-0" />
+          <PlusCircle className="w-4 h-4 shrink-0" />
           <span>Nuevo Usuario</span>
         </button>
       </div>
@@ -117,7 +117,7 @@ export const UsersPage = () => {
       )}
 
       <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-2 sm:gap-3">
-        <Search className="w-5 h-5 text-slate-400 ml-1 sm:ml-2 flex-shrink-0" />
+        <Search className="w-5 h-5 text-slate-400 ml-1 sm:ml-2 shrink-0" />
         <input
           type="text"
           placeholder="Buscar por nombre, usuario o rol..."
@@ -205,7 +205,7 @@ export const UsersPage = () => {
                   </td>
                   <td className="py-4 px-6">
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 text-xs font-bold uppercase tracking-wider">
-                      <Shield className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                      <Shield className="w-3.5 h-3.5 text-primary shrink-0" />
                       {user.roles.nombre}
                     </span>
                   </td>

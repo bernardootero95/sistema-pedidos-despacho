@@ -89,7 +89,7 @@ export const LoginPage = () => {
         <div className="bg-white py-8 px-4 shadow-lg sm:rounded-xl sm:px-10 border border-slate-200">
           {errors.general && (
             <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg flex items-center gap-3">
-              <ShieldAlert className="text-red-500 w-5 h-5 flex-shrink-0" />
+              <ShieldAlert className="text-red-500 w-5 h-5 shrink-0" />
               <p className="text-sm text-red-700 font-bold">{errors.general}</p>
             </div>
           )}
@@ -163,7 +163,7 @@ export const LoginPage = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full flex justify-center items-center gap-2 py-3.5 sm:py-2.5 px-4 border border-transparent rounded-xl sm:rounded-lg shadow-sm text-sm font-bold text-white bg-primary hover:bg-primary-hover active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all disabled:opacity-50 min-h-[48px] sm:min-h-0"
+              className="w-full flex justify-center items-center gap-2 py-3.5 sm:py-2.5 px-4 border border-transparent rounded-xl sm:rounded-lg shadow-sm text-sm font-bold text-white bg-primary hover:bg-primary-hover active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all disabled:opacity-50 min-h-12 sm:min-h-0"
             >
               <LogIn className="w-5 h-5 sm:w-4 sm:h-4" />
               {isSubmitting ? "Autenticando..." : "Ingresar al Sistema"}
