@@ -58,4 +58,21 @@ export const userService = {
       );
     return data;
   },
+
+  /**
+   * Solicita a la Edge Function la creación segura de un nuevo usuario
+   */
+  async crearUsuario(userData) {
+    const { data, error } = await supabase.functions.invoke("create-user", {
+      body: userData,
+    });
+
+    if (error)
+      throw new Error(
+        "Error de conexión con el servidor al intentar crear el usuario.",
+      );
+    if (data?.error) throw new Error(data.error);
+
+    return data;
+  },
 };
