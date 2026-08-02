@@ -21,8 +21,13 @@ export const authService = {
       const perfil = await this.getPerfilCompleto(data.user.id);
       return { ...data.user, ...perfil };
     } catch (error) {
-      console.error("[AuthService] Error en login:", error.message);
-      throw new Error(this.traducirErrorAuth(error.message));
+      // Extraer correctamente el mensaje del objeto de error de Supabase
+      const errorMessage =
+        error?.message ||
+        error?.error_description ||
+        "Error de conexión con el servidor.";
+      console.error("[AuthService] Error detallado:", errorMessage);
+      throw new Error(this.traducirErrorAuth(errorMessage));
     }
   },
 
