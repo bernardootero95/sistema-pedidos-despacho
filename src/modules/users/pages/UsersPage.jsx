@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { userService } from "../services/userService";
 import {
-  UsersCog,
+  UserCog,
   Search,
   PlusCircle,
   Shield,
   CheckCircle2,
   XCircle,
   Loader2,
-} from "lucide-react";
+} from "lucide-react"; // <-- Cambiado de UsersCog a UserCog
 
 export const UsersPage = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -34,7 +34,6 @@ export const UsersPage = () => {
 
   const handleToggleEstado = async (userId, estadoActual) => {
     try {
-      // Optimistic UI update para mayor fluidez
       setUsuarios((prev) =>
         prev.map((u) =>
           u.id === userId ? { ...u, estado: !estadoActual } : u,
@@ -42,7 +41,6 @@ export const UsersPage = () => {
       );
       await userService.toggleEstado(userId, !estadoActual);
     } catch (err) {
-      // Revertir en caso de error
       alert(err.message);
       cargarUsuarios();
     }
@@ -68,11 +66,11 @@ export const UsersPage = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* CABECERA */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <UsersCog className="w-6 h-6 text-primary flex-shrink-0" />
+            <UserCog className="w-6 h-6 text-primary flex-shrink-0" />{" "}
+            {/* <-- Actualizado aquí */}
             <span>Gestión de Personal</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -98,7 +96,6 @@ export const UsersPage = () => {
         </div>
       )}
 
-      {/* BÚSQUEDA */}
       <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-2 sm:gap-3">
         <Search className="w-5 h-5 text-slate-400 ml-1 sm:ml-2 flex-shrink-0" />
         <input
@@ -110,9 +107,7 @@ export const UsersPage = () => {
         />
       </div>
 
-      {/* LISTADO RESPONSIVO */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* VISTA MÓVIL */}
         <div className="block sm:hidden divide-y divide-slate-200">
           {filteredUsers.map((user) => (
             <div key={user.id} className="p-4 space-y-3">
@@ -160,7 +155,6 @@ export const UsersPage = () => {
           ))}
         </div>
 
-        {/* VISTA ESCRITORIO */}
         <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>

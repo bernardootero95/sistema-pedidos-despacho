@@ -12,7 +12,7 @@ import {
   Building2,
   Menu,
   X,
-  UsersCog,
+  UserCog, // <-- Cambiado de UsersCog a UserCog
 } from "lucide-react";
 
 export const MainLayout = () => {
@@ -35,9 +35,9 @@ export const MainLayout = () => {
     {
       path: "/usuarios",
       label: "Gestión de Personal",
-      icon: UsersCog,
+      icon: UserCog,
       roles: ["soporte", "gerencia"],
-    },
+    }, // <-- Actualizado aquí
     {
       path: "/pedidos",
       label: "Toma de Pedidos",
