@@ -12,6 +12,7 @@ import {
   Building2,
   Menu,
   X,
+  UsersCog,
 } from "lucide-react";
 
 export const MainLayout = () => {
@@ -30,6 +31,12 @@ export const MainLayout = () => {
       label: "Panel Principal",
       icon: LayoutDashboard,
       roles: ["soporte", "gerencia", "vendedor", "despachador", "repartidor"],
+    },
+    {
+      path: "/usuarios",
+      label: "Gestión de Personal",
+      icon: UsersCog,
+      roles: ["soporte", "gerencia"],
     },
     {
       path: "/pedidos",
@@ -150,7 +157,6 @@ export const MainLayout = () => {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* HEADER DE PRODUCCIÓN LIMPIO */}
         <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shadow-sm flex-shrink-0 z-10">
           <div className="flex items-center gap-3">
             <button

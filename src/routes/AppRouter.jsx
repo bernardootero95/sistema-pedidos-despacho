@@ -9,6 +9,7 @@ import { ProductsPage } from "../modules/products/pages/ProductsPage";
 import { VehiclesPage } from "../modules/vehicles/pages/VehiclesPage";
 import { OrdersPage } from "../modules/orders/pages/OrdersPage";
 import { DispatchesPage } from "../modules/dispatches/pages/DispatchesPage";
+import { UsersPage } from "../modules/users/pages/UsersPage";
 
 export const AppRouter = () => {
   const { user } = useAuth();
@@ -29,12 +30,15 @@ export const AppRouter = () => {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
 
+          {/* Módulos de Administración */}
+          <Route path="/usuarios" element={<UsersPage />} />
+
           {/* Módulos de Catálogos */}
           <Route path="/clientes" element={<ClientsPage />} />
           <Route path="/productos" element={<ProductsPage />} />
           <Route path="/vehiculos" element={<VehiclesPage />} />
 
-          {/* Módulos Operativos (¡Completamente integrados para la presentación!) */}
+          {/* Módulos Operativos */}
           <Route path="/pedidos" element={<OrdersPage />} />
           <Route path="/despachos" element={<DispatchesPage />} />
         </Route>
