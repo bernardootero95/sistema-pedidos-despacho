@@ -17,6 +17,40 @@ export const clientService = {
   },
 
   /**
+   * Obtiene los tipos de identificación activos y no eliminados
+   */
+  async getTiposIdentificacion() {
+    const { data, error } = await supabase
+      .from("tipos_identificacion")
+      .select("*")
+      .eq("estado", true)
+      .is("eliminado", null)
+      .order("descripcion", { ascending: true });
+
+    if (error)
+      throw new Error(
+        "Error al cargar tipos de identificación: " + error.message,
+      );
+    return data;
+  },
+
+  /**
+   * Obtiene los municipios activos y no eliminados
+   */
+  async getMunicipios() {
+    const { data, error } = await supabase
+      .from("municipios")
+      .select("*")
+      .eq("estado", true)
+      .is("eliminado", null)
+      .order("departamento", { ascending: true })
+      .order("nombre", { ascending: true });
+
+    if (error) throw new Error("Error al cargar municipios: " + error.message);
+    return data;
+  },
+
+  /**
    * Crea un nuevo cliente en la base de datos
    */
   async crearCliente(clienteData) {
