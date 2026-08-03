@@ -20,9 +20,10 @@ export const productService = {
       .is("eliminado", null)
       .order("creado", { ascending: false });
 
+    // Búsqueda por código, código de barras o nombre
     if (searchTerm) {
       query = query.or(
-        `codigo_sku.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%`,
+        `codigo.ilike.%${searchTerm}%,codigo_barra.ilike.%${searchTerm}%,nombre.ilike.%${searchTerm}%`,
       );
     }
 
@@ -41,7 +42,7 @@ export const productService = {
   },
 
   /**
-   * Obtiene las categorías activas para los selectores de formularios
+   * Obtiene las categorías activas para el formulario
    */
   async getCategorias() {
     const { data, error } = await supabase
@@ -68,7 +69,7 @@ export const productService = {
 
     if (error) {
       if (error.code === "23505") {
-        throw new Error("Ya existe un producto con ese Código/SKU.");
+        throw new Error("Ya existe un producto registrado con ese código.");
       }
       throw new Error("Error al crear el producto: " + error.message);
     }
@@ -77,7 +78,7 @@ export const productService = {
   },
 
   /**
-   * Actualiza los datos de un producto
+   * Actualiza un producto existente
    */
   async actualizarProducto(id, productoData) {
     const dataToUpdate = {
@@ -94,7 +95,9 @@ export const productService = {
 
     if (error) {
       if (error.code === "23505") {
-        throw new Error("El Código/SKU ya está en uso por otro producto.");
+        throw new Error(
+          "El código ingresado ya está en uso por otro producto.",
+        );
       }
       throw new Error("Error al actualizar el producto: " + error.message);
     }
@@ -103,7 +106,7 @@ export const productService = {
   },
 
   /**
-   * Alterna el estado activo/inactivo
+   * Alterna el estado activo/inactivo (Suspensión)
    */
   async toggleEstado(id, nuevoEstado) {
     const { data, error } = await supabase
@@ -121,7 +124,7 @@ export const productService = {
   },
 
   /**
-   * Realiza un borrado lógico
+   * Realiza un borrado lógico (Soft Delete)
    */
   async eliminarProducto(id) {
     const { data, error } = await supabase
