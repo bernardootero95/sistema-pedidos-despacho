@@ -2,18 +2,35 @@ import { supabase } from "../../../config/supabase";
 
 export const clientService = {
   /**
-   * Obtiene la lista de todos los clientes ordenados por fecha de creación (excluyendo eliminados)
+   * Obtiene la lista de clientes con paginación y búsqueda desde el servidor (Server-Side)
    */
-  async getClientes() {
-    const { data, error } = await supabase
+  async getClientesPaginados(page = 1, limit = 10, searchTerm = "") {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
       .from("clientes")
-      .select("*")
+      .select("*", { count: "exact" })
       .is("eliminado", null)
       .order("creado", { ascending: false });
 
+    // Búsqueda del lado del servidor (ilike para ignorar mayúsculas/minúsculas)
+    if (searchTerm) {
+      query = query.or(
+        `numero_identificacion.ilike.%${searchTerm}%,razon_social.ilike.%${searchTerm}%,primer_nombre.ilike.%${searchTerm}%,primer_apellido.ilike.%${searchTerm}%,correo.ilike.%${searchTerm}%`,
+      );
+    }
+
+    const { data, error, count } = await query.range(from, to);
+
     if (error)
       throw new Error("Error al cargar la lista de clientes: " + error.message);
-    return data;
+
+    return {
+      data,
+      total: count,
+      totalPages: Math.ceil(count / limit),
+    };
   },
 
   /**
@@ -62,7 +79,6 @@ export const clientService = {
 
     if (error) {
       if (error.code === "23505") {
-        // Código de PostgreSQL para 'Unique Violation'
         throw new Error(
           "Ya existe un cliente con ese número de identificación.",
         );
@@ -77,7 +93,6 @@ export const clientService = {
    * Actualiza los datos de un cliente existente
    */
   async actualizarCliente(id, clienteData) {
-    // Actualizamos la fecha de modificación automáticamente
     const dataToUpdate = {
       ...clienteData,
       actualizado: new Date().toISOString(),
