@@ -4,18 +4,19 @@ import {
   validateClientField,
   validateClientForm,
 } from "../utils/clientValidations";
+import { calculateDV } from "../utils/calculateDV";
 import { X, Save, ShieldAlert, Building2, User, Loader2 } from "lucide-react";
 
 export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
   const isEditing = !!clientToEdit;
 
-  // Estados de los catálogos dinámicos
   const [tiposDoc, setTiposDoc] = useState([]);
   const [municipios, setMunicipios] = useState([]);
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
 
   const [formData, setFormData] = useState({
     numero_identificacion: clientToEdit?.numero_identificacion || "",
+    digito_verificacion: clientToEdit?.digito_verificacion || "",
     tipo_identificacion: clientToEdit?.tipo_identificacion || "",
     tipo_organizacion: clientToEdit?.tipo_organizacion || "natural",
     primer_nombre: clientToEdit?.primer_nombre || "",
@@ -35,7 +36,6 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  // Carga asíncrona y paralela de catálogos
   useEffect(() => {
     const loadCatalogs = async () => {
       try {
@@ -47,7 +47,6 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
         setMunicipios(municipiosData);
       } catch (error) {
         console.error("Error técnico al cargar catálogos:", error);
-        // Exponemos el error.message exacto de Supabase para no estar ciegos
         setServerError(`Error en la base de datos: ${error.message}`);
       } finally {
         setLoadingCatalogs(false);
@@ -59,18 +58,24 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Al cambiar tipo de organización, reseteamos errores y limpiamos el tipo de documento si no aplica
     if (name === "tipo_organizacion") {
       setErrors({});
       setFormData((prev) => ({
         ...prev,
         [name]: value,
         tipo_identificacion: "",
+        digito_verificacion: "",
       }));
       return;
     }
 
     const newFormState = { ...formData, [name]: value };
+
+    // Cálculo automático del Dígito de Verificación
+    if (name === "numero_identificacion") {
+      newFormState.digito_verificacion = calculateDV(value);
+    }
+
     setFormData(newFormState);
 
     if (touched[name]) {
@@ -96,7 +101,6 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
 
     const newErrors = validateClientForm(formData);
 
-    // Validación Estricta: Asegurar que el municipio ingresado coincida exactamente con uno del catálogo
     const muniText = formData.ciudad_municipio.trim();
     const selectedMuni = municipios.find(
       (m) => `${m.nombre} - ${m.departamento}` === muniText,
@@ -118,13 +122,18 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
     setIsSubmitting(true);
     try {
       const isNatural = formData.tipo_organizacion === "natural";
+      const isNit =
+        formData.tipo_identificacion === "31" ||
+        formData.tipo_identificacion === "50";
+
       const payload = {
         numero_identificacion: formData.numero_identificacion.trim(),
+        digito_verificacion: isNit ? formData.digito_verificacion : null,
         tipo_identificacion: formData.tipo_identificacion,
         tipo_organizacion: formData.tipo_organizacion,
         direccion: formData.direccion.trim(),
         ciudad_municipio: muniText,
-        codigo_municipio: selectedMuni ? selectedMuni.codigo : null, // Guardamos el código DANE
+        codigo_municipio: selectedMuni ? selectedMuni.codigo : null,
         correo: formData.correo.trim() || null,
         telefono: formData.telefono.trim() || null,
 
@@ -152,6 +161,10 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
   };
 
   const isNatural = formData.tipo_organizacion === "natural";
+  // En tu tabla base de datos el NIT suele ser código 31 o 50
+  const isNit =
+    formData.tipo_identificacion === "31" ||
+    formData.tipo_identificacion === "50";
 
   const documentosPermitidos = tiposDoc.filter((doc) =>
     isNatural ? doc.aplica_natural : doc.aplica_juridica,
@@ -182,7 +195,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
               <p className="text-sm font-semibold text-slate-500">
-                Cargando catálogos del sistema...
+                Cargando catálogos...
               </p>
             </div>
           )}
@@ -261,14 +274,30 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Número de Identificación *
                   </label>
-                  <input
-                    type="text"
-                    name="numero_identificacion"
-                    value={formData.numero_identificacion}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.numero_identificacion ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      name="numero_identificacion"
+                      value={formData.numero_identificacion}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.numero_identificacion ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                    />
+
+                    {/* Input visual para el Dígito de Verificación (Oculto si no es NIT) */}
+                    {isNit && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-slate-400 font-bold">-</span>
+                        <input
+                          type="text"
+                          readOnly
+                          value={formData.digito_verificacion}
+                          className="w-12 p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-sm font-bold text-center text-slate-600 focus:outline-none"
+                          tabIndex="-1"
+                        />
+                      </div>
+                    )}
+                  </div>
                   {errors.numero_identificacion && (
                     <p className="mt-1 text-xs text-red-500 font-bold">
                       {errors.numero_identificacion}
