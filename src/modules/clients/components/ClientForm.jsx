@@ -46,7 +46,9 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
         setTiposDoc(docsData);
         setMunicipios(municipiosData);
       } catch (error) {
-        setServerError("No se pudieron cargar los catálogos del sistema.");
+        console.error("Error técnico al cargar catálogos:", error);
+        // Exponemos el error.message exacto de Supabase para no estar ciegos
+        setServerError(`Error en la base de datos: ${error.message}`);
       } finally {
         setLoadingCatalogs(false);
       }
@@ -158,7 +160,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl flex flex-col max-h-[95vh]">
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 shrink-0">
           <div>
             <h2 className="text-lg font-bold text-slate-900">
               {isEditing ? "Editar Cliente" : "Registrar Nuevo Cliente"}
@@ -187,7 +189,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
 
           {serverError && (
             <div className="mb-5 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-start gap-2 text-sm font-semibold">
-              <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
               <p>{serverError}</p>
             </div>
           )}
@@ -469,7 +471,7 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
           </form>
         </div>
 
-        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 flex-shrink-0">
+        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 shrink-0">
           <button
             type="button"
             onClick={onCancel}
