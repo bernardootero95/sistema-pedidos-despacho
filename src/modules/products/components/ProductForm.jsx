@@ -52,7 +52,6 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Si cambia el tipo, re-validamos categoria_id dinámicamente
     const newFormState = { ...formData, [name]: value };
     setFormData(newFormState);
 
@@ -60,17 +59,6 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
       setErrors((prev) => ({
         ...prev,
         [name]: validateProductField(name, value, newFormState),
-      }));
-    }
-
-    if (name === "tipo" && touched.categoria_id) {
-      setErrors((prev) => ({
-        ...prev,
-        categoria_id: validateProductField(
-          "categoria_id",
-          formData.categoria_id,
-          newFormState,
-        ),
       }));
     }
   };
@@ -136,7 +124,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl flex flex-col max-h-[95vh]">
         {/* Cabecera */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 shrink-0">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 text-primary rounded-lg">
               <Package className="w-5 h-5" />
@@ -171,7 +159,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
 
           {serverError && (
             <div className="mb-5 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-start gap-2 text-sm font-semibold">
-              <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+              <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <p>{serverError}</p>
             </div>
           )}
@@ -259,22 +247,15 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Tipo (Ej: Inventario)
+                    Tipo (Dato Externo)
                   </label>
                   <input
                     type="text"
                     name="tipo"
-                    list="tipo-list"
-                    autoComplete="off"
                     value={formData.tipo}
                     onChange={handleChange}
                     className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
-                  <datalist id="tipo-list">
-                    <option value="Inventario" />
-                    <option value="Servicio" />
-                    <option value="Gasto" />
-                  </datalist>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
@@ -302,17 +283,14 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Categoría{" "}
-                    {(formData.tipo?.toLowerCase() === "inventario" ||
-                      formData.tipo?.toLowerCase() === "servicio") &&
-                      "*"}
+                    Categoría
                   </label>
                   <select
                     name="categoria_id"
                     value={formData.categoria_id}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className={`w-full p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.categoria_id ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                    className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="">Ninguna...</option>
                     {categorias.map((c) => (
@@ -321,11 +299,6 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
                       </option>
                     ))}
                   </select>
-                  {errors.categoria_id && (
-                    <p className="mt-1 text-xs text-red-500 font-bold">
-                      {errors.categoria_id}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
@@ -449,7 +422,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 shrink-0">
+        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 flex-shrink-0">
           <button
             type="button"
             onClick={onCancel}

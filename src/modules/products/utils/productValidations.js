@@ -1,18 +1,14 @@
 /**
  * Diccionario de reglas de validación para el módulo de Productos.
+ * Adaptado para sincronización externa (el tipo y categoría no bloquean la creación).
  */
 const validators = {
   codigo: (value) => (!value.trim() ? "El código es obligatorio." : ""),
   nombre: (value) => (!value.trim() ? "El nombre es obligatorio." : ""),
 
-  // Condicional: Obligatorio si tipo es inventario o servicio
-  categoria_id: (value, formState) => {
-    const tipoStr = (formState.tipo || "").toLowerCase().trim();
-    if ((tipoStr === "inventario" || tipoStr === "servicio") && !value) {
-      return "La categoría es obligatoria para inventario o servicios.";
-    }
-    return "";
-  },
+  // La categoría pasa a ser opcional para no bloquear la sincronización
+  // con el sistema de facturación externo.
+  categoria_id: () => "",
 
   precio_venta: (value) => {
     if (value === "" || value === null) return "El precio es obligatorio.";
