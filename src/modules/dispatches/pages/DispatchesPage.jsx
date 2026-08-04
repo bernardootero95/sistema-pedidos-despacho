@@ -94,7 +94,7 @@ export const DispatchesPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Truck className="w-6 h-6 text-primary flex-shrink-0" />
+            <Truck className="w-6 h-6 text-primary shrink-0" />
             <span>Órdenes de Despacho</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -127,7 +127,7 @@ export const DispatchesPage = () => {
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <Plus className="w-4 h-4 flex-shrink-0" /> Nuevo Despacho
+            <Plus className="w-4 h-4 shrink-0" /> Nuevo Despacho
           </button>
         </div>
       </div>
@@ -142,7 +142,7 @@ export const DispatchesPage = () => {
             >
               <div className="p-4 sm:p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
                 <div className="flex items-center gap-3 overflow-hidden pr-2">
-                  <div className="p-2.5 bg-primary/20 text-primary-light rounded-lg font-bold flex-shrink-0">
+                  <div className="p-2.5 bg-primary/20 text-primary-light rounded-lg font-bold shrink-0">
                     <Truck className="w-5 h-5" />
                   </div>
                   <div className="overflow-hidden">
@@ -154,8 +154,8 @@ export const DispatchesPage = () => {
                     </h3>
                   </div>
                 </div>
-                <span className="px-2.5 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full text-xs font-bold flex items-center gap-1 flex-shrink-0">
-                  <Clock className="w-3.5 h-3.5 flex-shrink-0" /> En Ruta
+                <span className="px-2.5 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full text-xs font-bold flex items-center gap-1 shrink-0">
+                  <Clock className="w-3.5 h-3.5 shrink-0" /> En Ruta
                 </span>
               </div>
 
@@ -180,9 +180,9 @@ export const DispatchesPage = () => {
                 </div>
 
                 <div className="pt-3 border-t border-slate-100">
-                  <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2 flex items-center gap-1">
-                    <Package className="w-3.5 h-3.5 flex-shrink-0" /> Pedidos en
-                    esta ruta ({dsp.pedidos_ids.length})
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2 items-center gap-1">
+                    <Package className="w-3.5 h-3.5 shrink-0" /> Pedidos en esta
+                    ruta ({dsp.pedidos_ids.length})
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {dsp.pedidos_ids.map((id) => (
@@ -252,7 +252,7 @@ export const DispatchesPage = () => {
 
             <div className="flex flex-col justify-end">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl sm:rounded-lg text-blue-800 text-xs flex items-center gap-2.5">
-                <UserCheck className="w-5 h-5 flex-shrink-0 text-blue-600" />
+                <UserCheck className="w-5 h-5 shrink-0 text-blue-600" />
                 <span>
                   Estás operando bajo el usuario logístico:{" "}
                   <strong className="font-bold block sm:inline">
@@ -296,7 +296,7 @@ export const DispatchesPage = () => {
                         handleSelectPedido(ped.id);
                         setFormErrors((prev) => ({ ...prev, pedidos: "" }));
                       }}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between active:scale-[0.98] select-none min-h-[120px] ${
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between active:scale-[0.98] select-none min-h-30 ${
                         isSelected
                           ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
                           : "border-slate-200 bg-white hover:border-slate-300"
@@ -321,7 +321,7 @@ export const DispatchesPage = () => {
                           {ped.cliente_nombre}
                         </h4>
                         <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>Fecha toma: {ped.fecha}</span>
                         </p>
                       </div>
@@ -345,9 +345,9 @@ export const DispatchesPage = () => {
             <button
               type="submit"
               disabled={pedidosPendientes.length === 0}
-              className="w-full sm:w-auto ml-auto px-6 py-3.5 sm:py-3 bg-primary hover:bg-primary-hover active:scale-95 disabled:opacity-50 text-white font-bold text-sm sm:text-base rounded-xl sm:rounded-lg shadow-md transition-all flex items-center justify-center gap-2 min-h-[48px]"
+              className="w-full sm:w-auto ml-auto px-6 py-3.5 sm:py-3 bg-primary hover:bg-primary-hover active:scale-95 disabled:opacity-50 text-white font-bold text-sm sm:text-base rounded-xl sm:rounded-lg shadow-md transition-all flex items-center justify-center gap-2 min-h-12"
             >
-              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
               <span>Confirmar y Emitir Orden de Ruta</span>
             </button>
           </div>

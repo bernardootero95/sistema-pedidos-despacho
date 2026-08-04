@@ -38,19 +38,19 @@ export const DashboardPage = () => {
       case "pendiente":
         return (
           <span className="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold inline-flex items-center gap-1 w-fit">
-            <Clock className="w-3 h-3 flex-shrink-0" /> Pendiente
+            <Clock className="w-3 h-3 shrink-0" /> Pendiente
           </span>
         );
       case "despachado":
         return (
           <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold inline-flex items-center gap-1 w-fit">
-            <Truck className="w-3 h-3 flex-shrink-0" /> Despachado
+            <Truck className="w-3 h-3 shrink-0" /> Despachado
           </span>
         );
       case "entregado":
         return (
           <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-semibold inline-flex items-center gap-1 w-fit">
-            <CheckCircle2 className="w-3 h-3 flex-shrink-0" /> Entregado
+            <CheckCircle2 className="w-3 h-3 shrink-0" /> Entregado
           </span>
         );
       default:
@@ -73,7 +73,7 @@ export const DashboardPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-slate-200 text-xs text-slate-600 font-medium">
-          <AlertCircle className="w-4 h-4 text-primary flex-shrink-0" />
+          <AlertCircle className="w-4 h-4 text-primary shrink-0" />
           <span className="truncate">
             Empresa: <strong>{DEMO_DATA.empresa.nombre}</strong>
           </span>
@@ -91,7 +91,7 @@ export const DashboardPage = () => {
               {formatCurrency(ventasTotales)}
             </h3>
           </div>
-          <div className="p-3 bg-emerald-100 text-emerald-600 rounded-lg flex-shrink-0">
+          <div className="p-3 bg-emerald-100 text-emerald-600 rounded-lg shrink-0">
             <DollarSign className="w-6 h-6" />
           </div>
         </div>
@@ -105,7 +105,7 @@ export const DashboardPage = () => {
               {totalPedidos}
             </h3>
           </div>
-          <div className="p-3 bg-blue-100 text-blue-600 rounded-lg flex-shrink-0">
+          <div className="p-3 bg-blue-100 text-blue-600 rounded-lg shrink-0">
             <ShoppingCart className="w-6 h-6" />
           </div>
         </div>
@@ -119,7 +119,7 @@ export const DashboardPage = () => {
               {pedidosPendientes}
             </h3>
           </div>
-          <div className="p-3 bg-amber-100 text-amber-600 rounded-lg flex-shrink-0">
+          <div className="p-3 bg-amber-100 text-amber-600 rounded-lg shrink-0">
             <Clock className="w-6 h-6" />
           </div>
         </div>
@@ -133,7 +133,7 @@ export const DashboardPage = () => {
               {despachosActivos}
             </h3>
           </div>
-          <div className="p-3 bg-purple-100 text-purple-600 rounded-lg flex-shrink-0">
+          <div className="p-3 bg-purple-100 text-purple-600 rounded-lg shrink-0">
             <Truck className="w-6 h-6" />
           </div>
         </div>
@@ -150,7 +150,7 @@ export const DashboardPage = () => {
               Monitoreo en tiempo real de las órdenes ingresadas
             </p>
           </div>
-          <span className="text-xs font-semibold text-primary bg-primary-light px-3 py-1 rounded-full flex-shrink-0">
+          <span className="text-xs font-semibold text-primary bg-primary-light px-3 py-1 rounded-full shrink-0">
             {totalPedidos} total
           </span>
         </div>
