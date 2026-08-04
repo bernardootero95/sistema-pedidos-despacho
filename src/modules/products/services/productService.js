@@ -10,13 +10,7 @@ export const productService = {
 
     let query = supabase
       .from("productos")
-      .select(
-        `
-        *,
-        categorias_productos (id, nombre)
-      `,
-        { count: "exact" },
-      )
+      .select("*", { count: "exact" })
       .is("eliminado", null)
       .order("creado", { ascending: false });
 
@@ -39,22 +33,6 @@ export const productService = {
       total: count,
       totalPages: Math.ceil(count / limit),
     };
-  },
-
-  /**
-   * Obtiene las categorías activas para el formulario
-   */
-  async getCategorias() {
-    const { data, error } = await supabase
-      .from("categorias_productos")
-      .select("id, nombre")
-      .eq("estado", true)
-      .is("eliminado", null)
-      .order("nombre", { ascending: true });
-
-    if (error)
-      throw new Error("Error al cargar las categorías: " + error.message);
-    return data;
   },
 
   /**

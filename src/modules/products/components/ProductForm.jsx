@@ -1,18 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { productService } from "../services/productService";
 import {
   validateProductField,
   validateProductForm,
 } from "../utils/productValidations";
-import { X, Save, ShieldAlert, Package, Loader2 } from "lucide-react";
+import { X, Save, ShieldAlert, Package } from "lucide-react";
 
 export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
   const isEditing = !!productToEdit;
 
-  const [categorias, setCategorias] = useState([]);
-  const [loadingCats, setLoadingCats] = useState(true);
-
-  // Estados iniciales garantizando los defaults fiscales a 0
   const [formData, setFormData] = useState({
     codigo: productToEdit?.codigo || "",
     codigo_barra: productToEdit?.codigo_barra || "",
@@ -21,7 +17,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
     tipo: productToEdit?.tipo || "",
     departamento: productToEdit?.departamento || "",
     linea: productToEdit?.linea || "",
-    categoria_id: productToEdit?.categoria_id || "",
+    categoria: productToEdit?.categoria || "",
     precio_venta: productToEdit?.precio_venta ?? "",
     iva: productToEdit?.iva ?? "0",
     inc: productToEdit?.inc ?? "0",
@@ -33,21 +29,6 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
-
-  // Carga de categorías
-  useEffect(() => {
-    const loadCategorias = async () => {
-      try {
-        const data = await productService.getCategorias();
-        setCategorias(data);
-      } catch (error) {
-        setServerError("No se pudieron cargar las categorías del sistema.");
-      } finally {
-        setLoadingCats(false);
-      }
-    };
-    loadCategorias();
-  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -87,7 +68,6 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
 
     setIsSubmitting(true);
     try {
-      // Limpiamos y convertimos datos a sus tipos correctos para la base de datos
       const payload = {
         codigo: formData.codigo.trim(),
         codigo_barra: formData.codigo_barra.trim() || null,
@@ -96,9 +76,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
         tipo: formData.tipo.trim() || null,
         departamento: formData.departamento.trim() || null,
         linea: formData.linea.trim() || null,
-        categoria_id: formData.categoria_id
-          ? parseInt(formData.categoria_id)
-          : null,
+        categoria: formData.categoria.trim() || null,
         precio_venta: parseFloat(formData.precio_venta),
         iva: parseFloat(formData.iva) || 0,
         inc: parseFloat(formData.inc) || 0,
@@ -123,8 +101,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl flex flex-col max-h-[95vh]">
-        {/* Cabecera */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 text-primary rounded-lg">
               <Package className="w-5 h-5" />
@@ -146,20 +123,10 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
           </button>
         </div>
 
-        {/* Cuerpo */}
         <div className="p-4 sm:p-5 overflow-y-auto flex-1 relative">
-          {loadingCats && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
-              <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
-              <p className="text-sm font-semibold text-slate-500">
-                Cargando dependencias...
-              </p>
-            </div>
-          )}
-
           {serverError && (
             <div className="mb-5 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-start gap-2 text-sm font-semibold">
-              <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
               <p>{serverError}</p>
             </div>
           )}
@@ -170,7 +137,6 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
             className="space-y-6"
             noValidate
           >
-            {/* SECCIÓN 1: IDENTIFICACIÓN */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Identificación Básica
@@ -239,15 +205,14 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
               </div>
             </div>
 
-            {/* SECCIÓN 2: JERARQUÍA */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Jerarquía y Categorización
+                Jerarquía (Datos Externos)
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Tipo (Dato Externo)
+                    Tipo
                   </label>
                   <input
                     type="text"
@@ -285,25 +250,17 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Categoría
                   </label>
-                  <select
-                    name="categoria_id"
-                    value={formData.categoria_id}
+                  <input
+                    type="text"
+                    name="categoria"
+                    value={formData.categoria}
                     onChange={handleChange}
-                    onBlur={handleBlur}
                     className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">Ninguna...</option>
-                    {categorias.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombre}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
               </div>
             </div>
 
-            {/* SECCIÓN 3: FISCAL E INVENTARIO */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Datos Fiscales e Inventario
@@ -421,12 +378,11 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
           </form>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 flex-shrink-0">
+        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 shrink-0">
           <button
             type="button"
             onClick={onCancel}
-            disabled={isSubmitting || loadingCats}
+            disabled={isSubmitting}
             className="px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
           >
             Cancelar
@@ -434,7 +390,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
           <button
             type="submit"
             form="product-form"
-            disabled={isSubmitting || loadingCats}
+            disabled={isSubmitting}
             className="px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-bold rounded-lg shadow-sm flex items-center gap-2 transition-all"
           >
             <Save className="w-4 h-4" />

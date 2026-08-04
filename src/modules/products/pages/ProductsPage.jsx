@@ -18,7 +18,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-// Utilidad para formatear moneda (Pesos Colombianos)
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -28,7 +27,6 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-// Sub-componente Modal de Detalles (Solo Lectura)
 const ProductDetailsModal = ({ product, onClose }) => {
   if (!product) return null;
 
@@ -49,7 +47,6 @@ const ProductDetailsModal = ({ product, onClose }) => {
         </div>
 
         <div className="p-5 overflow-y-auto space-y-6 text-sm">
-          {/* Cabecera del Producto */}
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider">
@@ -70,7 +67,6 @@ const ProductDetailsModal = ({ product, onClose }) => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Columna Jerarquía */}
             <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
               <h4 className="text-xs font-bold uppercase text-slate-400 flex items-center gap-1.5 mb-2">
                 <Tag className="w-4 h-4" /> Clasificación
@@ -88,7 +84,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                   Categoría
                 </p>
                 <p className="font-semibold text-slate-800">
-                  {product.categorias_productos?.nombre || "Sin categoría"}
+                  {product.categoria || "Sin categoría"}
                 </p>
               </div>
               <div>
@@ -102,7 +98,6 @@ const ProductDetailsModal = ({ product, onClose }) => {
               </div>
             </div>
 
-            {/* Columna Fiscal e Inventario */}
             <div className="space-y-3 p-4 bg-emerald-50/50 rounded-xl border border-emerald-100">
               <h4 className="text-xs font-bold uppercase text-emerald-600 flex items-center gap-1.5 mb-2">
                 Datos Fiscales y Stock
@@ -159,7 +154,6 @@ export const ProductsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Paginación y Búsqueda
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -167,12 +161,10 @@ export const ProductsPage = () => {
   const [totalItems, setTotalItems] = useState(0);
   const pageSize = 10;
 
-  // Estados de modales
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
   const [productToView, setProductToView] = useState(null);
 
-  // Efecto Debounce para la búsqueda
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchTerm);
@@ -246,7 +238,6 @@ export const ProductsPage = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 relative">
-      {/* MODALES */}
       {isFormOpen && (
         <ProductForm
           productToEdit={productToEdit}
@@ -259,7 +250,6 @@ export const ProductsPage = () => {
         onClose={() => setProductToView(null)}
       />
 
-      {/* CABECERA */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -285,7 +275,6 @@ export const ProductsPage = () => {
         </div>
       )}
 
-      {/* BÚSQUEDA */}
       <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-2 sm:gap-3">
         <Search className="w-5 h-5 text-slate-400 ml-1 sm:ml-2 shrink-0" />
         <input
@@ -298,9 +287,7 @@ export const ProductsPage = () => {
         {loading && <Loader2 className="w-4 h-4 text-primary animate-spin" />}
       </div>
 
-      {/* TABLA DE RESULTADOS */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-        {/* VISTA MÓVIL */}
         <div className="block sm:hidden divide-y divide-slate-200">
           {productos.length === 0 && !loading && (
             <div className="p-8 text-center text-slate-500 text-sm">
@@ -374,7 +361,6 @@ export const ProductsPage = () => {
           ))}
         </div>
 
-        {/* VISTA ESCRITORIO */}
         <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-225">
             <thead>
@@ -408,7 +394,7 @@ export const ProductsPage = () => {
                   </td>
                   <td className="py-4 px-6">
                     <p className="font-semibold text-slate-700">
-                      {product.categorias_productos?.nombre || "Sin categoría"}
+                      {product.categoria || "Sin categoría"}
                     </p>
                     {product.tipo && (
                       <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">
@@ -493,7 +479,6 @@ export const ProductsPage = () => {
           </table>
         </div>
 
-        {/* CONTROLES DE PAGINACIÓN */}
         {totalPages > 1 && (
           <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-sm">
             <span className="text-slate-500 font-medium">
