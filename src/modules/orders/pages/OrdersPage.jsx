@@ -264,7 +264,7 @@ export const OrdersPage = () => {
                           </button>
 
                           <button
-                            onClick={() => setOrderToView(pedido)}
+                            onClick={() => navigate(`/orders/${pedido.id}`)}
                             className="p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
                             title="Ver Ficha Completa"
                           >
