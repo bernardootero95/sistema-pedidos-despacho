@@ -22,7 +22,7 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
   // --- ESTADOS DEL FORMULARIO ---
   const [clienteId, setClienteId] = useState("");
   const [vendedorId, setVendedorId] = useState("");
-  const [vendedorNombre, setVendedorNombre] = useState(""); // Para mostrar quién está facturando
+  const [vendedorNombre, setVendedorNombre] = useState("");
   const [notas, setNotas] = useState("");
   const [carrito, setCarrito] = useState([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
@@ -43,7 +43,6 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
 
         if (authData?.user) {
           setVendedorId(authData.user.id);
-          // Opcional: Buscar el nombre del vendedor en 'perfiles' para mostrarlo en la UI
           const { data: perfil } = await supabase
             .from("perfiles")
             .select("nombre_completo")
@@ -55,7 +54,7 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
           console.error("Error obteniendo sesión:", authError);
         }
 
-        // 2. Traer Clientes y Productos (Corrección de columnas iva e inc según imágenes)
+        // 2. Traer Clientes y Productos Activos
         const [resClientes, resProductos] = await Promise.all([
           supabase
             .from("clientes")
@@ -66,7 +65,7 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
 
           supabase
             .from("productos")
-            .select("id, nombre, codigo, precio_venta, iva, inc") // Nombres de columnas corregidos
+            .select("id, nombre, codigo, precio_venta, iva, inc")
             .is("eliminado", null),
         ]);
 
@@ -111,12 +110,12 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
         ...carrito,
         {
           producto_id: producto.id,
-          nombre: producto.nombre,
-          codigo: producto.codigo,
+          nombre_producto: producto.nombre, // Guardamos para mostrar en UI
+          codigo_producto: producto.codigo, // Guardamos para mostrar en UI
           cantidad: 1,
           precio_unitario: producto.precio_venta,
-          iva_porcentaje: producto.iva || 0, // Mapeado corregido
-          inc_porcentaje: producto.inc || 0, // Mapeado corregido
+          iva_porcentaje: producto.iva || 0,
+          inc_porcentaje: producto.inc || 0,
           subtotal_linea: producto.precio_venta * 1,
         },
       ]);
@@ -167,9 +166,15 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
       return;
     }
 
+    // Limpiamos los campos visuales de UI (nombre_producto, codigo_producto)
+    // antes de enviarlo a Supabase para que coincida exactamente con la tabla pedidos_detalle
+    const detallesParaGuardar = carrito.map(
+      ({ nombre_producto, codigo_producto, ...rest }) => rest,
+    );
+
     try {
       setIsSubmitting(true);
-      await orderService.crearPedido(cabeceraData, carrito);
+      await orderService.crearPedido(cabeceraData, detallesParaGuardar);
       onOrderCreated();
       onClose();
     } catch (error) {
@@ -236,7 +241,7 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
               </div>
             )}
 
-            {/* SECCIÓN 1: CLIENTE (El selector de vendedor se eliminó) */}
+            {/* SECCIÓN 1: CLIENTE */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Cliente *
@@ -338,7 +343,7 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
                           />
                         </td>
                         <td className="p-3 font-medium text-slate-700">
-                          {item.codigo} - {item.nombre}
+                          {item.codigo_producto} - {item.nombre_producto}
                         </td>
                         <td className="p-3 text-right text-slate-600">
                           {formatCurrency(item.precio_unitario)}
