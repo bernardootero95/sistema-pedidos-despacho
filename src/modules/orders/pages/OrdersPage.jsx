@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { orderService } from "../services/orderService";
+import { OrderForm } from "../components/OrderForm";
+import { OrderDetailsModal } from "../components/OrderDetailsModal";
 import {
   ShoppingCart,
   Search,
@@ -24,7 +26,7 @@ export const OrdersPage = () => {
   const [totalItems, setTotalItems] = useState(0);
   const pageSize = 10;
 
-  // Estados para los modales (Los construiremos en los siguientes pasos)
+  // Estados para los modales
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [orderToView, setOrderToView] = useState(null);
 
@@ -296,9 +298,20 @@ export const OrdersPage = () => {
         </div>
       </div>
 
-      {/* AQUÍ IRÁN LOS MODALES: */}
-      {/* {isFormOpen && <OrderForm ... />} */}
-      {/* {orderToView && <OrderDetailsModal ... />} */}
+      {/* RENDERIZADO DE MODALES */}
+      {isFormOpen && (
+        <OrderForm
+          onClose={() => setIsFormOpen(false)}
+          onOrderCreated={cargarPedidos}
+        />
+      )}
+
+      {orderToView && (
+        <OrderDetailsModal
+          orderId={orderToView.id}
+          onClose={() => setOrderToView(null)}
+        />
+      )}
     </div>
   );
 };
