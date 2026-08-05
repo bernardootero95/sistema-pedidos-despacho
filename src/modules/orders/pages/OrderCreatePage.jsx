@@ -272,7 +272,7 @@ export const OrderCreatePage = () => {
       >
         {errors.global && (
           <div className="bg-red-50 text-red-700 p-3 rounded-xl flex items-center gap-2 text-sm border border-red-200">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <AlertCircle className="h-5 w-5 shrink-0" />
             {errors.global}
           </div>
         )}
@@ -401,7 +401,7 @@ export const OrderCreatePage = () => {
                       </button>
                     </div>
 
-                    <div className="text-right min-w-[90px]">
+                    <div className="text-right min-w-22.5">
                       <span className="text-xs text-slate-400 block">
                         Subtotal
                       </span>

@@ -38,10 +38,10 @@ export const orderService = {
   },
 
   /**
-   * Crea un nuevo pedido integrando Cabecera y Detalle con validación estricta de stock
+   * Crea un nuevo pedido, valida el stock, lo descuenta y guarda los detalles
    */
   async crearPedido(pedidoData, detallesData) {
-    // 1. Verificación de stock en tiempo real antes de tocar la BD
+    // 1. Verificación estricta de stock y cálculo de nuevo inventario
     for (const item of detallesData) {
       const { data: productoActual, error: errorProd } = await supabase
         .from("productos")
@@ -50,16 +50,16 @@ export const orderService = {
         .single();
 
       if (errorProd)
-        throw new Error(`No se pudo verificar el stock del producto.`);
+        throw new Error("No se pudo verificar el stock del producto.");
 
       if (productoActual.disponible < item.cantidad) {
         throw new Error(
-          `Stock insuficiente para "${productoActual.nombre}". Cantidad disponible: ${productoActual.disponible}, solicitada: ${item.cantidad}.`,
+          `Stock insuficiente para "${productoActual.nombre}". Disponible: ${productoActual.disponible}, solicitado: ${item.cantidad}.`,
         );
       }
     }
 
-    // 2. Insertamos primero la Cabecera del pedido
+    // 2. Insertamos la Cabecera del pedido
     const { data: cabecera, error: errorCabecera } = await supabase
       .from("pedidos_cabecera")
       .insert([pedidoData])
@@ -68,20 +68,48 @@ export const orderService = {
 
     if (errorCabecera) throw errorCabecera;
 
-    // 3. Preparamos los detalles inyectándoles el ID de la cabecera
+    // 3. Preparamos los detalles con el ID de la cabecera
     const detallesConId = detallesData.map((detalle) => ({
       ...detalle,
       pedido_id: cabecera.id,
     }));
 
-    // 4. Insertamos todos los detalles en bloque
+    // 4. Insertamos los detalles en bloque
     const { error: errorDetalles } = await supabase
       .from("pedidos_detalle")
       .insert(detallesConId);
 
     if (errorDetalles) throw errorDetalles;
 
-    // Opcional: Aquí posteriormente podemos descontar el inventario de la tabla productos de forma automática
+    // 5. Descontar las existencias (disponible) en la tabla productos para cada ítem comprado
+    for (const item of detallesData) {
+      // Obtenemos el stock actual de nuevo para seguridad en concurrencia
+      const { data: prod } = await supabase
+        .from("productos")
+        .select("disponible")
+        .eq("id", item.producto_id)
+        .single();
+
+      const nuevoStock = prod.disponible - item.cantidad;
+
+      const { error: errorUpdateStock } = await supabase
+        .from("productos")
+        .update({
+          disponible: nuevoStock,
+          actualizado: new Date().toISOString(),
+        })
+        .eq("id", item.producto_id);
+
+      if (errorUpdateStock) {
+        console.error(
+          "Error al actualizar el stock del producto:",
+          errorUpdateStock,
+        );
+        throw new Error(
+          "El pedido se creó pero hubo un fallo al actualizar las existencias.",
+        );
+      }
+    }
 
     return cabecera;
   },
