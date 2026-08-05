@@ -53,40 +53,51 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     });
   };
 
-  // Cálculo exacto aplicando la tarifa real de IVA (ej. 19%) sobre la base
-  const calcularTotalesFiscales = () => {
+  // Cálculo agrupado por porcentaje exacto de IVA e INC
+  const calcularResumenFiscal = () => {
     if (!pedido || !pedido.detalles)
-      return { subtotal: 0, totalIva: 0, totalInc: 0 };
+      return { subtotal: 0, impuestosPorcentaje: [] };
 
     let subtotalGeneral = 0;
-    let totalIvaGeneral = 0;
-    let totalIncGeneral = 0;
+    const acumuladorImpuestos = {}; // Agrupará por tipo y porcentaje (ej. IVA 19%, IVA 5%)
 
     pedido.detalles.forEach((item) => {
       const subtotalLinea = item.subtotal_linea || 0;
-      const porcIva = item.iva_porcentaje || 19; // Forzamos o leemos el 19% real
-      const porcInc = item.inc_porcentaje || 0;
+      const porcIva =
+        item.iva_porcentaje !== undefined ? Number(item.iva_porcentaje) : 19;
+      const porcInc =
+        item.inc_porcentaje !== undefined ? Number(item.inc_porcentaje) : 0;
 
-      // Desglose matemático exacto para Colombia: Base = Total / (1 + (IVA+INC)/100)
+      // Base gravable matemática exacta: Total / (1 + (IVA + INC)/100)
       const factor = 1 + (porcIva + porcInc) / 100;
       const baseLinea = subtotalLinea / factor;
 
-      const ivaLinea = baseLinea * (porcIva / 100);
-      const incLinea = baseLinea * (porcInc / 100);
-
       subtotalGeneral += baseLinea;
-      totalIvaGeneral += ivaLinea;
-      totalIncGeneral += incLinea;
+
+      // Acumular IVA por tarifa
+      if (porcIva > 0) {
+        const valIva = baseLinea * (porcIva / 100);
+        const key = `IVA ${porcIva}%`;
+        acumuladorImpuestos[key] = (acumuladorImpuestos[key] || 0) + valIva;
+      }
+
+      // Acumular INC por tarifa
+      if (porcInc > 0) {
+        const valInc = baseLinea * (porcInc / 100);
+        const key = `INC ${porcInc}%`;
+        acumuladorImpuestos[key] = (acumuladorImpuestos[key] || 0) + valInc;
+      }
     });
 
     return {
       subtotal: subtotalGeneral,
-      totalIva: totalIvaGeneral,
-      totalInc: totalIncGeneral,
+      impuestosPorcentaje: Object.entries(acumuladorImpuestos).map(
+        ([nombre, valor]) => ({ nombre, valor }),
+      ),
     };
   };
 
-  const { subtotal, totalIva, totalInc } = calcularTotalesFiscales();
+  const { subtotal, impuestosPorcentaje } = calcularResumenFiscal();
 
   const handleDownloadPdf = () => {
     const element = document.getElementById("ticket-pdf-content");
@@ -232,26 +243,21 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                 </div>
               </div>
 
-              {/* DESGLOSE FINANCIERO CON IVA 19% EXACTO */}
+              {/* DESGLOSE FINANCIERO CON IMPUESTOS DINÁMICOS (5%, 19%, etc.) */}
               <div className="border-b border-dashed border-slate-400 pb-2 flex flex-col gap-1 text-[10px]">
                 <div className="flex justify-between">
-                  <span>Subtotal (Base):</span>
+                  <span>Subtotal:</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>
-                    IVA ({pedido.detalles?.[0]?.iva_porcentaje || 19}%):
-                  </span>
-                  <span>{formatCurrency(totalIva)}</span>
-                </div>
-                {totalInc > 0 && (
-                  <div className="flex justify-between">
-                    <span>
-                      INC ({pedido.detalles?.[0]?.inc_porcentaje || 0}%):
-                    </span>
-                    <span>{formatCurrency(totalInc)}</span>
+
+                {/* Renderiza cada impuesto por separado indicando su porcentaje exacto */}
+                {impuestosPorcentaje.map((imp, idx) => (
+                  <div key={idx} className="flex justify-between">
+                    <span>{imp.nombre}:</span>
+                    <span>{formatCurrency(imp.valor)}</span>
                   </div>
-                )}
+                ))}
+
                 <div className="flex justify-between font-bold text-xs pt-1 border-t border-slate-800">
                   <span>TOTAL PEDIDO:</span>
                   <span>{formatCurrency(pedido.total)}</span>
