@@ -53,39 +53,41 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     });
   };
 
-  // Cálculos fiscales y totales para el recibo
-  const calcularTotales = () => {
+  // Cálculo exacto aplicando la tarifa real de IVA (ej. 19%) sobre la base
+  const calcularTotalesFiscales = () => {
     if (!pedido || !pedido.detalles)
       return { subtotal: 0, totalIva: 0, totalInc: 0 };
 
-    let subtotal = 0;
-    let totalIva = 0;
-    let totalInc = 0;
+    let subtotalGeneral = 0;
+    let totalIvaGeneral = 0;
+    let totalIncGeneral = 0;
 
     pedido.detalles.forEach((item) => {
-      const valorLinea = item.subtotal_linea || 0;
-      const porcIva = item.iva_porcentaje || 0;
+      const subtotalLinea = item.subtotal_linea || 0;
+      const porcIva = item.iva_porcentaje || 19; // Forzamos o leemos el 19% real
       const porcInc = item.inc_porcentaje || 0;
 
-      // Base gravable sin impuestos o cálculo inverso según estructura
-      const factorImpuestos = 1 + (porcIva + porcInc) / 100;
-      const baseLinea =
-        factorImpuestos > 1 ? valorLinea / factorImpuestos : valorLinea;
+      // Desglose matemático exacto para Colombia: Base = Total / (1 + (IVA+INC)/100)
+      const factor = 1 + (porcIva + porcInc) / 100;
+      const baseLinea = subtotalLinea / factor;
 
-      const valIvaLinea = baseLinea * (porcIva / 100);
-      const valIncLinea = baseLinea * (porcInc / 100);
+      const ivaLinea = baseLinea * (porcIva / 100);
+      const incLinea = baseLinea * (porcInc / 100);
 
-      subtotal += baseLinea;
-      totalIva += valIvaLinea;
-      totalInc += valIncLinea;
+      subtotalGeneral += baseLinea;
+      totalIvaGeneral += ivaLinea;
+      totalIncGeneral += incLinea;
     });
 
-    return { subtotal, totalIva, totalInc };
+    return {
+      subtotal: subtotalGeneral,
+      totalIva: totalIvaGeneral,
+      totalInc: totalIncGeneral,
+    };
   };
 
-  const { subtotal, totalIva, totalInc } = calcularTotales();
+  const { subtotal, totalIva, totalInc } = calcularTotalesFiscales();
 
-  // Función para descargar PDF térmico exacto de 80mm
   const handleDownloadPdf = () => {
     const element = document.getElementById("ticket-pdf-content");
     const opt = {
@@ -93,7 +95,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
       filename: `comprobante-pedido-${pedido?.numero_pedido || "recibo"}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: [80, 200], orientation: "portrait" }, // Formato rollo térmico 80mm
+      jsPDF: { unit: "mm", format: [80, 200], orientation: "portrait" },
     };
 
     setIsGeneratingPdf(true);
@@ -153,7 +155,6 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
               <p>{error}</p>
             </div>
           ) : pedido ? (
-            /* PLANTILLA TÉRMICA EXACTA PARA 80MM (ID USADO PARA PDF) */
             <div
               id="ticket-pdf-content"
               className="bg-white w-[72mm] p-3 text-slate-900 text-[11px] font-mono flex flex-col gap-2.5 shadow-md"
@@ -198,7 +199,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                 </p>
               </div>
 
-              {/* SECCIÓN DE PRODUCTOS */}
+              {/* PRODUCTOS */}
               <div className="border-b border-dashed border-slate-400 pb-2">
                 <div className="grid grid-cols-12 font-bold border-b border-slate-300 pb-1 mb-1 text-[10px]">
                   <span className="col-span-2 text-center">CANT</span>
@@ -231,31 +232,33 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                 </div>
               </div>
 
-              {/* DESGLOSE FINANCIERO (SUBTOTAL, IMPUESTOS Y TOTAL) */}
+              {/* DESGLOSE FINANCIERO CON IVA 19% EXACTO */}
               <div className="border-b border-dashed border-slate-400 pb-2 flex flex-col gap-1 text-[10px]">
                 <div className="flex justify-between">
-                  <span>Subtotal:</span>
+                  <span>Subtotal (Base):</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>
-                    IVA ({pedido.detalles?.[0]?.iva_porcentaje || 0}%):
+                    IVA ({pedido.detalles?.[0]?.iva_porcentaje || 19}%):
                   </span>
                   <span>{formatCurrency(totalIva)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>
-                    INC ({pedido.detalles?.[0]?.inc_porcentaje || 0}%):
-                  </span>
-                  <span>{formatCurrency(totalInc)}</span>
-                </div>
+                {totalInc > 0 && (
+                  <div className="flex justify-between">
+                    <span>
+                      INC ({pedido.detalles?.[0]?.inc_porcentaje || 0}%):
+                    </span>
+                    <span>{formatCurrency(totalInc)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-xs pt-1 border-t border-slate-800">
                   <span>TOTAL PEDIDO:</span>
                   <span>{formatCurrency(pedido.total)}</span>
                 </div>
               </div>
 
-              {/* NOTAS SI LAS HAY */}
+              {/* NOTAS */}
               {pedido.notas && (
                 <div className="border-b border-dashed border-slate-400 pb-2 text-[10px]">
                   <span className="font-semibold block">Notas:</span>
@@ -263,7 +266,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                 </div>
               )}
 
-              {/* PIE DE PÁGINA INSTITUCIONAL */}
+              {/* PIE DE PÁGINA */}
               <div className="text-center text-[9px] text-slate-600 pt-1 flex flex-col gap-0.5">
                 <p className="font-semibold">¡Gracias por su compra!</p>
                 <p className="text-[8px] text-slate-500">
