@@ -5,7 +5,7 @@ import {
   Package,
   Loader2,
   AlertCircle,
-  Download,
+  ExternalLink,
 } from "lucide-react";
 import { orderService } from "../services/orderService";
 import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
@@ -111,7 +111,8 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
 
   const { subtotal, iva19, iva5, inc8 } = calcularDesgloseFiscal();
 
-  const handleDownloadPdf = () => {
+  // Modificado para abrir en una nueva pestaña usando Blob URL
+  const handleOpenPdf = () => {
     const element = document.getElementById("ticket-pdf-content");
     const opt = {
       margin: 0,
@@ -122,10 +123,14 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     };
 
     setIsGeneratingPdf(true);
+
     html2pdf()
-      .from(element)
       .set(opt)
-      .save()
+      .from(element)
+      .output("bloburl") // En lugar de .save(), creamos una URL temporal en memoria
+      .then((pdfUrl) => {
+        window.open(pdfUrl, "_blank"); // Abrimos la URL en una nueva pestaña
+      })
       .finally(() => {
         setIsGeneratingPdf(false);
       });
@@ -145,16 +150,16 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
           </h2>
           <div className="flex items-center gap-2">
             <button
-              onClick={handleDownloadPdf}
+              onClick={handleOpenPdf}
               disabled={isGeneratingPdf || !pedido}
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
             >
               {isGeneratingPdf ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Download className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4" />
               )}
-              Descargar PDF 80mm
+              Abrir PDF 80mm
             </button>
             <button
               onClick={onClose}
