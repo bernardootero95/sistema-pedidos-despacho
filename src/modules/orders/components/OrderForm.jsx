@@ -7,6 +7,7 @@ import {
   Save,
   Loader2,
   AlertCircle,
+  UserCheck,
 } from "lucide-react";
 import { supabase } from "../../../config/supabase";
 import { orderService } from "../services/orderService";
@@ -16,12 +17,12 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
   // --- ESTADOS DE DATOS EXTERNOS ---
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
-  const [vendedores, setVendedores] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
 
   // --- ESTADOS DEL FORMULARIO ---
   const [clienteId, setClienteId] = useState("");
   const [vendedorId, setVendedorId] = useState("");
+  const [vendedorNombre, setVendedorNombre] = useState(""); // Para mostrar quién está facturando
   const [notas, setNotas] = useState("");
   const [carrito, setCarrito] = useState([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
@@ -30,13 +31,32 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Cargar datos iniciales (Clientes, Vendedores y Productos Activos)
+  // Cargar datos iniciales (Usuario actual, Clientes y Productos Activos)
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoadingData(true);
-        // Corrección: Usamos .is("eliminado", null) en lugar de estado_registro para el Soft Delete
-        const [resClientes, resProductos, resVendedores] = await Promise.all([
+
+        // 1. Obtener el usuario autenticado actual
+        const { data: authData, error: authError } =
+          await supabase.auth.getUser();
+
+        if (authData?.user) {
+          setVendedorId(authData.user.id);
+          // Opcional: Buscar el nombre del vendedor en 'perfiles' para mostrarlo en la UI
+          const { data: perfil } = await supabase
+            .from("perfiles")
+            .select("nombre_completo")
+            .eq("id", authData.user.id)
+            .single();
+
+          if (perfil) setVendedorNombre(perfil.nombre_completo);
+        } else if (authError) {
+          console.error("Error obteniendo sesión:", authError);
+        }
+
+        // 2. Traer Clientes y Productos (Corrección de columnas iva e inc según imágenes)
+        const [resClientes, resProductos] = await Promise.all([
           supabase
             .from("clientes")
             .select(
@@ -46,35 +66,24 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
 
           supabase
             .from("productos")
-            .select(
-              "id, nombre, codigo, precio_venta, iva_porcentaje, inc_porcentaje",
-            )
-            .is("eliminado", null),
-
-          supabase
-            .from("perfiles")
-            .select("id, nombre_completo")
-            .in("rol", ["VENDEDOR", "ADMIN", "GERENTE"])
+            .select("id, nombre, codigo, precio_venta, iva, inc") // Nombres de columnas corregidos
             .is("eliminado", null),
         ]);
 
-        // Si hay algún error en las consultas, lo mostramos en consola para depurar rápido
         if (resClientes.error)
           console.error("Error clientes:", resClientes.error);
         if (resProductos.error)
           console.error("Error productos:", resProductos.error);
-        if (resVendedores.error)
-          console.error("Error vendedores:", resVendedores.error);
 
         if (resClientes.data) setClientes(resClientes.data);
         if (resProductos.data) setProductos(resProductos.data);
-        if (resVendedores.data) setVendedores(resVendedores.data);
       } catch (error) {
         console.error("Error cargando datos base:", error);
       } finally {
         setLoadingData(false);
       }
     };
+
     fetchData();
   }, []);
 
@@ -106,8 +115,8 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
           codigo: producto.codigo,
           cantidad: 1,
           precio_unitario: producto.precio_venta,
-          iva_porcentaje: producto.iva_porcentaje || 0,
-          inc_porcentaje: producto.inc_porcentaje || 0,
+          iva_porcentaje: producto.iva || 0, // Mapeado corregido
+          inc_porcentaje: producto.inc || 0, // Mapeado corregido
           subtotal_linea: producto.precio_venta * 1,
         },
       ]);
@@ -190,9 +199,20 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* HEADER DEL MODAL */}
         <div className="flex justify-between items-center p-6 border-b border-slate-200 bg-slate-50">
-          <h2 className="text-xl font-bold text-slate-800">
-            Crear Nuevo Pedido
-          </h2>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">
+              Crear Nuevo Pedido
+            </h2>
+            {vendedorNombre && (
+              <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
+                <UserCheck className="h-4 w-4 text-emerald-500" />
+                Facturando como:{" "}
+                <span className="font-medium text-slate-700">
+                  {vendedorNombre}
+                </span>
+              </p>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="text-slate-400 hover:bg-slate-200 hover:text-slate-700 p-2 rounded-full transition-colors"
@@ -204,7 +224,7 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
         {loadingData ? (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-500 gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            <p>Cargando datos maestros...</p>
+            <p>Cargando datos maestros y sesión...</p>
           </div>
         ) : (
           /* CUERPO DEL MODAL */
@@ -216,59 +236,29 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
               </div>
             )}
 
-            {/* SECCIÓN 1: DATOS GENERALES */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Cliente *
-                </label>
-                <select
-                  value={clienteId}
-                  onChange={(e) => {
-                    setClienteId(e.target.value);
-                    setErrors((p) => ({ ...p, cliente_id: "" }));
-                  }}
-                  className={`w-full p-2.5 border rounded-lg outline-none transition-all ${errors.cliente_id ? "border-red-500 focus:ring-red-200" : "border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
-                >
-                  <option value="">-- Seleccionar Cliente --</option>
-                  {clientes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.numero_identificacion} - {obtenerNombreCliente(c)}
-                    </option>
-                  ))}
-                </select>
-                {errors.cliente_id && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.cliente_id}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Vendedor Asignado *
-                </label>
-                <select
-                  value={vendedorId}
-                  onChange={(e) => {
-                    setVendedorId(e.target.value);
-                    setErrors((p) => ({ ...p, vendedor_id: "" }));
-                  }}
-                  className={`w-full p-2.5 border rounded-lg outline-none transition-all ${errors.vendedor_id ? "border-red-500 focus:ring-red-200" : "border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
-                >
-                  <option value="">-- Seleccionar Vendedor --</option>
-                  {vendedores.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.nombre_completo}
-                    </option>
-                  ))}
-                </select>
-                {errors.vendedor_id && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.vendedor_id}
-                  </p>
-                )}
-              </div>
+            {/* SECCIÓN 1: CLIENTE (El selector de vendedor se eliminó) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Cliente *
+              </label>
+              <select
+                value={clienteId}
+                onChange={(e) => {
+                  setClienteId(e.target.value);
+                  setErrors((p) => ({ ...p, cliente_id: "" }));
+                }}
+                className={`w-full p-2.5 border rounded-lg outline-none transition-all ${errors.cliente_id ? "border-red-500 focus:ring-red-200" : "border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              >
+                <option value="">-- Seleccionar Cliente --</option>
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.numero_identificacion} - {obtenerNombreCliente(c)}
+                  </option>
+                ))}
+              </select>
+              {errors.cliente_id && (
+                <p className="text-red-500 text-xs mt-1">{errors.cliente_id}</p>
+              )}
             </div>
 
             {/* SECCIÓN 2: BUSCADOR DE PRODUCTOS */}
