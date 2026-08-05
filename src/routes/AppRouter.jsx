@@ -10,6 +10,7 @@ import { VehiclesPage } from "../modules/vehicles/pages/VehiclesPage";
 import { OrdersPage } from "../modules/orders/pages/OrdersPage";
 import { DispatchesPage } from "../modules/dispatches/pages/DispatchesPage";
 import { UsersPage } from "../modules/users/pages/UsersPage";
+import { OrderCreatePage } from "../modules/orders/pages/OrderCreatePage";
 
 export const AppRouter = () => {
   const { user } = useAuth();
@@ -40,6 +41,7 @@ export const AppRouter = () => {
 
           {/* Módulos Operativos */}
           <Route path="/pedidos" element={<OrdersPage />} />
+          <Route path="/orders/new" element={<OrderCreatePage />} />
           <Route path="/despachos" element={<DispatchesPage />} />
         </Route>
 

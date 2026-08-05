@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // <-- 1. Importamos useNavigate
 import { orderService } from "../services/orderService";
-import { OrderForm } from "../components/OrderForm";
 import { OrderDetailsModal } from "../components/OrderDetailsModal";
 import {
   ShoppingCart,
@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 
 export const OrdersPage = () => {
+  const navigate = useNavigate(); // <-- 2. Inicializamos el hook aquí
+
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -26,15 +28,14 @@ export const OrdersPage = () => {
   const [totalItems, setTotalItems] = useState(0);
   const pageSize = 10;
 
-  // Estados para los modales
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  // Estados para el modal de detalle
   const [orderToView, setOrderToView] = useState(null);
 
-  // Optimización de búsqueda (Debounce de 500ms) para no saturar la BD
+  // Optimización de búsqueda (Debounce de 500ms)
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchTerm);
-      setCurrentPage(1); // Resetear a la página 1 al buscar
+      setCurrentPage(1);
     }, 500);
     return () => clearTimeout(handler);
   }, [searchTerm]);
@@ -66,7 +67,6 @@ export const OrdersPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, debouncedSearch]);
 
-  // Utilidades de formato
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("es-CO", {
       style: "currency",
@@ -109,10 +109,9 @@ export const OrdersPage = () => {
     const motivo = window.prompt(
       `¿Indique el motivo para anular el pedido ${numero_pedido}?`,
     );
-    if (!motivo) return; // Si cancela o lo deja vacío, no hacemos nada
+    if (!motivo) return;
 
     try {
-      // Optimistic Update
       setPedidos((prev) =>
         prev.map((p) =>
           p.id === id ? { ...p, estado: "anulado", notas: motivo } : p,
@@ -121,7 +120,7 @@ export const OrdersPage = () => {
       await orderService.anularPedido(id, motivo);
     } catch (err) {
       alert("Error al anular: " + err.message);
-      cargarPedidos(); // Revertir en caso de error
+      cargarPedidos();
     }
   };
 
@@ -139,7 +138,7 @@ export const OrdersPage = () => {
           </p>
         </div>
         <button
-          onClick={() => setIsFormOpen(true)}
+          onClick={() => navigate("/orders/new")} // <-- 3. Redirección limpia a nuestra nueva página móvil
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm w-full sm:w-auto justify-center"
         >
           <PlusCircle className="h-5 w-5" />
@@ -298,14 +297,7 @@ export const OrdersPage = () => {
         </div>
       </div>
 
-      {/* RENDERIZADO DE MODALES */}
-      {isFormOpen && (
-        <OrderForm
-          onClose={() => setIsFormOpen(false)}
-          onOrderCreated={cargarPedidos}
-        />
-      )}
-
+      {/* MODAL DE DETALLES */}
       {orderToView && (
         <OrderDetailsModal
           orderId={orderToView.id}
