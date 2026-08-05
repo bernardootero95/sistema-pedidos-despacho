@@ -136,7 +136,7 @@ export const OrderDetailsPage = () => {
     return (
       <div className="p-6 max-w-lg mx-auto">
         <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-center gap-3 border border-red-200">
-          <AlertCircle className="h-6 w-6 shrink-0" />
+          <AlertCircle className="h-6 w-6 flex-shrink-0" />
           <p className="text-sm font-medium">
             {error || "Pedido no encontrado."}
           </p>
@@ -162,7 +162,7 @@ export const OrderDetailsPage = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(-1)} // Regresa dinámicamente a la vista anterior (listado de pedidos)
+            onClick={() => navigate(-1)}
             className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors"
             title="Volver"
           >
@@ -215,7 +215,7 @@ export const OrderDetailsPage = () => {
             </p>
           </div>
           <div className="flex items-start gap-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
-            <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+            <MapPin className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5" />
             <span>{cliente?.direccion || "Dirección no registrada"}</span>
           </div>
         </div>
@@ -261,7 +261,7 @@ export const OrderDetailsPage = () => {
               className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors"
             >
               <div className="flex items-start gap-3">
-                <div className="bg-blue-50 text-blue-700 font-bold px-3 py-1.5 rounded-xl text-xs sm:text-sm shrink-0">
+                <div className="bg-blue-50 text-blue-700 font-bold px-3 py-1.5 rounded-xl text-xs sm:text-sm flex-shrink-0">
                   {item.cantidad}x
                 </div>
                 <div>
@@ -310,7 +310,7 @@ export const OrderDetailsPage = () => {
           <div className="flex justify-between text-slate-600">
             <span>INC 8%:</span>
             <span className="font-medium text-slate-800">
-              {formatCurrency(iva8 || inc8)}
+              {formatCurrency(inc8)}
             </span>
           </div>
           <div className="flex justify-between font-bold text-base sm:text-lg text-slate-900 pt-3 border-t border-slate-300 mt-1">
