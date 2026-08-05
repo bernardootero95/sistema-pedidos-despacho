@@ -53,7 +53,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     });
   };
 
-  // Cálculo discriminado exacto para IVA 19%, IVA 5%, INC 8% y Subtotal
+  // Cálculo discriminado exacto con blindaje para datos antiguos o con decimales
   const calcularDesgloseFiscal = () => {
     if (!pedido || !pedido.detalles)
       return { subtotal: 0, iva19: 0, iva5: 0, inc8: 0 };
@@ -64,25 +64,41 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     let acumInc8 = 0;
 
     pedido.detalles.forEach((item) => {
-      const subtotalLinea = item.subtotal_linea || 0;
-      const porcIva =
-        item.iva_porcentaje !== undefined ? Number(item.iva_porcentaje) : 0;
-      const porcInc =
-        item.inc_porcentaje !== undefined ? Number(item.inc_porcentaje) : 0;
+      const subtotalLinea = Number(item.subtotal_linea) || 0;
 
-      // Base gravable matemática exacta: Total / (1 + (IVA + INC)/100)
-      const factor = 1 + (porcIva + porcInc) / 100;
+      // 1. Extraer porcentajes (buscando en el detalle o en el producto cruzado)
+      let porcIva = 0;
+      if (item.iva_porcentaje !== undefined && item.iva_porcentaje !== null) {
+        porcIva = Number(item.iva_porcentaje);
+      } else if (item.producto && item.producto.iva !== undefined) {
+        porcIva = Number(item.producto.iva);
+      }
+
+      let porcInc = 0;
+      if (item.inc_porcentaje !== undefined && item.inc_porcentaje !== null) {
+        porcInc = Number(item.inc_porcentaje);
+      } else if (item.producto && item.producto.inc !== undefined) {
+        porcInc = Number(item.producto.inc);
+      }
+
+      // 2. Redondear por si hay datos de prueba viejos (ej: 18.98 -> 19)
+      const ivaRedondeado = Math.round(porcIva);
+      const incRedondeado = Math.round(porcInc);
+
+      // 3. Base gravable matemática exacta usando los valores redondeados
+      const factor = 1 + (ivaRedondeado + incRedondeado) / 100;
       const baseLinea = subtotalLinea / factor;
 
       subtotalGeneral += baseLinea;
 
-      if (porcIva === 19) {
+      // 4. Acumular en las categorías fijas
+      if (ivaRedondeado === 19) {
         acumIva19 += baseLinea * (19 / 100);
-      } else if (porcIva === 5) {
+      } else if (ivaRedondeado === 5) {
         acumIva5 += baseLinea * (5 / 100);
       }
 
-      if (porcInc === 8) {
+      if (incRedondeado === 8) {
         acumInc8 += baseLinea * (8 / 100);
       }
     });
@@ -241,7 +257,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                 </div>
               </div>
 
-              {/* DISCRIMINACIÓN FINANCIERA SOLICITADA */}
+              {/* DISCRIMINACIÓN FINANCIERA FIJA */}
               <div className="border-b border-dashed border-slate-400 pb-2 flex flex-col gap-1 text-[10px]">
                 <div className="flex justify-between">
                   <span>SUBTOTAL:</span>
@@ -263,7 +279,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                   <span>{formatCurrency(inc8)}</span>
                 </div>
 
-                <div className="flex justify-between font-bold text-xs pt-1 border-t border-slate-800">
+                <div className="flex justify-between font-bold text-xs pt-1 border-t border-slate-800 mt-1">
                   <span>TOTAL:</span>
                   <span>{formatCurrency(pedido.total)}</span>
                 </div>
@@ -281,7 +297,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
               <div className="text-center text-[9px] text-slate-600 pt-1 flex flex-col gap-0.5">
                 <p className="font-semibold">¡Gracias por su compra!</p>
                 <p className="text-[8px] text-slate-500">
-                  Sistema de pedidos y despacho desarrollado por TecnoIngenieria
+                  Sistema de pedidos y despacho desarrollado por TecnoIngeniería
                   B.O.
                 </p>
               </div>
