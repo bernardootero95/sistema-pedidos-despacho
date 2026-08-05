@@ -9,11 +9,8 @@ import {
   User,
   MapPin,
   Calendar,
-  DollarSign,
-  FileText,
   Loader2,
   AlertCircle,
-  Tag,
   ShieldCheck,
 } from "lucide-react";
 
@@ -73,7 +70,6 @@ export const OrderDetailsPage = () => {
     }
   };
 
-  // Cálculos fiscales para el desglose detallado en pantalla
   const calcularDesglose = () => {
     if (!pedido || !pedido.detalles)
       return { subtotal: 0, iva19: 0, iva5: 0, inc8: 0 };
@@ -146,10 +142,10 @@ export const OrderDetailsPage = () => {
           </p>
         </div>
         <button
-          onClick={() => navigate("/orders")}
+          onClick={() => navigate("/pedidos")}
           className="mt-4 flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
         >
-          <ArrowLeft className="h-4 w-4" /> Volver a la lista de pedidos
+          <ArrowLeft className="h-4 w-4" /> Volver a pedidos
         </button>
       </div>
     );
@@ -166,9 +162,9 @@ export const OrderDetailsPage = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate("/orders")}
+            onClick={() => navigate(-1)} // Regresa dinámicamente a la vista anterior (listado de pedidos)
             className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors"
-            title="Regresar"
+            title="Volver"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -249,7 +245,7 @@ export const OrderDetailsPage = () => {
         </div>
       </div>
 
-      {/* TARJETA DETALLE DE PRODUCTOS (OPTIMIZADA PARA MÓVIL) */}
+      {/* TARJETA DETALLE DE PRODUCTOS */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm sm:text-base">
@@ -314,7 +310,7 @@ export const OrderDetailsPage = () => {
           <div className="flex justify-between text-slate-600">
             <span>INC 8%:</span>
             <span className="font-medium text-slate-800">
-              {formatCurrency(inc8)}
+              {formatCurrency(iva8 || inc8)}
             </span>
           </div>
           <div className="flex justify-between font-bold text-base sm:text-lg text-slate-900 pt-3 border-t border-slate-300 mt-1">
