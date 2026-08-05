@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { OrderDetailsModal } from "../components/OrderDetailsModal";
-import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
+import { imprimirPedidoPdf } from "../utils/printUtils";
 import {
   ShoppingCart,
   Search,
@@ -31,12 +31,8 @@ export const OrdersPage = () => {
   const [totalItems, setTotalItems] = useState(0);
   const pageSize = 10;
 
-  // Estados para el modal de detalle y contenido de impresión directa
+  // Estados para el modal de detalle
   const [orderToView, setOrderToView] = useState(null);
-  const [pedidoParaImprimir, setPedidoParaImprimir] = useState(null);
-
-  // Nombre de empresa desde variables de entorno
-  const companyName = import.meta.env.VITE_COMPANY_NAME || "SISTEMA DE PEDIDOS";
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -130,89 +126,22 @@ export const OrdersPage = () => {
     }
   };
 
-  // Impresión directa usando el contenedor DOM real
+  // Impresión directa llamando a la utilidad limpia
   const handleDirectPrint = async (id) => {
     try {
       setPrintingId(id);
       const pedidoCompleto = await orderService.getPedidoCompleto(id);
-      setPedidoParaImprimir(pedidoCompleto);
-
-      // Damos un pequeño respiro al ciclo de vida de React para que el DOM pinte el contenedor oculto
-      setTimeout(async () => {
-        const element = document.getElementById("direct-print-ticket");
-        if (!element) {
-          alert("No se pudo renderizar el tiquete.");
-          setPrintingId(null);
-          return;
-        }
-
-        const opt = {
-          margin: 0,
-          filename: `comprobante-pedido-${pedidoCompleto.numero_pedido}.pdf`,
-          image: { type: "jpeg", quality: 1 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF: { unit: "mm", format: [80, 200], orientation: "portrait" },
-        };
-
-        await html2pdf()
-          .set(opt)
-          .from(element)
-          .output("bloburl")
-          .then((pdfUrl) => {
-            window.open(pdfUrl, "_blank");
-          });
-
-        setPedidoParaImprimir(null);
-        setPrintingId(null);
-      }, 300);
+      await imprimirPedidoPdf(pedidoCompleto);
     } catch (err) {
       console.error("Error al generar PDF directo:", err);
       alert("No se pudo generar el comprobante del pedido.");
+    } finally {
       setPrintingId(null);
-      setPedidoParaImprimir(null);
     }
   };
 
-  // Cálculos fiscales para el tiquete de impresión directa
-  const calcularDesgloseDirecto = (detalles) => {
-    if (!detalles) return { subtotal: 0, iva19: 0, iva5: 0, inc8: 0 };
-    let subtotalGeneral = 0;
-    let acumIva19 = 0;
-    let acumIva5 = 0;
-    let acumInc8 = 0;
-
-    detalles.forEach((item) => {
-      const subtotalLinea = Number(item.subtotal_linea) || 0;
-      const porcIva = Math.round(Number(item.iva_porcentaje) || 0);
-      const porcInc = Math.round(Number(item.inc_porcentaje) || 0);
-
-      const factor = 1 + (porcIva + porcInc) / 100;
-      const baseLinea = subtotalLinea / factor;
-
-      subtotalGeneral += baseLinea;
-
-      if (porcIva === 19) acumIva19 += baseLinea * (19 / 100);
-      else if (porcIva === 5) acumIva5 += baseLinea * (5 / 100);
-      if (porcInc === 8) acumInc8 += baseLinea * (8 / 100);
-    });
-
-    return {
-      subtotal: subtotalGeneral,
-      iva19: acumIva19,
-      iva5: acumIva5,
-      inc8: acumInc8,
-    };
-  };
-
-  const totalesDirectos = pedidoParaImprimir
-    ? calcularDesgloseDirecto(pedidoParaImprimir.detalles)
-    : { subtotal: 0, iva19: 0, iva5: 0, inc8: 0 };
-  const clienteNombreDirecto =
-    pedidoParaImprimir?.clientes?.razon_social ||
-    `${pedidoParaImprimir?.clientes?.primer_nombre || ""} ${pedidoParaImprimir?.clientes?.primer_apellido || ""}`;
-
   return (
-    <div className="flex flex-col h-full bg-slate-50 relative">
+    <div className="flex flex-col h-full bg-slate-50">
       {/* HEADER DE LA PÁGINA */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-6 bg-white border-b border-slate-200 gap-4">
         <div>
@@ -395,265 +324,6 @@ export const OrdersPage = () => {
           </div>
         </div>
       </div>
-
-      {/* CONTENEDOR OCULTO EN EL DOM REAL PARA RENDERIZAR EL TIQUETE ANTES DE EXPORTAR A PDF */}
-      {pedidoParaImprimir && (
-        <div
-          style={{ position: "absolute", left: "-9999px", top: 0, zIndex: -50 }}
-        >
-          <div
-            id="direct-print-ticket"
-            style={{
-              backgroundColor: "#ffffff",
-              color: "#000000",
-              width: "72mm",
-              padding: "12px",
-              fontFamily: "monospace",
-              fontSize: "11px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-            }}
-          >
-            <div
-              style={{
-                textAlign: "center",
-                paddingBottom: "8px",
-                borderBottom: "1px dashed #000000",
-              }}
-            >
-              <h3
-                style={{
-                  fontWeight: "bold",
-                  fontSize: "14px",
-                  textTransform: "uppercase",
-                  margin: 0,
-                }}
-              >
-                {companyName}
-              </h3>
-              <p
-                style={{
-                  fontWeight: "bold",
-                  fontSize: "11px",
-                  textTransform: "uppercase",
-                  margin: "2px 0",
-                }}
-              >
-                COMPROBANTE DE DESPACHO
-              </p>
-              <p
-                style={{
-                  fontWeight: "bold",
-                  fontSize: "13px",
-                  margin: "4px 0",
-                }}
-              >
-                Pedido N°: {pedidoParaImprimir.numero_pedido}
-              </p>
-              <p style={{ fontSize: "10px", color: "#333333", margin: 0 }}>
-                Fecha: {formatDate(pedidoParaImprimir.fecha_pedido)}
-              </p>
-            </div>
-
-            <div
-              style={{
-                paddingBottom: "8px",
-                borderBottom: "1px dashed #000000",
-                fontSize: "10px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "2px",
-              }}
-            >
-              <p style={{ margin: 0 }}>
-                <strong>Cliente:</strong> {clienteNombreDirecto}
-              </p>
-              <p style={{ margin: 0 }}>
-                <strong>Tipo ID:</strong>{" "}
-                {pedidoParaImprimir.clientes?.tipo_identificacion || "NIT / CC"}
-              </p>
-              <p style={{ margin: 0 }}>
-                <strong>N° Identificación:</strong>{" "}
-                {pedidoParaImprimir.clientes?.numero_identificacion}
-              </p>
-              <p style={{ margin: 0 }}>
-                <strong>Dirección:</strong>{" "}
-                {pedidoParaImprimir.clientes?.direccion || "No registrada"}
-              </p>
-              <p style={{ margin: 0 }}>
-                <strong>Vendedor:</strong>{" "}
-                {pedidoParaImprimir.vendedor?.nombre_completo}
-              </p>
-            </div>
-
-            <div
-              style={{
-                paddingBottom: "8px",
-                borderBottom: "1px dashed #000000",
-              }}
-            >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
-                  fontWeight: "bold",
-                  borderBottom: "1px solid #000000",
-                  paddingBottom: "4px",
-                  marginBottom: "4px",
-                  fontSize: "10px",
-                }}
-              >
-                <span
-                  style={{ gridColumn: "span 2 / span 2", textAlign: "center" }}
-                >
-                  CANT
-                </span>
-                <span style={{ gridColumn: "span 6 / span 6" }}>PRODUCTO</span>
-                <span
-                  style={{ gridColumn: "span 4 / span 4", textAlign: "right" }}
-                >
-                  TOTAL
-                </span>
-              </div>
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: "6px" }}
-              >
-                {pedidoParaImprimir.detalles?.map((item) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      borderBottom: "1px solid #eeeeee",
-                      paddingBottom: "4px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
-                        fontSize: "10px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          gridColumn: "span 2 / span 2",
-                          textAlign: "center",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {item.cantidad}
-                      </span>
-                      <span
-                        style={{
-                          gridColumn: "span 6 / span 6",
-                          fontWeight: "500",
-                        }}
-                      >
-                        {item.producto?.nombre}
-                      </span>
-                      <span
-                        style={{
-                          gridColumn: "span 4 / span 4",
-                          textAlign: "right",
-                        }}
-                      >
-                        {formatCurrency(item.subtotal_linea)}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "9px",
-                        paddingLeft: "8px",
-                        color: "#555555",
-                      }}
-                    >
-                      V. Unit: {formatCurrency(item.precio_unitario)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div
-              style={{
-                paddingBottom: "8px",
-                borderBottom: "1px dashed #000000",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-                fontSize: "10px",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>SUBTOTAL:</span>
-                <span>{formatCurrency(totalesDirectos.subtotal)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>IVA 19%:</span>
-                <span>{formatCurrency(totalesDirectos.iva19)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>IVA 5%:</span>
-                <span>{formatCurrency(totalesDirectos.iva5)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>INC 8%:</span>
-                <span>{formatCurrency(totalesDirectos.inc8)}</span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  borderTop: "1px solid #000000",
-                  paddingTop: "4px",
-                  marginTop: "2px",
-                }}
-              >
-                <span>TOTAL:</span>
-                <span>{formatCurrency(pedidoParaImprimir.total)}</span>
-              </div>
-            </div>
-
-            {pedidoParaImprimir.notas && (
-              <div
-                style={{
-                  paddingBottom: "8px",
-                  borderBottom: "1px dashed #000000",
-                  fontSize: "10px",
-                }}
-              >
-                <strong style={{ display: "block" }}>Notas:</strong>
-                <p style={{ margin: 0, fontStyle: "italic" }}>
-                  {pedidoParaImprimir.notas}
-                </p>
-              </div>
-            )}
-
-            <div
-              style={{
-                textAlign: "center",
-                fontSize: "9px",
-                color: "#333333",
-                display: "flex",
-                flexDirection: "column",
-                gap: "2px",
-              }}
-            >
-              <p style={{ fontWeight: "bold", color: "#000000", margin: 0 }}>
-                ¡Gracias por su compra!
-              </p>
-              <p style={{ fontSize: "8px", margin: 0 }}>
-                Sistema de pedidos y despacho desarrollado por TecnoIngenieria
-                B.O.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL DE DETALLES */}
       {orderToView && (

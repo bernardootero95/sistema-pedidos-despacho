@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from "react";
-import {
-  X,
-  Printer,
-  Package,
-  Loader2,
-  AlertCircle,
-  ExternalLink,
-} from "lucide-react";
+import { X, Package, Loader2, AlertCircle, ExternalLink } from "lucide-react";
 import { orderService } from "../services/orderService";
-import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
+import { imprimirPedidoPdf } from "../utils/printUtils";
 
 export const OrderDetailsModal = ({ orderId, onClose }) => {
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   const companyName = import.meta.env.VITE_COMPANY_NAME || "SISTEMA DE PEDIDOS";
 
   useEffect(() => {
@@ -109,28 +103,14 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
 
   const { subtotal, iva19, iva5, inc8 } = calcularDesgloseFiscal();
 
-  const handleOpenPdf = () => {
-    const element = document.getElementById("ticket-pdf-content");
-    const opt = {
-      margin: 0,
-      filename: `comprobante-pedido-${pedido?.numero_pedido || "recibo"}.pdf`,
-      image: { type: "jpeg", quality: 1 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: "mm", format: [80, 200], orientation: "portrait" },
-    };
-
+  const handleOpenPdf = async () => {
+    if (!pedido) return;
     setIsGeneratingPdf(true);
-
-    html2pdf()
-      .set(opt)
-      .from(element)
-      .output("bloburl")
-      .then((pdfUrl) => {
-        window.open(pdfUrl, "_blank");
-      })
-      .finally(() => {
-        setIsGeneratingPdf(false);
-      });
+    try {
+      await imprimirPedidoPdf(pedido);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const obtenerNombreCliente = (c) =>
@@ -156,7 +136,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
               ) : (
                 <ExternalLink className="h-4 w-4" />
               )}
-              Imprimir
+              Abrir PDF 80mm
             </button>
             <button
               onClick={onClose}
@@ -180,9 +160,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
               <p>{error}</p>
             </div>
           ) : pedido ? (
-            /* TICKET MONOCROMÁTICO CON COLORES HEX EN LÍNEA */
             <div
-              id="ticket-pdf-content"
               className="w-[72mm] p-3 text-[11px] font-mono flex flex-col gap-2.5 shadow-md"
               style={{ backgroundColor: "#ffffff", color: "#000000" }}
             >
@@ -329,7 +307,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                   ¡Gracias por su compra!
                 </p>
                 <p className="text-[8px]">
-                  Sistema de pedidos y despacho desarrollado por TecnoIngeniería
+                  Sistema de pedidos y despacho desarrollado por TecnoIngenieria
                   B.O.
                 </p>
               </div>
