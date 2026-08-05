@@ -9,7 +9,6 @@ export const orderService = {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    // Traemos el pedido junto con el nombre del cliente y del vendedor
     let query = supabase
       .from("pedidos_cabecera")
       .select(
@@ -23,7 +22,6 @@ export const orderService = {
       .is("eliminado", null)
       .order("creado", { ascending: false });
 
-    // Si hay término de búsqueda, filtramos por número de pedido
     if (searchTerm) {
       query = query.ilike("numero_pedido", `%${searchTerm}%`);
     }
@@ -40,10 +38,28 @@ export const orderService = {
   },
 
   /**
-   * Crea un nuevo pedido integrando Cabecera y Detalle
+   * Crea un nuevo pedido integrando Cabecera y Detalle con validación estricta de stock
    */
   async crearPedido(pedidoData, detallesData) {
-    // 1. Insertamos primero la Cabecera del pedido
+    // 1. Verificación de stock en tiempo real antes de tocar la BD
+    for (const item of detallesData) {
+      const { data: productoActual, error: errorProd } = await supabase
+        .from("productos")
+        .select("nombre, disponible")
+        .eq("id", item.producto_id)
+        .single();
+
+      if (errorProd)
+        throw new Error(`No se pudo verificar el stock del producto.`);
+
+      if (productoActual.disponible < item.cantidad) {
+        throw new Error(
+          `Stock insuficiente para "${productoActual.nombre}". Cantidad disponible: ${productoActual.disponible}, solicitada: ${item.cantidad}.`,
+        );
+      }
+    }
+
+    // 2. Insertamos primero la Cabecera del pedido
     const { data: cabecera, error: errorCabecera } = await supabase
       .from("pedidos_cabecera")
       .insert([pedidoData])
@@ -52,28 +68,26 @@ export const orderService = {
 
     if (errorCabecera) throw errorCabecera;
 
-    // 2. Preparamos los detalles inyectándoles el ID de la cabecera recién creada
+    // 3. Preparamos los detalles inyectándoles el ID de la cabecera
     const detallesConId = detallesData.map((detalle) => ({
       ...detalle,
       pedido_id: cabecera.id,
     }));
 
-    // 3. Insertamos todos los detalles en bloque (Bulk Insert)
+    // 4. Insertamos todos los detalles en bloque
     const { error: errorDetalles } = await supabase
       .from("pedidos_detalle")
       .insert(detallesConId);
 
-    if (errorDetalles) {
-      // En un entorno de producción estricto, aquí se llamaría a un rollback o se usaría una RPC,
-      // pero para nuestro flujo Supabase lo maneja de forma óptima.
-      throw errorDetalles;
-    }
+    if (errorDetalles) throw errorDetalles;
+
+    // Opcional: Aquí posteriormente podemos descontar el inventario de la tabla productos de forma automática
 
     return cabecera;
   },
 
   /**
-   * Obtiene la ficha completa de un pedido específico (Ficha de impresión/visualización)
+   * Obtiene la ficha completa de un pedido específico
    */
   async getPedidoCompleto(id) {
     const { data, error } = await supabase
@@ -97,14 +111,14 @@ export const orderService = {
   },
 
   /**
-   * Anula un pedido (Soft delete cambiando el estado a anulado)
+   * Anula un pedido
    */
   async anularPedido(id, motivoAnulacion) {
     const { data, error } = await supabase
       .from("pedidos_cabecera")
       .update({
         estado: "anulado",
-        notas: motivoAnulacion, // Guardamos el por qué se anuló
+        notas: motivoAnulacion,
         actualizado: new Date().toISOString(),
       })
       .eq("id", id)

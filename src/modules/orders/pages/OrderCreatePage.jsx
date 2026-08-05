@@ -36,7 +36,7 @@ export const OrderCreatePage = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Cargar datos iniciales
+  // Cargar datos iniciales trayendo el campo 'disponible' de productos
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -65,7 +65,7 @@ export const OrderCreatePage = () => {
             .is("eliminado", null),
           supabase
             .from("productos")
-            .select("id, nombre, codigo, precio_venta, iva, inc")
+            .select("id, nombre, codigo, precio_venta, iva, inc, disponible") // Incluimos disponible
             .is("eliminado", null),
         ]);
 
@@ -80,18 +80,34 @@ export const OrderCreatePage = () => {
     fetchData();
   }, []);
 
-  // --- LÓGICA DEL CARRITO ---
+  // --- LÓGICA DEL CARRITO CON VALIDACIÓN DE STOCK ---
   const agregarAlCarrito = () => {
     if (!productoSeleccionado) return;
 
     const producto = productos.find((p) => p.id === productoSeleccionado);
     if (!producto) return;
 
+    // Validar si hay stock disponible inicial
+    if (producto.disponible <= 0) {
+      alert(
+        `El producto "${producto.nombre}" no tiene existencias disponibles.`,
+      );
+      return;
+    }
+
     const existeIndex = carrito.findIndex(
       (item) => item.producto_id === producto.id,
     );
 
     if (existeIndex >= 0) {
+      const cantidadActual = carrito[existeIndex].cantidad;
+      if (cantidadActual + 1 > producto.disponible) {
+        alert(
+          `No puedes agregar más unidades. Stock disponible: ${producto.disponible}`,
+        );
+        return;
+      }
+
       const nuevoCarrito = [...carrito];
       nuevoCarrito[existeIndex].cantidad += 1;
       nuevoCarrito[existeIndex].subtotal_linea =
@@ -110,6 +126,7 @@ export const OrderCreatePage = () => {
           iva_porcentaje: producto.iva || 0,
           inc_porcentaje: producto.inc || 0,
           subtotal_linea: producto.precio_venta * 1,
+          disponible: producto.disponible, // Guardamos referencia de stock en el item
         },
       ]);
     }
@@ -118,20 +135,26 @@ export const OrderCreatePage = () => {
     setProductoSeleccionado("");
   };
 
-  // Función para cambiar cantidad mediante los botones de + y -
   const modificarCantidad = (index, delta) => {
     const nuevoCarrito = [...carrito];
-    const nuevaCantidad = nuevoCarrito[index].cantidad + delta;
+    const item = nuevoCarrito[index];
+    const nuevaCantidad = item.cantidad + delta;
 
     if (nuevaCantidad <= 0) {
-      // Si baja de 1, removemos el producto del carrito
       eliminarDelCarrito(index);
       return;
     }
 
-    nuevoCarrito[index].cantidad = nuevaCantidad;
-    nuevoCarrito[index].subtotal_linea =
-      nuevaCantidad * nuevoCarrito[index].precio_unitario;
+    // Validar contra el stock disponible
+    if (nuevaCantidad > item.disponible) {
+      alert(
+        `Stock máximo alcanzado para este producto (${item.disponible} unidades disponibles).`,
+      );
+      return;
+    }
+
+    item.cantidad = nuevaCantidad;
+    item.subtotal_linea = nuevaCantidad * item.precio_unitario;
     setCarrito(nuevoCarrito);
   };
 
@@ -140,9 +163,16 @@ export const OrderCreatePage = () => {
     const cantidad = cantidadStr === "" ? 1 : Number(cantidadStr);
 
     const nuevoCarrito = [...carrito];
-    nuevoCarrito[index].cantidad = cantidad;
-    nuevoCarrito[index].subtotal_linea =
-      cantidad * nuevoCarrito[index].precio_unitario;
+    const item = nuevoCarrito[index];
+
+    if (cantidad > item.disponible) {
+      alert(`La cantidad excede el stock disponible (${item.disponible}).`);
+      item.cantidad = item.disponible;
+    } else {
+      item.cantidad = cantidad;
+    }
+
+    item.subtotal_linea = item.cantidad * item.precio_unitario;
     setCarrito(nuevoCarrito);
   };
 
@@ -173,17 +203,17 @@ export const OrderCreatePage = () => {
     }
 
     const detallesParaGuardar = carrito.map(
-      ({ nombre, codigo, ...rest }) => rest,
+      ({ nombre, codigo, disponible, ...rest }) => rest,
     );
 
     try {
       setIsSubmitting(true);
       await orderService.crearPedido(cabeceraData, detallesParaGuardar);
-      navigate("/pedidos"); // Redirige a la lista general de pedidos
+      navigate("/pedidos");
     } catch (error) {
       console.error(error);
       setErrors({
-        global: "Ocurrió un error al guardar el pedido. Intenta nuevamente.",
+        global: error.message || "Ocurrió un error al guardar el pedido.",
       });
     } finally {
       setIsSubmitting(false);
@@ -242,7 +272,7 @@ export const OrderCreatePage = () => {
       >
         {errors.global && (
           <div className="bg-red-50 text-red-700 p-3 rounded-xl flex items-center gap-2 text-sm border border-red-200">
-            <AlertCircle className="h-5 w-5 shrink-0" />
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
             {errors.global}
           </div>
         )}
@@ -274,7 +304,7 @@ export const OrderCreatePage = () => {
           )}
         </div>
 
-        {/* BUSCADOR DE PRODUCTOS */}
+        {/* BUSCADOR DE PRODUCTOS CON STOCK VISIBLE */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">
             Agregar Productos
@@ -289,8 +319,10 @@ export const OrderCreatePage = () => {
               >
                 <option value="">-- Seleccionar producto --</option>
                 {productos.map((p) => (
-                  <option key={p.id} value={p.id}>
+                  <option key={p.id} value={p.id} disabled={p.disponible <= 0}>
                     {p.codigo} - {p.nombre} ({formatCurrency(p.precio_venta)})
+                    [Stock: {p.disponible}]{" "}
+                    {p.disponible <= 0 ? "(AGOTADO)" : ""}
                   </option>
                 ))}
               </select>
@@ -311,7 +343,7 @@ export const OrderCreatePage = () => {
           )}
         </div>
 
-        {/* CARRITO CON BOTONES DE MAS Y MENOS */}
+        {/* CARRITO */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-slate-700">
             Productos en el Pedido ({carrito.length})
@@ -333,7 +365,10 @@ export const OrderCreatePage = () => {
                       {item.nombre}
                     </p>
                     <p className="text-xs text-slate-500 font-mono">
-                      Cod: {item.codigo}
+                      Cod: {item.codigo} |{" "}
+                      <span className="text-emerald-600 font-medium">
+                        Stock: {item.disponible}
+                      </span>
                     </p>
                     <p className="text-xs font-semibold text-blue-600 mt-1">
                       {formatCurrency(item.precio_unitario)} c/u
@@ -341,13 +376,11 @@ export const OrderCreatePage = () => {
                   </div>
 
                   <div className="flex items-center justify-between w-full sm:w-auto gap-4">
-                    {/* Control de Cantidad con Botones + y - */}
                     <div className="flex items-center bg-white border border-slate-300 rounded-xl shadow-sm overflow-hidden">
                       <button
                         type="button"
                         onClick={() => modificarCantidad(index, -1)}
                         className="p-2 text-slate-600 hover:bg-slate-100 transition-colors active:bg-slate-200"
-                        title="Restar cantidad"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
@@ -363,13 +396,12 @@ export const OrderCreatePage = () => {
                         type="button"
                         onClick={() => modificarCantidad(index, 1)}
                         className="p-2 text-slate-600 hover:bg-slate-100 transition-colors active:bg-slate-200"
-                        title="Sumar cantidad"
                       >
                         <Plus className="h-4 w-4" />
                       </button>
                     </div>
 
-                    <div className="text-right min-w-22.5">
+                    <div className="text-right min-w-[90px]">
                       <span className="text-xs text-slate-400 block">
                         Subtotal
                       </span>
@@ -382,7 +414,6 @@ export const OrderCreatePage = () => {
                       type="button"
                       onClick={() => eliminarDelCarrito(index)}
                       className="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors"
-                      title="Eliminar producto"
                     >
                       <Trash2 className="h-5 w-5" />
                     </button>
@@ -393,7 +424,7 @@ export const OrderCreatePage = () => {
           )}
         </div>
 
-        {/* NOTAS Y TOTAL FLOTANTE */}
+        {/* NOTAS Y TOTAL */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">
