@@ -136,7 +136,7 @@ export const OrderDetailsPage = () => {
     return (
       <div className="p-6 max-w-lg mx-auto">
         <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-center gap-3 border border-red-200">
-          <AlertCircle className="h-6 w-6 flex-shrink-0" />
+          <AlertCircle className="h-6 w-6 shrink-0" />
           <p className="text-sm font-medium">
             {error || "Pedido no encontrado."}
           </p>
@@ -215,7 +215,7 @@ export const OrderDetailsPage = () => {
             </p>
           </div>
           <div className="flex items-start gap-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
-            <MapPin className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5" />
+            <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
             <span>{cliente?.direccion || "Dirección no registrada"}</span>
           </div>
         </div>
@@ -261,7 +261,7 @@ export const OrderDetailsPage = () => {
               className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors"
             >
               <div className="flex items-start gap-3">
-                <div className="bg-blue-50 text-blue-700 font-bold px-3 py-1.5 rounded-xl text-xs sm:text-sm flex-shrink-0">
+                <div className="bg-blue-50 text-blue-700 font-bold px-3 py-1.5 rounded-xl text-xs sm:text-sm shrink-0">
                   {item.cantidad}x
                 </div>
                 <div>

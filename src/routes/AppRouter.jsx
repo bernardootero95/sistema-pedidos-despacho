@@ -1,55 +1,108 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { LoginPage } from "../modules/auth/pages/LoginPage";
 import { MainLayout } from "../components/layout/MainLayout";
-import { DashboardPage } from "../modules/dashboard/pages/DashboardPage";
-import { ClientsPage } from "../modules/clients/pages/ClientsPage";
-import { ProductsPage } from "../modules/products/pages/ProductsPage";
-import { VehiclesPage } from "../modules/vehicles/pages/VehiclesPage";
-import { OrdersPage } from "../modules/orders/pages/OrdersPage";
-import { DispatchesPage } from "../modules/dispatches/pages/DispatchesPage";
-import { UsersPage } from "../modules/users/pages/UsersPage";
-import { OrderCreatePage } from "../modules/orders/pages/OrderCreatePage";
-import { OrderDetailsPage } from "../modules/orders/pages/OrderDetailsPage";
+import { Loader2 } from "lucide-react";
+
+// Carga perezosa (Lazy Loading) de las páginas
+const DashboardPage = lazy(() =>
+  import("../modules/dashboard/pages/DashboardPage").then((m) => ({
+    default: m.DashboardPage,
+  })),
+);
+const UsersPage = lazy(() =>
+  import("../modules/users/pages/UsersPage").then((m) => ({
+    default: m.UsersPage,
+  })),
+);
+const ClientsPage = lazy(() =>
+  import("../modules/clients/pages/ClientsPage").then((m) => ({
+    default: m.ClientsPage,
+  })),
+);
+const ProductsPage = lazy(() =>
+  import("../modules/products/pages/ProductsPage").then((m) => ({
+    default: m.ProductsPage,
+  })),
+);
+const VehiclesPage = lazy(() =>
+  import("../modules/vehicles/pages/VehiclesPage").then((m) => ({
+    default: m.VehiclesPage,
+  })),
+);
+const OrdersPage = lazy(() =>
+  import("../modules/orders/pages/OrdersPage").then((m) => ({
+    default: m.OrdersPage,
+  })),
+);
+const OrderCreatePage = lazy(() =>
+  import("../modules/orders/pages/OrderCreatePage").then((m) => ({
+    default: m.OrderCreatePage,
+  })),
+);
+const OrderDetailsPage = lazy(() =>
+  import("../modules/orders/pages/OrderDetailsPage").then((m) => ({
+    default: m.OrderDetailsPage,
+  })),
+);
+const DispatchesPage = lazy(() =>
+  import("../modules/dispatches/pages/DispatchesPage").then((m) => ({
+    default: m.DispatchesPage,
+  })),
+);
+
+// Componente visual mientras carga el chunk del módulo
+const PageLoader = () => (
+  <div className="flex h-screen w-full items-center justify-center bg-slate-50">
+    <div className="flex flex-col items-center gap-2">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <p className="text-sm font-medium text-slate-500">Cargando módulo...</p>
+    </div>
+  </div>
+);
 
 export const AppRouter = () => {
   const { user } = useAuth();
 
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Ruta pública */}
-        <Route
-          path="/login"
-          element={!user ? <LoginPage /> : <Navigate to="/dashboard" replace />}
-        />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Ruta pública */}
+          <Route
+            path="/login"
+            element={
+              !user ? <LoginPage /> : <Navigate to="/dashboard" replace />
+            }
+          />
 
-        {/* Rutas Protegidas por Layout Principal */}
-        <Route
-          element={user ? <MainLayout /> : <Navigate to="/login" replace />}
-        >
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
+          {/* Rutas Protegidas por Layout Principal */}
+          <Route
+            element={user ? <MainLayout /> : <Navigate to="/login" replace />}
+          >
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
 
-          {/* Módulos de Administración */}
-          <Route path="/usuarios" element={<UsersPage />} />
+            {/* Módulos de Administración */}
+            <Route path="/usuarios" element={<UsersPage />} />
 
-          {/* Módulos de Catálogos */}
-          <Route path="/clientes" element={<ClientsPage />} />
-          <Route path="/productos" element={<ProductsPage />} />
-          <Route path="/vehiculos" element={<VehiclesPage />} />
+            {/* Módulos de Catálogos */}
+            <Route path="/clientes" element={<ClientsPage />} />
+            <Route path="/productos" element={<ProductsPage />} />
+            <Route path="/vehiculos" element={<VehiclesPage />} />
 
-          {/* Módulos Operativos */}
-          <Route path="/pedidos" element={<OrdersPage />} />
-          <Route path="/orders/new" element={<OrderCreatePage />} />
-          <Route path="/orders/:id" element={<OrderDetailsPage />} />
-          <Route path="/despachos" element={<DispatchesPage />} />
-        </Route>
+            {/* Módulos Operativos */}
+            <Route path="/pedidos" element={<OrdersPage />} />
+            <Route path="/orders/new" element={<OrderCreatePage />} />
+            <Route path="/orders/:id" element={<OrderDetailsPage />} />
+            <Route path="/despachos" element={<DispatchesPage />} />
+          </Route>
 
-        {/* Captura de rutas inexistentes */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+          {/* Captura de rutas inexistentes */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 };
