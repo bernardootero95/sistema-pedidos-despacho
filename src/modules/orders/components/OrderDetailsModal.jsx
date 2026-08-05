@@ -8,13 +8,16 @@ import {
   Download,
 } from "lucide-react";
 import { orderService } from "../services/orderService";
-import html2pdf from "html2pdf.js";
+import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
 
 export const OrderDetailsModal = ({ orderId, onClose }) => {
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  // Variable de entorno para el nombre de la empresa
+  const companyName = import.meta.env.VITE_COMPANY_NAME || "SISTEMA DE PEDIDOS";
 
   useEffect(() => {
     const fetchDetalles = async () => {
@@ -175,7 +178,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
               <p>{error}</p>
             </div>
           ) : pedido ? (
-            /* TICKET MONOCROMÁTICO CON COLORES HEX EN LÍNEA PARA EVITAR ERROR OKLCH */
+            /* TICKET MONOCROMÁTICO CON COLORES HEX EN LÍNEA */
             <div
               id="ticket-pdf-content"
               className="w-[72mm] p-3 text-[11px] font-mono flex flex-col gap-2.5 shadow-md"
@@ -187,7 +190,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                 style={{ borderBottom: "1px dashed #000000" }}
               >
                 <h3 className="font-bold text-sm uppercase tracking-wide">
-                  TECNOINGENIERÍA B.O.
+                  {companyName}
                 </h3>
                 <p className="font-bold text-xs uppercase mt-0.5">
                   COMPROBANTE DE DESPACHO
