@@ -16,8 +16,6 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
   // --- ESTADOS DE DATOS EXTERNOS ---
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
-  // Nota: En un sistema real, el vendedor_id suele venir del AuthContext (usuario logueado).
-  // Aquí traemos la lista de vendedores activos para el ejemplo.
   const [vendedores, setVendedores] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
 
@@ -37,26 +35,36 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
     const fetchData = async () => {
       try {
         setLoadingData(true);
-        // Ejecutamos las consultas en paralelo para mayor velocidad
+        // Corrección: Usamos .is("eliminado", null) en lugar de estado_registro para el Soft Delete
         const [resClientes, resProductos, resVendedores] = await Promise.all([
           supabase
             .from("clientes")
             .select(
               "id, razon_social, primer_nombre, primer_apellido, numero_identificacion",
             )
-            .eq("estado_registro", true),
+            .is("eliminado", null),
+
           supabase
             .from("productos")
             .select(
               "id, nombre, codigo, precio_venta, iva_porcentaje, inc_porcentaje",
             )
-            .eq("estado_registro", true),
+            .is("eliminado", null),
+
           supabase
             .from("perfiles")
             .select("id, nombre_completo")
-            .eq("estado_registro", true)
-            .in("rol", ["VENDEDOR", "ADMIN", "GERENTE"]),
+            .in("rol", ["VENDEDOR", "ADMIN", "GERENTE"])
+            .is("eliminado", null),
         ]);
+
+        // Si hay algún error en las consultas, lo mostramos en consola para depurar rápido
+        if (resClientes.error)
+          console.error("Error clientes:", resClientes.error);
+        if (resProductos.error)
+          console.error("Error productos:", resProductos.error);
+        if (resVendedores.error)
+          console.error("Error vendedores:", resVendedores.error);
 
         if (resClientes.data) setClientes(resClientes.data);
         if (resProductos.data) setProductos(resProductos.data);
@@ -97,15 +105,14 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
           nombre: producto.nombre,
           codigo: producto.codigo,
           cantidad: 1,
-          precio_unitario: producto.precio_venta, // Congelamos el precio
+          precio_unitario: producto.precio_venta,
           iva_porcentaje: producto.iva_porcentaje || 0,
           inc_porcentaje: producto.inc_porcentaje || 0,
-          subtotal_linea: producto.precio_venta * 1, // Cantidad inicial es 1
+          subtotal_linea: producto.precio_venta * 1,
         },
       ]);
     }
 
-    // Limpiamos el error del carrito si lo había y reseteamos el select
     setErrors((prev) => ({ ...prev, carrito: "" }));
     setProductoSeleccionado("");
   };
@@ -116,7 +123,6 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
 
     const nuevoCarrito = [...carrito];
     nuevoCarrito[index].cantidad = cantidad;
-    // Recalcular subtotal
     nuevoCarrito[index].subtotal_linea =
       (cantidad || 0) * nuevoCarrito[index].precio_unitario;
 
@@ -143,10 +149,9 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
       vendedor_id: vendedorId,
       notas,
       total: totalPedido,
-      numero_pedido: `PED-${Date.now().toString().slice(-6)}`, // Generador de número temporal (idealmente esto se hace con una secuencia en BD)
+      numero_pedido: `PED-${Date.now().toString().slice(-6)}`,
     };
 
-    // Validación inmediata antes de tocar la base de datos
     const validationErrors = validateOrderForm(cabeceraData, carrito);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -156,8 +161,8 @@ export const OrderForm = ({ onClose, onOrderCreated }) => {
     try {
       setIsSubmitting(true);
       await orderService.crearPedido(cabeceraData, carrito);
-      onOrderCreated(); // Refresca la tabla principal
-      onClose(); // Cierra el modal
+      onOrderCreated();
+      onClose();
     } catch (error) {
       console.error(error);
       setErrors({
