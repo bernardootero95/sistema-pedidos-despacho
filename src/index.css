@@ -34,3 +34,39 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* ========================================================================== */
+/* CONFIGURACIÓN DE IMPRESIÓN TÉRMICA (80mm)                                  */
+/* ========================================================================== */
+@media print {
+  /* Ocultamos todo el layout principal, barras de navegación y botones */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Hacemos visible únicamente el área designada para la tirilla */
+  .printable-area,
+  .printable-area * {
+    visibility: visible;
+  }
+
+  /* Posicionamos la tirilla al inicio de la página de impresión */
+  .printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 72mm; /* Margen seguro para papel de 80mm */
+    margin: 0;
+    padding: 2mm;
+    font-family: "Courier New", Courier, monospace; /* Letra clara estilo POS */
+    font-size: 11px;
+    color: #000 !important;
+    background: #fff !important;
+  }
+
+  /* Ocultar botones de cierre o impresión en el papel */
+  button,
+  .no-print {
+    display: none !important;
+  }
+}

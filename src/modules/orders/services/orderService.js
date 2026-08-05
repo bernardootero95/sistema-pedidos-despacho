@@ -2,9 +2,6 @@
 import { supabase } from "../../../config/supabase";
 
 export const orderService = {
-  /**
-   * Obtiene la lista de pedidos (cabecera) con paginación
-   */
   async getPedidosPaginados(page = 1, limit = 10, searchTerm = "") {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -14,7 +11,7 @@ export const orderService = {
       .select(
         `
         *,
-        clientes ( razon_social, primer_nombre, primer_apellido, numero_identificacion ),
+        clientes ( razon_social, primer_nombre, primer_apellido, numero_identificacion, direccion, tipo_identificacion ),
         vendedor:perfiles ( nombre_completo )
       `,
         { count: "exact" },
@@ -27,21 +24,35 @@ export const orderService = {
     }
 
     const { data, error, count } = await query.range(from, to);
-
     if (error) throw error;
 
-    return {
-      data,
-      total: count,
-      totalPages: Math.ceil(count / limit),
-    };
+    return { data, total: count, totalPages: Math.ceil(count / limit) };
   },
 
   /**
-   * Crea un nuevo pedido, valida el stock, lo descuenta y guarda los detalles
+   * Genera el siguiente número consecutivo de pedido (Ej: 1, 2, 3...)
    */
+  async obtenerSiguienteNumeroPedido() {
+    const { data, error } = await supabase
+      .from("pedidos_cabecera")
+      .select("numero_pedido")
+      .order("creado", { ascending: false })
+      .limit(1);
+
+    if (error || !data || data.length === 0) {
+      return "1"; // Primer pedido del sistema
+    }
+
+    const ultimoNumero = parseInt(data[0].numero_pedido, 10);
+    if (isNaN(ultimoNumero)) {
+      return "1";
+    }
+
+    return (ultimoNumero + 1).toString();
+  },
+
   async crearPedido(pedidoData, detallesData) {
-    // 1. Verificación estricta de stock y cálculo de nuevo inventario
+    // 1. Validar y descontar stock
     for (const item of detallesData) {
       const { data: productoActual, error: errorProd } = await supabase
         .from("productos")
@@ -54,36 +65,41 @@ export const orderService = {
 
       if (productoActual.disponible < item.cantidad) {
         throw new Error(
-          `Stock insuficiente para "${productoActual.nombre}". Disponible: ${productoActual.disponible}, solicitado: ${item.cantidad}.`,
+          `Stock insuficiente para "${productoActual.nombre}". Disponible: ${productoActual.disponible}`,
         );
       }
     }
 
-    // 2. Insertamos la Cabecera del pedido
+    // 2. Asignar el consecutivo numérico automático
+    const siguienteNumero = await this.obtenerSiguienteNumeroPedido();
+    const pedidoConConsecutivo = {
+      ...pedidoData,
+      numero_pedido: siguienteNumero,
+    };
+
+    // 3. Insertar Cabecera
     const { data: cabecera, error: errorCabecera } = await supabase
       .from("pedidos_cabecera")
-      .insert([pedidoData])
+      .insert([pedidoConConsecutivo])
       .select()
       .single();
 
     if (errorCabecera) throw errorCabecera;
 
-    // 3. Preparamos los detalles con el ID de la cabecera
+    // 4. Insertar Detalles
     const detallesConId = detallesData.map((detalle) => ({
       ...detalle,
       pedido_id: cabecera.id,
     }));
 
-    // 4. Insertamos los detalles en bloque
     const { error: errorDetalles } = await supabase
       .from("pedidos_detalle")
       .insert(detallesConId);
 
     if (errorDetalles) throw errorDetalles;
 
-    // 5. Descontar las existencias (disponible) en la tabla productos para cada ítem comprado
+    // 5. Descontar Inventario
     for (const item of detallesData) {
-      // Obtenemos el stock actual de nuevo para seguridad en concurrencia
       const { data: prod } = await supabase
         .from("productos")
         .select("disponible")
@@ -91,32 +107,18 @@ export const orderService = {
         .single();
 
       const nuevoStock = prod.disponible - item.cantidad;
-
-      const { error: errorUpdateStock } = await supabase
+      await supabase
         .from("productos")
         .update({
           disponible: nuevoStock,
           actualizado: new Date().toISOString(),
         })
         .eq("id", item.producto_id);
-
-      if (errorUpdateStock) {
-        console.error(
-          "Error al actualizar el stock del producto:",
-          errorUpdateStock,
-        );
-        throw new Error(
-          "El pedido se creó pero hubo un fallo al actualizar las existencias.",
-        );
-      }
     }
 
     return cabecera;
   },
 
-  /**
-   * Obtiene la ficha completa de un pedido específico
-   */
   async getPedidoCompleto(id) {
     const { data, error } = await supabase
       .from("pedidos_cabecera")
@@ -138,9 +140,6 @@ export const orderService = {
     return data;
   },
 
-  /**
-   * Anula un pedido
-   */
   async anularPedido(id, motivoAnulacion) {
     const { data, error } = await supabase
       .from("pedidos_cabecera")
