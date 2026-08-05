@@ -6,7 +6,6 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
 
   const companyName = import.meta.env.VITE_COMPANY_NAME || "SISTEMA DE PEDIDOS";
 
-  // 1. Cálculos fiscales centralizados
   let subtotalGeneral = 0;
   let acumIva19 = 0;
   let acumIva5 = 0;
@@ -49,12 +48,14 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
     });
   };
 
-  // 2. Crear contenedor temporal seguro en el DOM
+  // Creamos el contenedor asegurando que el DOM lo procese físicamente
   const container = document.createElement("div");
-  container.style.position = "absolute";
-  container.style.left = "-9999px";
+  container.style.position = "fixed";
+  container.style.left = "0";
   container.style.top = "0";
-  container.style.zIndex = "-50";
+  container.style.opacity = "0";
+  container.style.pointerEvents = "none";
+  container.style.zIndex = "-1000";
 
   container.innerHTML = `
     <div style="background-color: #ffffff; color: #000000; width: 72mm; padding: 12px; font-family: monospace; font-size: 11px; display: flex; flex-direction: column; gap: 10px;">
@@ -136,7 +137,13 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
   };
 
   try {
-    const pdfUrl = await html2pdf().set(opt).from(container).output("bloburl");
+    // Damos un pequeño respiro de 250ms para garantizar que el DOM pinte el contenido antes de convertir a PDF
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    const pdfUrl = await html2pdf()
+      .set(opt)
+      .from(container.firstElementChild)
+      .output("bloburl");
     window.open(pdfUrl, "_blank");
   } catch (error) {
     console.error("Error al generar el PDF térmico:", error);
