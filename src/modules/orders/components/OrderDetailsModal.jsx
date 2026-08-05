@@ -53,7 +53,6 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     });
   };
 
-  // Cálculo discriminado exacto con blindaje para datos antiguos o con decimales
   const calcularDesgloseFiscal = () => {
     if (!pedido || !pedido.detalles)
       return { subtotal: 0, iva19: 0, iva5: 0, inc8: 0 };
@@ -66,7 +65,6 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     pedido.detalles.forEach((item) => {
       const subtotalLinea = Number(item.subtotal_linea) || 0;
 
-      // 1. Extraer porcentajes (buscando en el detalle o en el producto cruzado)
       let porcIva = 0;
       if (item.iva_porcentaje !== undefined && item.iva_porcentaje !== null) {
         porcIva = Number(item.iva_porcentaje);
@@ -81,17 +79,14 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
         porcInc = Number(item.producto.inc);
       }
 
-      // 2. Redondear por si hay datos de prueba viejos (ej: 18.98 -> 19)
       const ivaRedondeado = Math.round(porcIva);
       const incRedondeado = Math.round(porcInc);
 
-      // 3. Base gravable matemática exacta usando los valores redondeados
       const factor = 1 + (ivaRedondeado + incRedondeado) / 100;
       const baseLinea = subtotalLinea / factor;
 
       subtotalGeneral += baseLinea;
 
-      // 4. Acumular en las categorías fijas
       if (ivaRedondeado === 19) {
         acumIva19 += baseLinea * (19 / 100);
       } else if (ivaRedondeado === 5) {
@@ -118,8 +113,8 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     const opt = {
       margin: 0,
       filename: `comprobante-pedido-${pedido?.numero_pedido || "recibo"}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      image: { type: "jpeg", quality: 1 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
       jsPDF: { unit: "mm", format: [80, 200], orientation: "portrait" },
     };
 
@@ -180,12 +175,17 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
               <p>{error}</p>
             </div>
           ) : pedido ? (
+            /* TICKET MONOCROMÁTICO CON COLORES HEX EN LÍNEA PARA EVITAR ERROR OKLCH */
             <div
               id="ticket-pdf-content"
-              className="bg-white w-[72mm] p-3 text-slate-900 text-[11px] font-mono flex flex-col gap-2.5 shadow-md"
+              className="w-[72mm] p-3 text-[11px] font-mono flex flex-col gap-2.5 shadow-md"
+              style={{ backgroundColor: "#ffffff", color: "#000000" }}
             >
               {/* ENCABEZADO */}
-              <div className="text-center border-b border-dashed border-slate-400 pb-2">
+              <div
+                className="text-center pb-2"
+                style={{ borderBottom: "1px dashed #000000" }}
+              >
                 <h3 className="font-bold text-sm uppercase tracking-wide">
                   TECNOINGENIERÍA B.O.
                 </h3>
@@ -195,13 +195,16 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                 <p className="font-bold mt-1 text-sm">
                   Pedido N°: {pedido.numero_pedido}
                 </p>
-                <p className="text-[10px] text-slate-600">
+                <p className="text-[10px]" style={{ color: "#333333" }}>
                   Fecha: {formatDate(pedido.fecha_pedido)}
                 </p>
               </div>
 
               {/* DATOS DEL CLIENTE */}
-              <div className="border-b border-dashed border-slate-400 pb-2 flex flex-col gap-0.5 text-[10px]">
+              <div
+                className="pb-2 flex flex-col gap-0.5 text-[10px]"
+                style={{ borderBottom: "1px dashed #000000" }}
+              >
                 <p>
                   <span className="font-semibold">Cliente:</span>{" "}
                   {obtenerNombreCliente(pedido.clientes)}
@@ -225,8 +228,14 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
               </div>
 
               {/* PRODUCTOS */}
-              <div className="border-b border-dashed border-slate-400 pb-2">
-                <div className="grid grid-cols-12 font-bold border-b border-slate-300 pb-1 mb-1 text-[10px]">
+              <div
+                className="pb-2"
+                style={{ borderBottom: "1px dashed #000000" }}
+              >
+                <div
+                  className="grid grid-cols-12 font-bold pb-1 mb-1 text-[10px]"
+                  style={{ borderBottom: "1px solid #000000" }}
+                >
                   <span className="col-span-2 text-center">CANT</span>
                   <span className="col-span-6">PRODUCTO</span>
                   <span className="col-span-4 text-right">TOTAL</span>
@@ -236,7 +245,8 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                   {pedido.detalles?.map((item) => (
                     <div
                       key={item.id}
-                      className="flex flex-col border-b border-slate-100 pb-1"
+                      className="flex flex-col pb-1"
+                      style={{ borderBottom: "1px solid #eeeeee" }}
                     >
                       <div className="grid grid-cols-12 items-start text-[10px]">
                         <span className="col-span-2 text-center font-bold">
@@ -249,7 +259,10 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                           {formatCurrency(item.subtotal_linea)}
                         </span>
                       </div>
-                      <div className="text-[9px] text-slate-500 pl-2">
+                      <div
+                        className="text-[9px] pl-2"
+                        style={{ color: "#555555" }}
+                      >
                         V. Unit: {formatCurrency(item.precio_unitario)}
                       </div>
                     </div>
@@ -258,7 +271,10 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
               </div>
 
               {/* DISCRIMINACIÓN FINANCIERA FIJA */}
-              <div className="border-b border-dashed border-slate-400 pb-2 flex flex-col gap-1 text-[10px]">
+              <div
+                className="pb-2 flex flex-col gap-1 text-[10px]"
+                style={{ borderBottom: "1px dashed #000000" }}
+              >
                 <div className="flex justify-between">
                   <span>SUBTOTAL:</span>
                   <span>{formatCurrency(subtotal)}</span>
@@ -279,7 +295,10 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                   <span>{formatCurrency(inc8)}</span>
                 </div>
 
-                <div className="flex justify-between font-bold text-xs pt-1 border-t border-slate-800 mt-1">
+                <div
+                  className="flex justify-between font-bold text-xs pt-1 mt-1"
+                  style={{ borderTop: "1px solid #000000" }}
+                >
                   <span>TOTAL:</span>
                   <span>{formatCurrency(pedido.total)}</span>
                 </div>
@@ -287,16 +306,24 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
 
               {/* NOTAS */}
               {pedido.notas && (
-                <div className="border-b border-dashed border-slate-400 pb-2 text-[10px]">
+                <div
+                  className="pb-2 text-[10px]"
+                  style={{ borderBottom: "1px dashed #000000" }}
+                >
                   <span className="font-semibold block">Notas:</span>
                   <p className="italic">{pedido.notas}</p>
                 </div>
               )}
 
               {/* PIE DE PÁGINA */}
-              <div className="text-center text-[9px] text-slate-600 pt-1 flex flex-col gap-0.5">
-                <p className="font-semibold">¡Gracias por su compra!</p>
-                <p className="text-[8px] text-slate-500">
+              <div
+                className="text-center text-[9px] pt-1 flex flex-col gap-0.5"
+                style={{ color: "#333333" }}
+              >
+                <p className="font-semibold" style={{ color: "#000000" }}>
+                  ¡Gracias por su compra!
+                </p>
+                <p className="text-[8px]">
                   Sistema de pedidos y despacho desarrollado por TecnoIngeniería
                   B.O.
                 </p>
