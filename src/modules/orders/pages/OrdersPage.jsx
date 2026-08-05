@@ -1,24 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // <-- 1. Importamos useNavigate
+import { useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { OrderDetailsModal } from "../components/OrderDetailsModal";
+import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
 import {
   ShoppingCart,
   Search,
   PlusCircle,
   Eye,
   Ban,
+  Printer,
   Loader2,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 
 export const OrdersPage = () => {
-  const navigate = useNavigate(); // <-- 2. Inicializamos el hook aquí
+  const navigate = useNavigate();
 
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [printingId, setPrintingId] = useState(null); // Estado para saber qué pedido se está imprimiendo
 
   // Paginación y Búsqueda
   const [searchTerm, setSearchTerm] = useState("");
@@ -31,7 +34,9 @@ export const OrdersPage = () => {
   // Estados para el modal de detalle
   const [orderToView, setOrderToView] = useState(null);
 
-  // Optimización de búsqueda (Debounce de 500ms)
+  // Nombre de empresa desde variables de entorno
+  const companyName = import.meta.env.VITE_COMPANY_NAME || "SISTEMA DE PEDIDOS";
+
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchTerm);
@@ -72,7 +77,7 @@ export const OrdersPage = () => {
       style: "currency",
       currency: "COP",
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(amount || 0);
   };
 
   const formatDate = (dateString) => {
@@ -124,6 +129,140 @@ export const OrdersPage = () => {
     }
   };
 
+  // Función directa para generar e imprimir/abrir el PDF desde la tabla sin abrir el modal
+  const handleDirectPrint = async (id) => {
+    try {
+      setPrintingId(id);
+      const pedidoCompleto = await orderService.getPedidoCompleto(id);
+
+      // Creamos un contenedor temporal invisible en el DOM
+      const container = document.createElement("div");
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+
+      // Cálculos fiscales rápidos para la tirilla
+      let subtotalGeneral = 0;
+      let acumIva19 = 0;
+      let acumIva5 = 0;
+      let acumInc8 = 0;
+
+      pedidoCompleto.detalles?.forEach((item) => {
+        const subtotalLinea = Number(item.subtotal_linea) || 0;
+        const porcIva = Math.round(Number(item.iva_porcentaje) || 0);
+        const porcInc = Math.round(Number(item.inc_porcentaje) || 0);
+
+        const factor = 1 + (porcIva + porcInc) / 100;
+        const baseLinea = subtotalLinea / factor;
+
+        subtotalGeneral += baseLinea;
+
+        if (porcIva === 19) acumIva19 += baseLinea * (19 / 100);
+        else if (porcIva === 5) acumIva5 += baseLinea * (5 / 100);
+        if (porcInc === 8) acumInc8 += baseLinea * (8 / 100);
+      });
+
+      const clienteNombre =
+        pedidoCompleto.clientes?.razon_social ||
+        `${pedidoCompleto.clientes?.primer_nombre || ""} ${pedidoCompleto.clientes?.primer_apellido || ""}`;
+
+      // Estructura HTML exacta del tiquete 80mm
+      container.innerHTML = `
+        <div style="background-color: #ffffff; color: #000000; width: 72mm; padding: 3px; font-family: monospace; font-size: 11px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="text-align: center; padding-bottom: 8px; border-bottom: 1px dashed #000000;">
+            <h3 style="font-weight: bold; font-size: 14px; text-transform: uppercase; margin: 0;">${companyName}</h3>
+            <p style="font-weight: bold; font-size: 11px; text-transform: uppercase; margin: 2px 0;">COMPROBANTE DE DESPACHO</p>
+            <p style="font-weight: bold; font-size: 13px; margin: 4px 0;">Pedido N°: ${pedidoCompleto.numero_pedido}</p>
+            <p style="font-size: 10px; color: #333333; margin: 0;">Fecha: ${formatDate(pedidoCompleto.fecha_pedido)}</p>
+          </div>
+
+          <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; font-size: 10px; display: flex; flex-direction: column; gap: 2px;">
+            <p style="margin: 0;"><strong>Cliente:</strong> ${clienteNombre}</p>
+            <p style="margin: 0;"><strong>Tipo ID:</strong> ${pedidoCompleto.clientes?.tipo_identificacion || "NIT / CC"}</p>
+            <p style="margin: 0;"><strong>N° Identificación:</strong> ${pedidoCompleto.clientes?.numero_identificacion}</p>
+            <p style="margin: 0;"><strong>Dirección:</strong> ${pedidoCompleto.clientes?.direccion || "No registrada"}</p>
+            <p style="margin: 0;"><strong>Vendedor:</strong> ${pedidoCompleto.vendedor?.nombre_completo}</p>
+          </div>
+
+          <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000;">
+            <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); font-weight: bold; border-bottom: 1px solid #000000; padding-bottom: 4px; margin-bottom: 4px; font-size: 10px;">
+              <span style="grid-column: span 2 / span 2; text-align: center;">CANT</span>
+              <span style="grid-column: span 6 / span 6;">PRODUCTO</span>
+              <span style="grid-column: span 4 / span 4; text-align: right;">TOTAL</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              ${pedidoCompleto.detalles
+                ?.map(
+                  (item) => `
+                <div style="display: flex; flex-direction: column; border-bottom: 1px solid #eeeeee; padding-bottom: 4px;">
+                  <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); font-size: 10px;">
+                    <span style="grid-column: span 2 / span 2; text-align: center; font-weight: bold;">${item.cantidad}</span>
+                    <span style="grid-column: span 6 / span 6; font-weight: 500;">${item.producto?.nombre}</span>
+                    <span style="grid-column: span 4 / span 4; text-align: right;">${formatCurrency(item.subtotal_linea)}</span>
+                  </div>
+                  <div style="font-size: 9px; padding-left: 8px; color: #555555;">V. Unit: ${formatCurrency(item.precio_unitario)}</div>
+                </div>
+              `,
+                )
+                .join("")}
+            </div>
+          </div>
+
+          <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; display: flex; flex-direction: column; gap: 4px; font-size: 10px;">
+            <div style="display: flex; justify-content: space-between;"><span>SUBTOTAL:</span><span>${formatCurrency(subtotalGeneral)}</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>IVA 19%:</span><span>${formatCurrency(acumIva19)}</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>IVA 5%:</span><span>${formatCurrency(acumIva5)}</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>INC 8%:</span><span>${formatCurrency(acumInc8)}</span></div>
+            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; border-top: 1px solid #000000; padding-top: 4px; margin-top: 2px;">
+              <span>TOTAL:</span><span>${formatCurrency(pedidoCompleto.total)}</span>
+            </div>
+          </div>
+
+          ${
+            pedidoCompleto.notas
+              ? `
+            <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; font-size: 10px;">
+              <strong style="display: block;">Notas:</strong>
+              <p style="margin: 0; font-style: italic;">${pedidoCompleto.notas}</p>
+            </div>
+          `
+              : ""
+          }
+
+          <div style="text-align: center; font-size: 9px; color: #333333; display: flex; flex-direction: column; gap: 2px;">
+            <p style="font-weight: bold; color: #000000; margin: 0;">¡Gracias por su compra!</p>
+            <p style="font-size: 8px; margin: 0;">Sistema de pedidos y despacho desarrollado por TecnoIngenieria B.O.</p>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(container);
+
+      const opt = {
+        margin: 0,
+        filename: `comprobante-pedido-${pedidoCompleto.numero_pedido}.pdf`,
+        image: { type: "jpeg", quality: 1 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: "mm", format: [80, 200], orientation: "portrait" },
+      };
+
+      await html2pdf()
+        .set(opt)
+        .from(container)
+        .output("bloburl")
+        .then((pdfUrl) => {
+          window.open(pdfUrl, "_blank");
+        });
+
+      document.body.removeChild(container);
+    } catch (err) {
+      console.error("Error al generar PDF directo:", err);
+      alert("No se pudo generar el comprobante del pedido.");
+    } finally {
+      setPrintingId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50">
       {/* HEADER DE LA PÁGINA */}
@@ -138,7 +277,7 @@ export const OrdersPage = () => {
           </p>
         </div>
         <button
-          onClick={() => navigate("/orders/new")} // <-- 3. Redirección limpia a nuestra nueva página móvil
+          onClick={() => navigate("/orders/new")}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm w-full sm:w-auto justify-center"
         >
           <PlusCircle className="h-5 w-5" />
@@ -218,7 +357,7 @@ export const OrdersPage = () => {
                       <td className="p-4">
                         <div className="font-medium text-slate-800">
                           {pedido.clientes?.razon_social ||
-                            `${pedido.clientes?.primer_nombre} ${pedido.clientes?.primer_apellido}`}
+                            `${pedido.clientes?.primer_nombre || ""} ${pedido.clientes?.primer_apellido || ""}`}
                         </div>
                         <div className="text-xs text-slate-500">
                           ID: {pedido.clientes?.numero_identificacion}
@@ -234,7 +373,21 @@ export const OrdersPage = () => {
                         {getStatusBadge(pedido.estado)}
                       </td>
                       <td className="p-4">
-                        <div className="flex justify-center gap-2">
+                        <div className="flex justify-center gap-1.5">
+                          {/* Botón directo de impresión de tiquete PDF */}
+                          <button
+                            onClick={() => handleDirectPrint(pedido.id)}
+                            disabled={printingId === pedido.id}
+                            className="p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg transition-colors disabled:opacity-50"
+                            title="Imprimir / Abrir Tiquete PDF"
+                          >
+                            {printingId === pedido.id ? (
+                              <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+                            ) : (
+                              <Printer className="h-5 w-5" />
+                            )}
+                          </button>
+
                           <button
                             onClick={() => setOrderToView(pedido)}
                             className="p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
