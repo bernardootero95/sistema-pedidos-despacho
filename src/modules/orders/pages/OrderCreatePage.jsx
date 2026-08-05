@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Search,
   Plus,
+  Minus,
   Trash2,
   Save,
   Loader2,
@@ -79,7 +80,7 @@ export const OrderCreatePage = () => {
     fetchData();
   }, []);
 
-  // --- LÓGICA DEL CARRITO (Arreglada la visualización) ---
+  // --- LÓGICA DEL CARRITO ---
   const agregarAlCarrito = () => {
     if (!productoSeleccionado) return;
 
@@ -102,8 +103,8 @@ export const OrderCreatePage = () => {
         ...carrito,
         {
           producto_id: producto.id,
-          nombre: producto.nombre, // Clave exacta para la UI
-          codigo: producto.codigo, // Clave exacta para la UI
+          nombre: producto.nombre,
+          codigo: producto.codigo,
           cantidad: 1,
           precio_unitario: producto.precio_venta,
           iva_porcentaje: producto.iva || 0,
@@ -117,14 +118,31 @@ export const OrderCreatePage = () => {
     setProductoSeleccionado("");
   };
 
-  const actualizarCantidad = (index, nuevaCantidad) => {
-    const cantidadStr = nuevaCantidad.toString().replace(/\D/g, "");
-    const cantidad = cantidadStr === "" ? "" : Number(cantidadStr);
+  // Función para cambiar cantidad mediante los botones de + y -
+  const modificarCantidad = (index, delta) => {
+    const nuevoCarrito = [...carrito];
+    const nuevaCantidad = nuevoCarrito[index].cantidad + delta;
+
+    if (nuevaCantidad <= 0) {
+      // Si baja de 1, removemos el producto del carrito
+      eliminarDelCarrito(index);
+      return;
+    }
+
+    nuevoCarrito[index].cantidad = nuevaCantidad;
+    nuevoCarrito[index].subtotal_linea =
+      nuevaCantidad * nuevoCarrito[index].precio_unitario;
+    setCarrito(nuevoCarrito);
+  };
+
+  const actualizarCantidadInput = (index, valorTexto) => {
+    const cantidadStr = valorTexto.toString().replace(/\D/g, "");
+    const cantidad = cantidadStr === "" ? 1 : Number(cantidadStr);
 
     const nuevoCarrito = [...carrito];
     nuevoCarrito[index].cantidad = cantidad;
     nuevoCarrito[index].subtotal_linea =
-      (cantidad || 0) * nuevoCarrito[index].precio_unitario;
+      cantidad * nuevoCarrito[index].precio_unitario;
     setCarrito(nuevoCarrito);
   };
 
@@ -154,7 +172,6 @@ export const OrderCreatePage = () => {
       return;
     }
 
-    // Limpiamos nombre y código antes de enviar a la BD
     const detallesParaGuardar = carrito.map(
       ({ nombre, codigo, ...rest }) => rest,
     );
@@ -162,7 +179,7 @@ export const OrderCreatePage = () => {
     try {
       setIsSubmitting(true);
       await orderService.crearPedido(cabeceraData, detallesParaGuardar);
-      navigate("/orders"); // Redirige al listado general tras guardar
+      navigate("/pedidos"); // Redirige a la lista general de pedidos
     } catch (error) {
       console.error(error);
       setErrors({
@@ -195,11 +212,11 @@ export const OrderCreatePage = () => {
 
   return (
     <div className="flex flex-col min-h-full bg-slate-50 pb-24">
-      {/* HEADER MÓVIL / ESCRITORIO */}
+      {/* HEADER */}
       <div className="flex items-center justify-between p-4 bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate("/orders")}
+            onClick={() => navigate("/pedidos")}
             className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="h-6 w-6" />
@@ -230,7 +247,7 @@ export const OrderCreatePage = () => {
           </div>
         )}
 
-        {/* SECCIÓN 1: CLIENTE */}
+        {/* CLIENTE */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">
             Seleccionar Cliente *
@@ -257,7 +274,7 @@ export const OrderCreatePage = () => {
           )}
         </div>
 
-        {/* SECCIÓN 2: AGREGAR PRODUCTOS */}
+        {/* BUSCADOR DE PRODUCTOS */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">
             Agregar Productos
@@ -294,7 +311,7 @@ export const OrderCreatePage = () => {
           )}
         </div>
 
-        {/* SECCIÓN 3: LISTA DE PRODUCTOS EN EL CARRITO (Optimizado para tarjetas móviles) */}
+        {/* CARRITO CON BOTONES DE MAS Y MENOS */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-slate-700">
             Productos en el Pedido ({carrito.length})
@@ -309,38 +326,63 @@ export const OrderCreatePage = () => {
               {carrito.map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl gap-2"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl gap-3"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-800 text-sm truncate">
+                    <p className="font-semibold text-slate-800 text-sm">
                       {item.nombre}
                     </p>
                     <p className="text-xs text-slate-500 font-mono">
                       Cod: {item.codigo}
                     </p>
-                    <p className="text-xs font-medium text-blue-600 mt-0.5">
+                    <p className="text-xs font-semibold text-blue-600 mt-1">
                       {formatCurrency(item.precio_unitario)} c/u
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-end">
-                      <span className="text-xs text-slate-400 mb-0.5">
-                        Cant.
-                      </span>
+
+                  <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+                    {/* Control de Cantidad con Botones + y - */}
+                    <div className="flex items-center bg-white border border-slate-300 rounded-xl shadow-sm overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => modificarCantidad(index, -1)}
+                        className="p-2 text-slate-600 hover:bg-slate-100 transition-colors active:bg-slate-200"
+                        title="Restar cantidad"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
                       <input
-                        type="number"
-                        min="1"
+                        type="text"
                         value={item.cantidad}
                         onChange={(e) =>
-                          actualizarCantidad(index, e.target.value)
+                          actualizarCantidadInput(index, e.target.value)
                         }
-                        className="w-16 p-1.5 text-center font-bold border border-slate-300 rounded-lg bg-white outline-none focus:border-blue-500 text-sm"
+                        className="w-12 text-center font-bold text-slate-800 outline-none text-sm bg-transparent"
                       />
+                      <button
+                        type="button"
+                        onClick={() => modificarCantidad(index, 1)}
+                        className="p-2 text-slate-600 hover:bg-slate-100 transition-colors active:bg-slate-200"
+                        title="Sumar cantidad"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
                     </div>
+
+                    <div className="text-right min-w-22.5">
+                      <span className="text-xs text-slate-400 block">
+                        Subtotal
+                      </span>
+                      <span className="font-bold text-slate-800 text-sm">
+                        {formatCurrency(item.subtotal_linea)}
+                      </span>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => eliminarDelCarrito(index)}
-                      className="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors mt-4"
+                      className="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                      title="Eliminar producto"
                     >
                       <Trash2 className="h-5 w-5" />
                     </button>
@@ -351,7 +393,7 @@ export const OrderCreatePage = () => {
           )}
         </div>
 
-        {/* SECCIÓN 4: NOTAS Y TOTAL FLOTANTE */}
+        {/* NOTAS Y TOTAL FLOTANTE */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">
