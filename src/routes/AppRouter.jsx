@@ -11,7 +11,7 @@ import { OrdersPage } from "../modules/orders/pages/OrdersPage";
 import { DispatchesPage } from "../modules/dispatches/pages/DispatchesPage";
 import { UsersPage } from "../modules/users/pages/UsersPage";
 import { OrderCreatePage } from "../modules/orders/pages/OrderCreatePage";
-import { OrderDetailsPage } from "./modules/orders/pages/OrderDetailsPage";
+import { OrderDetailsPage } from "../modules/orders/pages/OrderDetailsPage";
 
 export const AppRouter = () => {
   const { user } = useAuth();

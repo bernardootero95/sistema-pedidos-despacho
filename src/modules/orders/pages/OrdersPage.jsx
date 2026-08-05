@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
-import { OrderDetailsModal } from "../components/OrderDetailsModal";
 import { imprimirPedidoPdf } from "../utils/printUtils";
 import {
   ShoppingCart,
@@ -30,9 +29,6 @@ export const OrdersPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const pageSize = 10;
-
-  // Estados para el modal de detalle
-  const [orderToView, setOrderToView] = useState(null);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -254,7 +250,7 @@ export const OrdersPage = () => {
                             onClick={() => handleDirectPrint(pedido.id)}
                             disabled={printingId === pedido.id}
                             className="p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg transition-colors disabled:opacity-50"
-                            title="Imprimir / Abrir Tiquete PDF"
+                            title="Imprimir Tiquete PDF"
                           >
                             {printingId === pedido.id ? (
                               <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
@@ -324,14 +320,6 @@ export const OrdersPage = () => {
           </div>
         </div>
       </div>
-
-      {/* MODAL DE DETALLES */}
-      {orderToView && (
-        <OrderDetailsModal
-          orderId={orderToView.id}
-          onClose={() => setOrderToView(null)}
-        />
-      )}
     </div>
   );
 };
