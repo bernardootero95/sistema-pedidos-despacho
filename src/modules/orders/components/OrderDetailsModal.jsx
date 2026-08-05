@@ -15,8 +15,6 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-
-  // Variable de entorno para el nombre de la empresa
   const companyName = import.meta.env.VITE_COMPANY_NAME || "SISTEMA DE PEDIDOS";
 
   useEffect(() => {
@@ -111,7 +109,6 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
 
   const { subtotal, iva19, iva5, inc8 } = calcularDesgloseFiscal();
 
-  // Modificado para abrir en una nueva pestaña usando Blob URL
   const handleOpenPdf = () => {
     const element = document.getElementById("ticket-pdf-content");
     const opt = {
@@ -127,9 +124,9 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     html2pdf()
       .set(opt)
       .from(element)
-      .output("bloburl") // En lugar de .save(), creamos una URL temporal en memoria
+      .output("bloburl")
       .then((pdfUrl) => {
-        window.open(pdfUrl, "_blank"); // Abrimos la URL en una nueva pestaña
+        window.open(pdfUrl, "_blank");
       })
       .finally(() => {
         setIsGeneratingPdf(false);
@@ -159,7 +156,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
               ) : (
                 <ExternalLink className="h-4 w-4" />
               )}
-              Abrir PDF 80mm
+              Imprimir
             </button>
             <button
               onClick={onClose}
