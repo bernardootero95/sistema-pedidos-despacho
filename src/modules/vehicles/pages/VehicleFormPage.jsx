@@ -5,7 +5,14 @@ import {
   validateVehicleField,
   validateVehicleForm,
 } from "../utils/vehicleValidations";
-import { Save, ArrowLeft, ShieldAlert, Loader2, Truck } from "lucide-react";
+import {
+  Save,
+  ArrowLeft,
+  ShieldAlert,
+  Loader2,
+  Truck,
+  UserCheck,
+} from "lucide-react";
 
 export const VehicleFormPage = () => {
   const navigate = useNavigate();
@@ -16,20 +23,28 @@ export const VehicleFormPage = () => {
     placa: "",
     marca: "",
     modelo: "",
+    conductor_id: "",
     capacidad_peso: "",
     capacidad_volumen: "",
   });
 
+  const [repartidores, setRepartidores] = useState([]);
   const [touched, setTouched] = useState({});
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(isEditing);
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
 
   useEffect(() => {
-    if (isEditing) {
-      const cargarVehiculo = async () => {
-        try {
+    const cargarDatosIniciales = async () => {
+      try {
+        setLoading(true);
+
+        // Cargar catálogo de repartidores en paralelo
+        const repartidoresData = await vehicleService.getRepartidores();
+        setRepartidores(repartidoresData);
+
+        if (isEditing) {
           const { data, error } = await vehicleService.getVehiculoPorId(id);
           if (error) throw error;
           if (data) {
@@ -37,18 +52,20 @@ export const VehicleFormPage = () => {
               placa: data.placa || "",
               marca: data.marca || "",
               modelo: data.modelo || "",
-              capacidad_peso: data.capacidad_peso || "",
-              capacidad_volumen: data.capacidad_volumen || "",
+              conductor_id: data.conductor_id || "",
+              capacidad_peso: data.capacidad_peso ?? "",
+              capacidad_volumen: data.capacidad_volumen ?? "",
             });
           }
-        } catch (err) {
-          setServerError(`No se pudo cargar el vehículo: ${err.message}`);
-        } finally {
-          setLoading(false);
         }
-      };
-      cargarVehiculo();
-    }
+      } catch (err) {
+        setServerError(`Error al cargar datos: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarDatosIniciales();
   }, [id, isEditing]);
 
   const handleChange = (e) => {
@@ -84,6 +101,7 @@ export const VehicleFormPage = () => {
       placa: true,
       marca: true,
       modelo: true,
+      conductor_id: true,
       capacidad_peso: true,
       capacidad_volumen: true,
     });
@@ -92,11 +110,24 @@ export const VehicleFormPage = () => {
 
     try {
       setIsSubmitting(true);
+
+      const payload = {
+        ...formData,
+        conductor_id: formData.conductor_id || null,
+        capacidad_peso:
+          formData.capacidad_peso !== "" ? Number(formData.capacidad_peso) : 0,
+        capacidad_volumen:
+          formData.capacidad_volumen !== ""
+            ? Number(formData.capacidad_volumen)
+            : 0,
+      };
+
       if (isEditing) {
-        await vehicleService.actualizarVehiculo(id, formData);
+        await vehicleService.actualizarVehiculo(id, payload);
       } else {
-        await vehicleService.crearVehiculo(formData);
+        await vehicleService.crearVehiculo(payload);
       }
+
       navigate("/vehiculos");
     } catch (err) {
       setServerError(err.message);
@@ -109,7 +140,7 @@ export const VehicleFormPage = () => {
     return (
       <div className="flex justify-center items-center h-64 text-slate-500 gap-2">
         <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-        <span>Cargando información del vehículo...</span>
+        <span>Cargando datos del módulo de vehículos...</span>
       </div>
     );
   }
@@ -131,8 +162,8 @@ export const VehicleFormPage = () => {
             </h1>
             <p className="text-sm text-slate-500">
               {isEditing
-                ? "Modifique los datos técnicos de la unidad de transporte."
-                : "Ingrese la información para añadir un vehículo a la flota."}
+                ? "Modifique los datos técnicos y el conductor asignado a la unidad."
+                : "Ingrese la información para añadir una unidad a la flota."}
             </p>
           </div>
         </div>
@@ -181,6 +212,37 @@ export const VehicleFormPage = () => {
             )}
           </div>
 
+          {/* Conductor / Repartidor Asignado */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+              Conductor (Repartidor)
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <UserCheck className="w-4 h-4" />
+              </span>
+              <select
+                name="conductor_id"
+                value={formData.conductor_id}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className="w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-blue-600 text-slate-800 bg-white focus:outline-none transition-colors"
+              >
+                <option value="">-- Sin conductor asignado --</option>
+                {repartidores.map((rep) => (
+                  <option key={rep.id} value={rep.id}>
+                    {rep.nombre_completo} ({rep.nombre_usuario})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <span className="text-xs text-slate-400 mt-1 block">
+              Solo se muestran usuarios activos con rol Repartidor.
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {/* Marca */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
@@ -205,9 +267,7 @@ export const VehicleFormPage = () => {
               </span>
             )}
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {/* Modelo (Año) */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
@@ -233,10 +293,11 @@ export const VehicleFormPage = () => {
             )}
           </div>
 
-          {/* Capacidad de Peso */}
+          {/* Capacidad de Peso (Opcional) */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Cap. Peso (kg) *
+              Cap. Peso (kg){" "}
+              <span className="text-slate-400 font-normal">(Opcional)</span>
             </label>
             <input
               type="number"
@@ -258,11 +319,14 @@ export const VehicleFormPage = () => {
               </span>
             )}
           </div>
+        </div>
 
-          {/* Capacidad de Volumen */}
+        {/* Capacidad de Volumen (Opcional) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Cap. Volumen (m³)
+              Cap. Volumen (m³){" "}
+              <span className="text-slate-400 font-normal">(Opcional)</span>
             </label>
             <input
               type="number"

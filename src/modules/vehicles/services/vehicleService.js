@@ -2,7 +2,7 @@ import { supabase } from "../../../config/supabase";
 
 export const vehicleService = {
   /**
-   * Obtiene la lista de vehículos con paginación y búsqueda por placa o marca
+   * Obtiene la lista de vehículos con paginación, búsqueda e información del conductor asignado
    */
   async getVehiculosPaginados(page = 1, limit = 10, searchTerm = "") {
     const from = (page - 1) * limit;
@@ -10,7 +10,10 @@ export const vehicleService = {
 
     let query = supabase
       .from("vehiculos")
-      .select("*", { count: "exact" })
+      .select(
+        "*, conductor:perfiles!vehiculos_conductor_id_fkey(id, nombre_completo, nombre_usuario)",
+        { count: "exact" },
+      )
       .is("eliminado", null);
 
     if (searchTerm.trim() !== "") {
@@ -36,12 +39,54 @@ export const vehicleService = {
   },
 
   /**
-   * Obtiene vehículos activos y disponibles para asignación en despachos
+   * Obtiene los datos de un vehículo por su ID
+   */
+  async getVehiculoPorId(id) {
+    const { data, error } = await supabase
+      .from("vehiculos")
+      .select(
+        "*, conductor:perfiles!vehiculos_conductor_id_fkey(id, nombre_completo, nombre_usuario)",
+      )
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      throw new Error(`Error al obtener el vehículo: ${error.message}`);
+    }
+
+    return { data, error: null };
+  },
+
+  /**
+   * Obtiene la lista de usuarios activos con el rol de 'repartidor'
+   */
+  async getRepartidores() {
+    const { data, error } = await supabase
+      .from("perfiles")
+      .select("id, nombre_completo, nombre_usuario, roles!inner(nombre)")
+      .eq("roles.nombre", "repartidor")
+      .eq("estado", true)
+      .is("eliminado", null)
+      .order("nombre_completo", { ascending: true });
+
+    if (error) {
+      throw new Error(
+        `Error al obtener lista de repartidores: ${error.message}`,
+      );
+    }
+
+    return data || [];
+  },
+
+  /**
+   * Obtiene vehículos activos y disponibles con su conductor
    */
   async getVehiculosDisponibles() {
     const { data, error } = await supabase
       .from("vehiculos")
-      .select("id, placa, marca, modelo, capacidad_peso")
+      .select(
+        "id, placa, marca, modelo, capacidad_peso, conductor_id, conductor:perfiles!vehiculos_conductor_id_fkey(nombre_completo)",
+      )
       .eq("estado", true)
       .is("eliminado", null)
       .order("placa", { ascending: true });
@@ -56,7 +101,7 @@ export const vehicleService = {
   },
 
   /**
-   * Crea un nuevo vehículo en la base de datos
+   * Crea un nuevo vehículo
    */
   async crearVehiculo(vehiculoData) {
     const { data, error } = await supabase
@@ -73,7 +118,7 @@ export const vehicleService = {
   },
 
   /**
-   * Actualiza los datos de un vehículo existente
+   * Actualiza un vehículo existente
    */
   async actualizarVehiculo(id, vehiculoData) {
     const dataToUpdate = {
@@ -119,7 +164,7 @@ export const vehicleService = {
   },
 
   /**
-   * Realiza un borrado lógico (Soft Delete) del vehículo
+   * Borrado lógico (Soft Delete) del vehículo
    */
   async eliminarVehiculo(id) {
     const { data, error } = await supabase

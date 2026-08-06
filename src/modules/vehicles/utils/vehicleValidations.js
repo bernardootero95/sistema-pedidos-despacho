@@ -1,20 +1,19 @@
 /**
  * Diccionario de reglas de validación para el módulo de Vehículos.
- * Garantiza formato de placa y rangos lógicos de capacidad y modelo.
+ * Las capacidades de peso y volumen son opcionales y no restrictivas.
  */
 const currentYear = new Date().getFullYear();
 
 const validators = {
   placa: (value) => {
-    if (!value.trim()) return "La placa es obligatoria.";
+    if (!value || !value.trim()) return "La placa es obligatoria.";
     const cleanPlaca = value.trim().toUpperCase();
-    // Validación estándar para formato de placa colombiana (ej: ABC123 o ABC12) o general
     if (cleanPlaca.length < 5)
       return "La placa debe tener al menos 5 caracteres.";
     return "";
   },
   marca: (value) => {
-    if (!value.trim()) return "La marca es obligatoria.";
+    if (!value || !value.trim()) return "La marca es obligatoria.";
     return "";
   },
   modelo: (value) => {
@@ -25,16 +24,16 @@ const validators = {
     }
     return "";
   },
+  conductor_id: () => "", // Opcional
   capacidad_peso: (value) => {
-    if (value === "" || value === null)
-      return "La capacidad de peso es obligatoria.";
+    if (value === "" || value === null || value === undefined) return ""; // Opcional
     const weight = Number(value);
-    if (isNaN(weight) || weight <= 0)
-      return "La capacidad debe ser mayor a 0 kg.";
+    if (isNaN(weight) || weight < 0)
+      return "Debe ingresar un número mayor o igual a 0.";
     return "";
   },
   capacidad_volumen: (value) => {
-    if (value === "" || value === null) return ""; // Opcional pero si se ingresa debe ser positivo
+    if (value === "" || value === null || value === undefined) return ""; // Opcional
     const volume = Number(value);
     if (isNaN(volume) || volume < 0) return "El volumen no puede ser negativo.";
     return "";
