@@ -31,6 +31,12 @@ const VehiclesPage = lazy(() =>
     default: m.VehiclesPage,
   })),
 );
+// Importación del nuevo formulario de vehículos
+const VehicleFormPage = lazy(() =>
+  import("../modules/vehicles/pages/VehicleFormPage").then((m) => ({
+    default: m.VehicleFormPage,
+  })),
+);
 const OrdersPage = lazy(() =>
   import("../modules/orders/pages/OrdersPage").then((m) => ({
     default: m.OrdersPage,
@@ -90,7 +96,11 @@ export const AppRouter = () => {
             {/* Módulos de Catálogos */}
             <Route path="/clientes" element={<ClientsPage />} />
             <Route path="/productos" element={<ProductsPage />} />
+
+            {/* Módulos de Vehículos */}
             <Route path="/vehiculos" element={<VehiclesPage />} />
+            <Route path="/vehiculos/nuevo" element={<VehicleFormPage />} />
+            <Route path="/vehiculos/editar/:id" element={<VehicleFormPage />} />
 
             {/* Módulos Operativos */}
             <Route path="/pedidos" element={<OrdersPage />} />
