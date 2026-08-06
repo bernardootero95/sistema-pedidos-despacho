@@ -1,5 +1,4 @@
 import React from "react";
-import { tenantConfig } from "../../config/tenant";
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -8,20 +7,30 @@ export const Footer = () => {
     <footer className="bg-white border-t border-slate-200 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="py-4 flex flex-col md:flex-row justify-between items-center gap-2">
-          {/* Derechos de Autor y Empresa */}
+          {/* Derechos de Autor y Empresa Desarrolladora */}
           <div className="text-sm text-slate-500">
-            &copy; {currentYear}{" "}
-            <span className="font-semibold text-slate-700">
-              {tenantConfig.name}
-            </span>
-            . Todos los derechos reservados.
+            &copy; {currentYear} Desarrollado por{" "}
+            <a
+              href="https://tecnoingenieriabo.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-slate-700 hover:text-primary transition-colors"
+            >
+              TecnoIngeniería B.O.
+            </a>{" "}
+            Todos los derechos reservados.
           </div>
 
-          {/* Versión del Sistema y Soporte (Opcional) */}
+          {/* Versión del Sistema y Enlace de Soporte */}
           <div className="flex items-center gap-4 text-xs text-slate-400">
             <span>Versión 1.0.0</span>
             <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-slate-300"></span>
-            <a href="#" className="hover:text-blue-600 transition-colors">
+            <a
+              href="https://tecnoingenieriabo.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
               Soporte Técnico
             </a>
           </div>
