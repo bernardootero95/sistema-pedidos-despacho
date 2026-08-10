@@ -1,358 +1,261 @@
-import React, { useState } from "react";
-import { DEMO_DATA } from "../../../mock/demoData";
-import { useAuth } from "../../../context/AuthContext";
+import React, { useState, useEffect } from "react";
+import { dispatchService } from "../services/dispatchService";
 import {
   Truck,
-  Plus,
-  CheckCircle2,
-  Clock,
-  Package,
-  AlertCircle,
+  Search,
+  PlusCircle,
+  Eye,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
   MapPin,
-  UserCheck,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 
 export const DispatchesPage = () => {
-  const { user } = useAuth();
+  const [despachos, setDespachos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [despachos, setDespachos] = useState(DEMO_DATA.despachos);
-  const [pedidosPendientes, setPedidosPendientes] = useState(
-    DEMO_DATA.pedidos.filter((p) => p.estado === "pendiente"),
-  );
+  // Paginación y Búsqueda
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const pageSize = 10;
 
-  const [activeTab, setActiveTab] = useState("list");
-  const [vehiculoPlaca, setVehiculoPlaca] = useState("");
-  const [selectedPedidos, setSelectedPedidos] = useState([]);
-  const [formErrors, setFormErrors] = useState({});
+  // Efecto para el Debounce de búsqueda
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Volver a la página 1 al buscar
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("es-CO", {
-      style: "currency",
-      currency: "COP",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const handleSelectPedido = (id) => {
-    if (selectedPedidos.includes(id)) {
-      setSelectedPedidos(selectedPedidos.filter((item) => item !== id));
-    } else {
-      setSelectedPedidos([...selectedPedidos, id]);
+  // Cargar Despachos
+  const cargarDespachos = async () => {
+    try {
+      setLoading(true);
+      const {
+        data,
+        total,
+        totalPages: pages,
+      } = await dispatchService.getDespachosPaginados(
+        currentPage,
+        pageSize,
+        debouncedSearch,
+      );
+      setDespachos(data);
+      setTotalItems(total);
+      setTotalPages(pages);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmitDispatch = (e) => {
-    e.preventDefault();
-    const errors = {};
-    if (!vehiculoPlaca)
-      errors.vehiculo = "Debes asignar un vehículo para la ruta.";
-    if (selectedPedidos.length === 0)
-      errors.pedidos =
-        "Selecciona al menos un pedido pendiente para despachar.";
+  useEffect(() => {
+    cargarDespachos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, debouncedSearch]);
 
-    setFormErrors(errors);
-    if (Object.keys(errors).length > 0) return;
-
-    const vehiculo = DEMO_DATA.vehiculos.find((v) => v.placa === vehiculoPlaca);
-
-    const newDispatch = {
-      id: `DSP-${500 + despachos.length + 1}`,
-      fecha: new Date().toISOString().split("T")[0],
-      vehiculo_placa: vehiculo.placa,
-      conductor_nombre: vehiculo.conductor,
-      despachador_nombre: user?.nombre_completo || "Despachador Demo",
-      estado: "en_ruta",
-      pedidos_ids: selectedPedidos,
-      total_peso_estimado: `${selectedPedidos.length * 45} kg est.`,
+  const getStatusBadge = (estado) => {
+    const styles = {
+      creado: "bg-blue-100 text-blue-800 border-blue-200",
+      en_ruta: "bg-amber-100 text-amber-800 border-amber-200",
+      completado: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      anulado: "bg-red-100 text-red-800 border-red-200",
     };
 
-    setDespachos([newDispatch, ...despachos]);
-    DEMO_DATA.despachos.unshift(newDispatch);
+    const labels = {
+      creado: "Creado",
+      en_ruta: "En Ruta",
+      completado: "Completado",
+      anulado: "Anulado",
+    };
 
-    DEMO_DATA.pedidos.forEach((p) => {
-      if (selectedPedidos.includes(p.id)) {
-        p.estado = "despachado";
-      }
-    });
-
-    setPedidosPendientes(
-      pedidosPendientes.filter((p) => !selectedPedidos.includes(p.id)),
-    );
-
-    setVehiculoPlaca("");
-    setSelectedPedidos([]);
-    setFormErrors({});
-    setActiveTab("list");
-    alert(
-      `¡Orden de Despacho ${newDispatch.id} generada y asignada al vehículo ${vehiculo.placa}!`,
+    return (
+      <span
+        className={`px-2.5 py-1 text-xs font-medium rounded-full border ${styles[estado] || "bg-gray-100 text-gray-800"}`}
+      >
+        {labels[estado] || estado}
+      </span>
     );
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("es-CO", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* CABECERA RESPONSIVA */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+    <div className="space-y-6">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Truck className="w-6 h-6 text-primary shrink-0" />
-            <span>Órdenes de Despacho</span>
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <Truck className="w-6 h-6 text-primary" />
+            Órdenes de Despacho
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Agrupación logística de pedidos, asignación de flota de reparto y
-            control de rutas.
+          <p className="text-sm text-slate-500 mt-1">
+            Gestiona y monitorea las rutas de entrega de los vehículos.
           </p>
         </div>
+        <button
+          onClick={() => alert("Próximo paso: Abrir formulario de creación")} // Lo conectaremos en el siguiente paso
+          className="flex items-center gap-2 bg-primary hover:bg-primaryHover text-white px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm w-full sm:w-auto justify-center"
+        >
+          <PlusCircle className="w-5 h-5" />
+          Nuevo Despacho
+        </button>
+      </div>
 
-        <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 w-full sm:w-auto">
-          <button
-            onClick={() => setActiveTab("list")}
-            className={`flex-1 sm:flex-initial py-2 px-4 rounded-md text-xs font-bold transition-all text-center ${
-              activeTab === "list"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Rutas Activas ({despachos.length})
-          </button>
-          <button
-            onClick={() => {
-              setPedidosPendientes(
-                DEMO_DATA.pedidos.filter((p) => p.estado === "pendiente"),
-              );
-              setActiveTab("new");
-            }}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-2 px-4 rounded-md text-xs font-bold transition-all ${
-              activeTab === "new"
-                ? "bg-primary text-white shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Plus className="w-4 h-4 shrink-0" /> Nuevo Despacho
-          </button>
+      {/* CONTROLES (BÚSQUEDA) */}
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between gap-4">
+        <div className="relative w-full sm:w-96">
+          <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Buscar por código de despacho..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+          />
         </div>
       </div>
 
-      {/* VISTA 1: RUTAS Y DESPACHOS ACTIVOS */}
-      {activeTab === "list" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-          {despachos.map((dsp) => (
-            <div
-              key={dsp.id}
-              className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between"
-            >
-              <div className="p-4 sm:p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-                <div className="flex items-center gap-3 overflow-hidden pr-2">
-                  <div className="p-2.5 bg-primary/20 text-primary-light rounded-lg font-bold shrink-0">
-                    <Truck className="w-5 h-5" />
-                  </div>
-                  <div className="overflow-hidden">
-                    <span className="text-[10px] sm:text-xs text-slate-400 font-bold block uppercase tracking-wider truncate">
-                      Orden de Despacho
-                    </span>
-                    <h3 className="text-base sm:text-lg font-black font-mono text-white truncate">
-                      {dsp.id}
-                    </h3>
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full text-xs font-bold flex items-center gap-1 shrink-0">
-                  <Clock className="w-3.5 h-3.5 shrink-0" /> En Ruta
-                </span>
-              </div>
-
-              <div className="p-4 sm:p-5 space-y-4">
-                <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                  <div className="overflow-hidden">
-                    <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5 truncate">
-                      Vehículo Asignado
-                    </span>
-                    <p className="font-bold text-slate-900 font-mono text-sm sm:text-base truncate">
-                      {dsp.vehiculo_placa}
-                    </p>
-                  </div>
-                  <div className="overflow-hidden">
-                    <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5 truncate">
-                      Conductor
-                    </span>
-                    <p className="font-semibold text-slate-700 text-xs sm:text-sm truncate">
-                      {dsp.conductor_nombre}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-slate-100">
-                  <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2 items-center gap-1">
-                    <Package className="w-3.5 h-3.5 shrink-0" /> Pedidos en esta
-                    ruta ({dsp.pedidos_ids.length})
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {dsp.pedidos_ids.map((id) => (
-                      <span
-                        key={id}
-                        className="px-2 py-1 bg-slate-100 border border-slate-200 text-slate-800 font-mono text-xs font-bold rounded"
-                      >
-                        {id}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-slate-500 px-4 sm:px-5">
-                <span className="truncate">
-                  Despachado por:{" "}
-                  <strong className="text-slate-700">
-                    {dsp.despachador_nombre}
-                  </strong>
-                </span>
-                <span>Fecha: {dsp.fecha}</span>
-              </div>
-            </div>
-          ))}
+      {/* MENSAJES DE ERROR */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl flex items-center gap-2">
+          <XCircle className="w-5 h-5" />
+          <p>{error}</p>
         </div>
       )}
 
-      {/* VISTA 2: ARMAR NUEVO DESPACHO (Formulario Touch-Optimized) */}
-      {activeTab === "new" && (
-        <form
-          onSubmit={handleSubmitDispatch}
-          className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-6"
-          noValidate
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pb-6 border-b border-slate-200">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                1. Asignar Vehículo / Conductor
-              </label>
-              <select
-                value={vehiculoPlaca}
-                onChange={(e) => {
-                  setVehiculoPlaca(e.target.value);
-                  setFormErrors((prev) => ({ ...prev, vehiculo: "" }));
-                }}
-                className={`w-full p-3.5 sm:p-3 bg-slate-50 border rounded-xl sm:rounded-lg text-base sm:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                  formErrors.vehiculo
-                    ? "border-red-400 bg-red-50/20"
-                    : "border-slate-300"
-                }`}
-              >
-                <option value="">-- Selecciona vehículo de la flota --</option>
-                {DEMO_DATA.vehiculos.map((v) => (
-                  <option key={v.id} value={v.placa}>
-                    {v.placa} - {v.marca} (Cap: {v.capacidad_kg} kg | Conductor:{" "}
-                    {v.conductor})
-                  </option>
+      {/* TABLA RESPONSIVA */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        {loading && despachos.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-slate-400">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+            <p>Cargando despachos...</p>
+          </div>
+        ) : despachos.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-slate-500 text-center">
+            <MapPin className="w-12 h-12 text-slate-300 mb-4" />
+            <h3 className="text-lg font-semibold text-slate-700">
+              No se encontraron despachos
+            </h3>
+            <p className="max-w-sm mt-2">
+              {searchTerm
+                ? "No hay resultados que coincidan con tu búsqueda."
+                : "Aún no has registrado ninguna orden de despacho en el sistema."}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-sm">
+                  <th className="px-6 py-4 font-medium">Código</th>
+                  <th className="px-6 py-4 font-medium">Vehículo</th>
+                  <th className="px-6 py-4 font-medium">Repartidor</th>
+                  <th className="px-6 py-4 font-medium">Fecha Despacho</th>
+                  <th className="px-6 py-4 font-medium">Estado</th>
+                  <th className="px-6 py-4 font-medium text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {despachos.map((despacho) => (
+                  <tr
+                    key={despacho.id}
+                    className="hover:bg-slate-50/50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <span className="font-semibold text-slate-700">
+                        {despacho.codigo_despacho}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-slate-700">
+                        {despacho.vehiculo?.placa || "N/A"}
+                      </span>
+                      <br />
+                      <span className="text-xs text-slate-500">
+                        {despacho.vehiculo?.marca || ""}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-slate-700">
+                        {despacho.repartidor?.nombre_completo || "N/A"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {formatDate(despacho.fecha_despacho)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {getStatusBadge(despacho.estado)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() =>
+                          alert(
+                            `Próximamente: Detalles del despacho ${despacho.codigo_despacho}`,
+                          )
+                        }
+                        className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors inline-flex"
+                        title="Ver Detalles"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
+                    </td>
+                  </tr>
                 ))}
-              </select>
-              {formErrors.vehiculo && (
-                <p className="mt-1.5 text-xs font-semibold text-red-600">
-                  {formErrors.vehiculo}
-                </p>
-              )}
-            </div>
+              </tbody>
+            </table>
+          </div>
+        )}
 
-            <div className="flex flex-col justify-end">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl sm:rounded-lg text-blue-800 text-xs flex items-center gap-2.5">
-                <UserCheck className="w-5 h-5 shrink-0 text-blue-600" />
-                <span>
-                  Estás operando bajo el usuario logístico:{" "}
-                  <strong className="font-bold block sm:inline">
-                    {user?.nombre_completo}
-                  </strong>
-                </span>
-              </div>
+        {/* PAGINACIÓN */}
+        {!loading && despachos.length > 0 && (
+          <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <span className="text-sm text-slate-500">
+              Mostrando página{" "}
+              <span className="font-medium text-slate-700">{currentPage}</span>{" "}
+              de{" "}
+              <span className="font-medium text-slate-700">{totalPages}</span> (
+              {totalItems} registros)
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
           </div>
-
-          {/* LISTADO DE PEDIDOS PENDIENTES */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-                2. Seleccionar Pedidos Pendientes de Entrega
-              </label>
-              <span className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full w-fit">
-                {selectedPedidos.length} pedido(s) seleccionado(s)
-              </span>
-            </div>
-
-            {formErrors.pedidos && (
-              <p className="text-xs font-semibold text-red-600 p-2.5 bg-red-50 rounded-lg border border-red-200">
-                {formErrors.pedidos}
-              </p>
-            )}
-
-            {pedidosPendientes.length === 0 ? (
-              <div className="p-6 sm:p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300 text-slate-500 text-xs sm:text-sm font-medium">
-                No hay pedidos en estado "Pendiente" en este momento. Crea uno
-                nuevo desde el módulo de Toma de Pedidos.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                {pedidosPendientes.map((ped) => {
-                  const isSelected = selectedPedidos.includes(ped.id);
-                  return (
-                    <div
-                      key={ped.id}
-                      onClick={() => {
-                        handleSelectPedido(ped.id);
-                        setFormErrors((prev) => ({ ...prev, pedidos: "" }));
-                      }}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between active:scale-[0.98] select-none min-h-30 ${
-                        isSelected
-                          ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                          : "border-slate-200 bg-white hover:border-slate-300"
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-mono font-black text-sm text-slate-900">
-                            {ped.id}
-                          </span>
-                          <span
-                            className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold transition-colors ${
-                              isSelected
-                                ? "bg-primary text-white shadow-sm"
-                                : "bg-slate-100 text-slate-400 border border-slate-300"
-                            }`}
-                          >
-                            {isSelected && "✓"}
-                          </span>
-                        </div>
-                        <h4 className="font-bold text-slate-800 text-sm sm:text-base leading-snug">
-                          {ped.cliente_nombre}
-                        </h4>
-                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>Fecha toma: {ped.fecha}</span>
-                        </p>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
-                        <span className="text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                          {ped.items.length} ítem(s)
-                        </span>
-                        <span className="text-slate-900 font-black text-sm sm:text-base">
-                          {formatCurrency(ped.total)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="pt-4 border-t border-slate-200">
-            <button
-              type="submit"
-              disabled={pedidosPendientes.length === 0}
-              className="w-full sm:w-auto ml-auto px-6 py-3.5 sm:py-3 bg-primary hover:bg-primary-hover active:scale-95 disabled:opacity-50 text-white font-bold text-sm sm:text-base rounded-xl sm:rounded-lg shadow-md transition-all flex items-center justify-center gap-2 min-h-12"
-            >
-              <CheckCircle2 className="w-5 h-5 shrink-0" />
-              <span>Confirmar y Emitir Orden de Ruta</span>
-            </button>
-          </div>
-        </form>
-      )}
+        )}
+      </div>
     </div>
   );
 };
