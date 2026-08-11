@@ -161,7 +161,7 @@ export const DispatchCreatePage = () => {
 
       {error && (
         <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center gap-3 border border-red-100">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <AlertCircle className="w-5 h-5 shrink-0" />
           <p className="font-medium">{error}</p>
         </div>
       )}
@@ -270,13 +270,13 @@ export const DispatchCreatePage = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 grow overflow-hidden">
               {/* Lista de Disponibles */}
-              <div className="border border-slate-200 rounded-lg flex flex-col h-[400px]">
+              <div className="border border-slate-200 rounded-lg flex flex-col h-100">
                 <div className="bg-slate-50 p-3 font-medium text-slate-700 border-b border-slate-200">
                   Pendientes por Despachar
                 </div>
-                <div className="overflow-y-auto p-2 flex flex-col gap-2 flex-grow">
+                <div className="overflow-y-auto p-2 flex flex-col gap-2 grow">
                   {pedidosFiltrados.length === 0 ? (
                     <p className="text-sm text-slate-500 text-center mt-4">
                       No hay pedidos disponibles.
@@ -312,14 +312,14 @@ export const DispatchCreatePage = () => {
               </div>
 
               {/* Lista de Seleccionados */}
-              <div className="border border-blue-200 rounded-lg flex flex-col h-[400px]">
+              <div className="border border-blue-200 rounded-lg flex flex-col h-100">
                 <div className="bg-blue-50 p-3 font-medium text-blue-800 border-b border-blue-200 flex justify-between">
                   <span>En este Camión</span>
                   <span className="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full">
                     {pedidosSeleccionados.length}
                   </span>
                 </div>
-                <div className="overflow-y-auto p-2 flex flex-col gap-2 flex-grow bg-slate-50">
+                <div className="overflow-y-auto p-2 flex flex-col gap-2 grow bg-slate-50">
                   {pedidosSeleccionados.length === 0 ? (
                     <p className="text-sm text-slate-500 text-center mt-4 flex flex-col items-center gap-2">
                       <Truck className="w-8 h-8 text-slate-300" />

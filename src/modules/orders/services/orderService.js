@@ -30,93 +30,34 @@ export const orderService = {
   },
 
   /**
-   * Genera el siguiente número consecutivo de pedido (Ej: 1, 2, 3...)
+   * Crea un pedido de forma atómica mediante la función RPC
+   * `crear_pedido_transaccional`. Toda la validación de stock, el cálculo
+   * de precios y el consecutivo se resuelven en el servidor dentro de una
+   * única transacción, evitando condiciones de carrera entre vendedores
+   * concurrentes y evitando confiar en precios enviados por el cliente.
+   *
+   * @param {Object} cabeceraData - { cliente_id, vendedor_id, notas }
+   * @param {Array} detallesData - [{ producto_id, cantidad }, ...]
    */
-  async obtenerSiguienteNumeroPedido() {
-    const { data, error } = await supabase
-      .from("pedidos_cabecera")
-      .select("numero_pedido")
-      .order("creado", { ascending: false })
-      .limit(1);
-
-    if (error || !data || data.length === 0) {
-      return "1"; // Primer pedido del sistema
-    }
-
-    const ultimoNumero = parseInt(data[0].numero_pedido, 10);
-    if (isNaN(ultimoNumero)) {
-      return "1";
-    }
-
-    return (ultimoNumero + 1).toString();
-  },
-
-  async crearPedido(pedidoData, detallesData) {
-    // 1. Validar y descontar stock
-    for (const item of detallesData) {
-      const { data: productoActual, error: errorProd } = await supabase
-        .from("productos")
-        .select("nombre, disponible")
-        .eq("id", item.producto_id)
-        .single();
-
-      if (errorProd)
-        throw new Error("No se pudo verificar el stock del producto.");
-
-      if (productoActual.disponible < item.cantidad) {
-        throw new Error(
-          `Stock insuficiente para "${productoActual.nombre}". Disponible: ${productoActual.disponible}`,
-        );
-      }
-    }
-
-    // 2. Asignar el consecutivo numérico automático
-    const siguienteNumero = await this.obtenerSiguienteNumeroPedido();
-    const pedidoConConsecutivo = {
-      ...pedidoData,
-      numero_pedido: siguienteNumero,
-    };
-
-    // 3. Insertar Cabecera
-    const { data: cabecera, error: errorCabecera } = await supabase
-      .from("pedidos_cabecera")
-      .insert([pedidoConConsecutivo])
-      .select()
-      .single();
-
-    if (errorCabecera) throw errorCabecera;
-
-    // 4. Insertar Detalles
-    const detallesConId = detallesData.map((detalle) => ({
-      ...detalle,
-      pedido_id: cabecera.id,
+  async crearPedido(cabeceraData, detallesData) {
+    const detallesParaRpc = detallesData.map((item) => ({
+      producto_id: item.producto_id,
+      cantidad: Number(item.cantidad),
     }));
 
-    const { error: errorDetalles } = await supabase
-      .from("pedidos_detalle")
-      .insert(detallesConId);
+    const { data, error } = await supabase.rpc("crear_pedido_transaccional", {
+      p_cliente_id: cabeceraData.cliente_id,
+      p_vendedor_id: cabeceraData.vendedor_id,
+      p_notas: cabeceraData.notas || null,
+      p_detalles: detallesParaRpc,
+    });
 
-    if (errorDetalles) throw errorDetalles;
-
-    // 5. Descontar Inventario
-    for (const item of detallesData) {
-      const { data: prod } = await supabase
-        .from("productos")
-        .select("disponible")
-        .eq("id", item.producto_id)
-        .single();
-
-      const nuevoStock = prod.disponible - item.cantidad;
-      await supabase
-        .from("productos")
-        .update({
-          disponible: nuevoStock,
-          actualizado: new Date().toISOString(),
-        })
-        .eq("id", item.producto_id);
+    if (error) {
+      // Postgres RAISE EXCEPTION llega aquí como error.message
+      throw new Error(error.message || "Error al crear el pedido.");
     }
 
-    return cabecera;
+    return data;
   },
 
   async getPedidoCompleto(id) {

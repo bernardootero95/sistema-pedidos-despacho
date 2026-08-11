@@ -1,94 +1,117 @@
-# Memoria Técnica del Proyecto: Sistema de Pedidos y Despacho
+"""# Datos y Memoria Técnica del Proyecto: Sistema de Pedidos y Despacho
 
-Esta documentación centraliza la arquitectura, diseño y esquema del proyecto para ser utilizada como fuente de contexto o memoria del desarrollo.
+Esta documentación centraliza la arquitectura, diseño, esquema de base de datos y estructura del proyecto. Sirve como fuente de la verdad para el contexto del desarrollo, asegurando el cumplimiento de los principios SOLID y la escalabilidad del sistema.
+
+---
 
 ## 1. Definición Técnica (Stack Tecnológico)
 
-El sistema está construido priorizando la escalabilidad, funcionalidad y velocidad, aplicando principios SOLID y Clean Architecture.
+El sistema está construido priorizando la escalabilidad, mantenibilidad, velocidad y experiencia de usuario (UI/UX), aplicando estrictamente principios **SOLID** y **Clean Architecture**.
 
-- **Frontend:** React, Vite, JavaScript.
-- **Estilizado y UI:** Tailwind CSS v4 (configuración nativa mediante el plugin `@tailwindcss/vite` y variables CSS con `@theme`).
-- **Base de Datos y Backend as a Service (BaaS):** Supabase (PostgreSQL), empleando RLS (Row Level Security) para aislamiento de datos.
-- **Arquitectura General:** Arquitectura Modular basada en características (Feature-Driven Architecture).
-- **Modelo de Despliegue (SaaS):** Marca Blanca (White-Label) / Multi-Empresa. Cada cliente cuenta con su propio entorno y base de datos, personalizando colores, logo y variables mediante archivos `.env`.
-- **Calidad de Código:** Linter estándar de la industria (ESLint), validación modular de datos y separación de responsabilidades (SRP).
+- **Frontend:** React, Vite, JavaScript (ES6+).
+- **Estilizado y UI:** Tailwind CSS v4 (configuración nativa mediante `@tailwindcss/vite` e inyección de variables dinámicas `@theme`).
+- **Iconografía:** Lucide React.
+- **Base de Datos y Backend as a Service (BaaS):** Supabase (PostgreSQL), empleando **Row Level Security (RLS)** y funciones con triggers autónomos para auditoría.
+- **Arquitectura General:** Arquitectura Modular Basada en Características (_Feature-Driven Architecture_).
+- **Optimización de Rendimiento:** Implementación de _Code Splitting_ mediante `React.lazy` y `Suspense` en el enrutador para reducir el tamaño del bundle inicial.
+- **Modelo de Despliegue (SaaS):** Marca Blanca (_White-Label_) / Multi-Empresa. Cada cliente cuenta con su propio entorno y base de datos, personalizando colores, logo y variables mediante archivos `.env` e inyección en el DOM (`tenantConfig.js`).
+- **Calidad y Patrones de Código:** Linter estándar (ESLint), validación modular desacoplada de la UI (SRP), paginación del lado del servidor (_Server-Side Pagination_) y transacciones atómicas para datos complejos.
 
-## 2. Descripción del Proyecto
+---
 
-Es un **Sistema de Toma de Pedidos y Despacho (Order Management System - OMS)** desacoplado, diseñado para facilitar las labores logísticas y comerciales de distintas compañías. Su funcionamiento se basa en interactuar de forma asíncrona con un sistema ERP maestro.
+## 2. Descripción General y Flujos Operativos
 
-- **Flujo Principal:** Los vendedores toman pedidos en el sistema -> Pasan a preparación -> Son organizados en "Órdenes de Despacho" por el despachador -> Se asignan a un vehículo/repartidor -> Se entregan al cliente.
-- **Integración Fiscal:** Una vez entregado el pedido, el sistema permite que el ERP principal consuma los datos para generar la facturación electrónica (normativa DIAN en Colombia).
-- **Sincronización:** Los productos, inventarios (stocks) y categorías se sincronizan en diferido desde el ERP hacia la aplicación cada día, evitando cuellos de botella en tiempo real. Los clientes, por otro lado, nacen en este sistema y se envían hacia el ERP.
-- **Roles Dinámicos y Seguridad:** Accesos delimitados para Soporte (todo), Gerencia (todo), Vendedor (ventas), Despachador (logística) y Repartidor (rutas).
+Es un **Sistema de Toma de Pedidos y Despacho (Order Management System - OMS)** desacoplado, diseñado para facilitar y automatizar las labores logísticas y comerciales de distintas compañías, interactuando de forma asíncrona con un sistema ERP maestro.
 
-## 3. Estructura de Carpetas
+### Flujo Principal de Trabajo:
 
-Diseñada para que el proyecto no se convierta en un monolito inmanejable. La lógica de negocio (`services`), las reglas (`utils`), las vistas (`pages`) y los componentes visuales (`components`) están aislados por módulo:
+1. **Toma de Pedido (Vendedor):** El vendedor selecciona el cliente, busca productos en el catálogo y genera un pedido. En este punto se ejecuta el **congelamiento de precios e impuestos** (IVA e INC) para garantizar la inmutabilidad histórica requerida por normativas fiscales (DIAN en Colombia). El pedido nace en estado `pendiente`.
+2. **Preparación y Logística:** Los pedidos pendientes pasan a revisión.
+3. **Órdenes de Despacho (Despachador):** El despachador agrupa múltiples pedidos pendientes en una **Orden de Despacho**, asignándoles un vehículo de la flota y un conductor/repartidor registrado (usuarios con rol específico, e.g., `rol_id = 5`).
+4. **Ruta y Entrega (Repartidor):** El repartidor ejecuta la entrega en ruta y actualiza los estados en tiempo real (móvil/responsivo).
+5. **Sincronización con ERP / Facturación:** Una vez entregado el pedido, los datos están disponibles para ser consumidos por el ERP principal y generar la facturación electrónica correspondiente.
+
+---
+
+## 3. Estructura de Carpetas del Proyecto
+
+Diseñada bajo un enfoque modular por características (_Feature-Driven_) para prevenir el crecimiento monolítico:
 
 ```text
 src/
-├── components/          # Componentes compartidos reutilizables
-│   └── layout/          # Layout principal (MainLayout.jsx) con Sidebar dinámico por rol
+├── components/          # Componentes globales y reutilizables (Footer, Modales, etc.)
+│   └── layout/          # MainLayout.jsx (Sidebar dinámico por rol, barra superior responsive)
 ├── config/              # Configuraciones de integración
-│   ├── supabase.js      # Conexión principal
-│   └── tenant.js        # Lógica de Marca Blanca (.env)
-├── context/             # Manejadores de Estado Global
-│   └── AuthContext.jsx  # Control de sesión y perfiles
-├── mock/                # Entorno de pruebas (demoData.js) para prototipos interactivos
-├── modules/             # [Núcleo] Módulos de la aplicación
-│   ├── auth/            # Autenticación y configuración SQL
-│   ├── clients/         # Módulo de Directorio de Clientes (UI, validations, services)
-│   ├── dashboard/       # Panel principal y KPIs
-│   ├── products/        # Inventario y catálogo sincronizado
-│   └── vehicles/        # Flota logística
-└── routes/              # Sistema de navegación
-    └── AppRouter.jsx    # Protección y declaración de rutas
+│   ├── supabase.js      # Conexión cliente a Supabase
+│   └── tenant.js        # Lógica de Marca Blanca (Variables VITE_TENANT_*)
+├── context/             # Estado Global
+│   └── AuthContext.jsx  # Control de sesión, perfiles de usuario y permisos por rol
+├── mock/                # Entorno de datos de prueba para prototipado
+├── modules/             # [NÚCLEO] Módulos de negocio desacoplados
+│   ├── auth/            # Autenticación, gestión de personal y scripts SQL base
+│   ├── clients/         # Directorio de Clientes (UI, ClientForm, validations, clientService)
+│   ├── dashboard/       # Panel principal y visualización de KPIs
+│   ├── products/        # Inventario y catálogo sincronizado (productService)
+│   ├── vehicles/        # Flota logística (vehicleService, formularios y listado)
+│   ├── orders/          # Módulo de Toma de Pedidos (orderService, OrdersPage, OrderForm)
+│   └── dispatches/      # Módulo de Despachos (dispatchService, DispatchesPage, DispatchForm)
+├── routes/              # Sistema de navegación protegida
+│   └── AppRouter.jsx    # Enrutador central optimizado con React.lazy + Suspense
+└── utils/               # Utilidades globales y reglas de validación
+    ├── clientValidations.js
+    ├── productValidations.js
+    ├── calculateDV.js   # Algoritmo de cálculo de Dígito de Verificación (NIT)
+    └── printUtils.js    # Generación y exportación de comprobantes en PDF directo
 ```
 
-## 4. Estructura de la Base de Datos
+## 4. Estructura y Esquema de la Base de Datos
 
-```texto
-Utilizamos PostgreSQL con esquemas fuertemente tipados, soft deletes e historial de auditoría autónomo.
+PostgreSQL alojado en Supabase con esquemas fuertemente tipados, borrado lógico (Soft Delete) e historial de auditoría autónomo.
 
-Control y Auditoría Obligatoria: Todas las tablas incluyen los campos estado (boolean), creado (timestamp), actualizado (timestamp) y eliminado (timestamp - para Soft Delete). Además, cuentan con triggers conectados a registrar_auditoria() para logs automáticos.
+Control y Auditoría Obligatoria
+Todas las tablas principales incluyen los siguientes campos y triggers:
 
-Módulo Auth:
+estado (boolean, por defecto true)
 
-roles: Define las posiciones y sus accesos (gerencia, ventas, soporte).
+creado (timestamp with time zone, por defecto now())
 
-perfiles: Extiende a los usuarios nativos de Supabase para manejar el inicio de sesión limpio sin correos obligatorios (usuario transformado en backend a usuario@empresa.com).
+actualizado (timestamp with time zone, por defecto now())
 
-Catálogos: \* Tablas municipios y tipos_identificacion para poblar el frontend de forma dinámica.
+eliminado (timestamp with time zone, para Soft Delete)
 
-Módulo Clientes (clientes): \* Distingue entre Persona Natural (nombres, apellidos) y Jurídica (Razón social), además de cálculo automático del Dígito de Verificación (DV).
+Triggers conectados a la función registrar_auditoria().
 
-Módulo Productos (productos): \* Soporta datos de facturación electrónica DIAN: precio, iva, inc, y clasificacion (gravado, exento, excluido).
+Módulos de Base de Datos Base
+Usuarios y Auth: Tablas roles y perfiles (extienden auth nativo de Supabase).
 
-Datos de jerarquía como texto libre (tipo, departamento, linea, categoria) para facilitar la importación desde sistemas de terceros sin problemas de llaves foráneas.
+Catálogos: municipios y tipos_identificacion.
 
-Control de disponible (stock).
-```
+Clientes: Manejo de Persona Natural (nombres) vs. Jurídica (Razón Social), cálculo de DV.
 
-## 5. Esquema de los Archivos (Archivos Clave)
+Productos: Propiedades fiscales DIAN (precio_venta, iva, inc, clasificacion), jerarquía libre.
 
-```texto
-   vite.config.js / src/index.css: Alojan la configuración del ecosistema Tailwind CSS v4, sin dependencias extrañas. Integran las variables @theme manipuladas por la configuración de Inquilino.
+Vehículos: Registro de flota, capacidad, asignación de repartidor_id.
 
-src/config/tenant.js: Lee las variables de entorno de la empresa (ej. VITE_TENANT_PRIMARY_COLOR) y actualiza el DOM instantáneamente al abrir la web (Marca Blanca).
+Módulo Transaccional: Pedidos y Despachos
+pedidos_cabecera: Cliente, vendedor, fechas, estado (pendiente, despachado, etc.), y totales (subtotal, total_iva, total_inc, total).
 
-src/modules/auth/schema.sql: Script fundamental que inicializa las funciones de auditoría en la BD, RLS, tablas de usuarios y triggers.
+pedidos_detalle (ON DELETE CASCADE): Relación pedido-producto. Congela precios e impuestos al momento de la venta para inmutabilidad.
 
-Archivos \*Validations.js (ej. clientValidations.js): Archivos puros de JavaScript (utilities) que actúan como esquemas de validación de negocio. Separan los condicionales (If-Else) de la UI para mantener limpios los formularios y cumplir el Principio de Responsabilidad Única.
+despachos: Cabecera de la orden de despacho (Vehículo, conductor, fecha, estado).
 
-Componentes de Formulario (ClientForm.jsx, ProductForm.jsx): Modales adaptativos, se transforman en tiempo real según el contexto (si seleccionas Persona Natural se ocultan los campos corporativos). Ejecutan las validaciones importadas al cambiar (onChange) o desenfocar (onBlur).
+despachos_detalle: Vincula despachos con pedidos_cabecera. Aplica restricción única combinada para no duplicar pedidos en un mismo viaje.
 
-Capa de Servicios (clientService.js, productService.js): Contienen todo el código SQL/Supabase. Proveen funciones encapsuladas para crear, actualizar, listar y aplicar la paginación del lado del servidor (server-side pagination), fundamental para el manejo eficiente de grandes volúmenes de datos.
+## 5. Archivos Clave del Repositorio
 
-```
+vite.config.js / src/index.css: Configuración del motor Tailwind CSS v4 y variables de tema @theme.
 
-¡Guarda este archivo! Te servirá como referencia perfecta y contexto para nuestro trabajo futuro. ¿Podemos continuar ahora con la definición de la base de datos para el módulo de **Pedidos**?
+src/config/tenant.js: Motor de Marca Blanca que lee .env y aplica identidad corporativa al DOM.
 
-```
+src/routes/AppRouter.jsx: Enrutador protegido con Lazy Loading y PageLoader.
 
-```
+src/layouts/MainLayout.jsx y src/components/layout/Footer.jsx: Contenedores visuales principales responsivos.
+
+src/modules/*/services/*Service.js: Capa de persistencia (SQL/Supabase) que aísla la lógica de base de datos de los componentes visuales.
+
+src/modules/*/utils/*Validations.js: Lógica pura y estricta para validación de datos antes de peticiones al backend.
+"""
