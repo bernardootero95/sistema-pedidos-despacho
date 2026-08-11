@@ -22,7 +22,6 @@ export const dispatchService = {
       .is("eliminado", null)
       .order("fecha_despacho", { ascending: false });
 
-    // Búsqueda por código de despacho
     if (searchTerm) {
       query = query.ilike("codigo_despacho", `%${searchTerm}%`);
     }
@@ -41,42 +40,29 @@ export const dispatchService = {
   },
 
   /**
-   * Crea un nuevo despacho (Cabecera) y le asigna los pedidos (Detalle)
+   * Crea un despacho de forma atómica mediante la función RPC
+   * `crear_despacho_transaccional`: bloquea los pedidos seleccionados,
+   * valida que sigan 'pendiente' (evita doble asignación concurrente por
+   * dos despachadores), genera el consecutivo y marca los pedidos como
+   * 'despachado' — todo dentro de una única transacción.
+   *
+   * @param {Object} cabeceraData - { vehiculo_id, repartidor_id, fecha_despacho, notas }
+   * @param {string[]} pedidosIds
    */
-  async crearDespacho(despachoData, pedidosIds) {
-    // 1. Insertar la Cabecera del Despacho
-    const { data: cabecera, error: errorCabecera } = await supabase
-      .from("despachos")
-      .insert([despachoData])
-      .select()
-      .single();
+  async crearDespachoTransaccional(cabeceraData, pedidosIds) {
+    const { data, error } = await supabase.rpc("crear_despacho_transaccional", {
+      p_vehiculo_id: cabeceraData.vehiculo_id,
+      p_repartidor_id: cabeceraData.repartidor_id,
+      p_fecha_despacho: cabeceraData.fecha_despacho,
+      p_notas: cabeceraData.notas || null,
+      p_pedidos_ids: pedidosIds,
+    });
 
-    if (errorCabecera) {
-      throw new Error(`Error al crear el despacho: ${errorCabecera.message}`);
+    if (error) {
+      throw new Error(error.message || "Error al crear el despacho.");
     }
 
-    // 2. Insertar los Detalles (Relacionar pedidos al despacho)
-    if (pedidosIds && pedidosIds.length > 0) {
-      const detalles = pedidosIds.map((pedidoId) => ({
-        despacho_id: cabecera.id,
-        pedido_id: pedidoId,
-        estado_entrega: "pendiente",
-      }));
-
-      const { error: errorDetalle } = await supabase
-        .from("despachos_pedidos")
-        .insert(detalles);
-
-      // Si falla el detalle, hacemos un rollback manual eliminando la cabecera huérfana
-      if (errorDetalle) {
-        await supabase.from("despachos").delete().eq("id", cabecera.id);
-        throw new Error(
-          `Error al asignar los pedidos al despacho: ${errorDetalle.message}`,
-        );
-      }
-    }
-
-    return cabecera;
+    return data;
   },
 
   /**
@@ -89,10 +75,10 @@ export const dispatchService = {
         `
         *,
         pedido:pedidos_cabecera(
-          id, 
-          consecutivo, 
+          id,
+          numero_pedido,
           total,
-          cliente:clientes(razon_social, primer_nombre, primer_apellido)
+          clientes(razon_social, primer_nombre, primer_apellido)
         )
       `,
       )
