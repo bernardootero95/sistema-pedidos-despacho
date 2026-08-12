@@ -60,6 +60,34 @@ export const orderService = {
     return data;
   },
 
+  /**
+   * Obtiene los pedidos en estado 'pendiente' disponibles para asignar a
+   * una orden de despacho. Sin paginación a propósito: el despachador
+   * necesita ver el universo completo de pendientes para armar la ruta,
+   * no una porción de 10 en 10.
+   */
+  async getPedidosPendientes() {
+    const { data, error } = await supabase
+      .from("pedidos_cabecera")
+      .select(
+        `
+        id,
+        numero_pedido,
+        total,
+        clientes ( razon_social, primer_nombre, primer_apellido )
+      `,
+      )
+      .eq("estado", "pendiente")
+      .is("eliminado", null)
+      .order("creado", { ascending: true }); // FIFO: los más antiguos primero
+
+    if (error) {
+      throw new Error(`Error al obtener pedidos pendientes: ${error.message}`);
+    }
+
+    return data || [];
+  },
+
   async getPedidoCompleto(id) {
     const { data, error } = await supabase
       .from("pedidos_cabecera")
