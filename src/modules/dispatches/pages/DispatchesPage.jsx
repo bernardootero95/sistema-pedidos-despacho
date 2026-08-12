@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { dispatchService } from "../services/dispatchService";
 import {
   Truck,
@@ -14,6 +15,8 @@ import {
 } from "lucide-react";
 
 export const DispatchesPage = () => {
+  const navigate = useNavigate();
+
   const [despachos, setDespachos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -112,7 +115,7 @@ export const DispatchesPage = () => {
           </p>
         </div>
         <button
-          onClick={() => alert("Próximo paso: Abrir formulario de creación")} // Lo conectaremos en el siguiente paso
+          onClick={() => navigate("/despachos/nuevo")}
           className="flex items-center gap-2 bg-primary hover:bg-primaryHover text-white px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm w-full sm:w-auto justify-center"
         >
           <PlusCircle className="w-5 h-5" />
