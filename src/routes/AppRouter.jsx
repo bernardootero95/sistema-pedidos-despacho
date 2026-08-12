@@ -62,6 +62,11 @@ const DispatchCreatePage = lazy(() =>
     default: m.DispatchCreatePage,
   })),
 );
+const DispatchDetailsPage = lazy(() =>
+  import("../modules/dispatches/pages/DispatchDetailsPage").then((m) => ({
+    default: m.DispatchDetailsPage,
+  })),
+);
 
 // Componente visual mientras carga el chunk del módulo
 const PageLoader = () => (
@@ -113,6 +118,7 @@ export const AppRouter = () => {
             <Route path="/orders/:id" element={<OrderDetailsPage />} />
             <Route path="/despachos" element={<DispatchesPage />} />
             <Route path="/despachos/nuevo" element={<DispatchCreatePage />} />
+            <Route path="/despachos/:id" element={<DispatchDetailsPage />} />
           </Route>
 
           {/* Captura de rutas inexistentes */}

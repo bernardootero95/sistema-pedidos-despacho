@@ -79,25 +79,50 @@ export const vehicleService = {
   },
 
   /**
-   * Obtiene vehículos activos y disponibles con su conductor
+   * Obtiene vehículos activos con su conductor, marcando con
+   * `enRutaActiva` los que ya tienen un despacho sin terminar
+   * (estado 'creado' o 'en_ruta'). No se ocultan: se muestran
+   * deshabilitados en el selector para que el despachador entienda por
+   * qué no puede elegirlos, en vez de que "desaparezcan" sin explicación.
+   * La regla real (fuente de verdad) vive en crear_despacho_transaccional;
+   * esto es solo para dar feedback inmediato en la UI.
    */
   async getVehiculosDisponibles() {
-    const { data, error } = await supabase
-      .from("vehiculos")
-      .select(
-        "id, placa, marca, modelo, capacidad_peso, conductor_id, conductor:perfiles!vehiculos_conductor_id_fkey(nombre_completo)",
-      )
-      .eq("estado", true)
-      .is("eliminado", null)
-      .order("placa", { ascending: true });
+    const [vehiculosRes, despachosActivosRes] = await Promise.all([
+      supabase
+        .from("vehiculos")
+        .select(
+          "id, placa, marca, modelo, capacidad_peso, conductor_id, conductor:perfiles!vehiculos_conductor_id_fkey(nombre_completo)",
+        )
+        .eq("estado", true)
+        .is("eliminado", null)
+        .order("placa", { ascending: true }),
+      supabase
+        .from("despachos")
+        .select("vehiculo_id")
+        .in("estado", ["creado", "en_ruta"])
+        .is("eliminado", null),
+    ]);
 
-    if (error) {
+    if (vehiculosRes.error) {
       throw new Error(
-        `Error al obtener vehículos disponibles: ${error.message}`,
+        `Error al obtener vehículos disponibles: ${vehiculosRes.error.message}`,
+      );
+    }
+    if (despachosActivosRes.error) {
+      throw new Error(
+        `Error al verificar despachos activos: ${despachosActivosRes.error.message}`,
       );
     }
 
-    return data || [];
+    const idsEnRutaActiva = new Set(
+      (despachosActivosRes.data || []).map((d) => d.vehiculo_id),
+    );
+
+    return (vehiculosRes.data || []).map((v) => ({
+      ...v,
+      enRutaActiva: idsEnRutaActiva.has(v.id),
+    }));
   },
 
   /**

@@ -68,11 +68,12 @@ export const DispatchHeaderForm = ({
             >
               <option value="">Seleccione un vehículo...</option>
               {vehiculos.map((v) => (
-                <option key={v.id} value={v.id}>
+                <option key={v.id} value={v.id} disabled={v.enRutaActiva}>
                   {v.placa} - {v.marca}
                   {v.conductor
                     ? ` (Conductor habitual: ${v.conductor.nombre_completo})`
                     : ""}
+                  {v.enRutaActiva ? " — EN RUTA ACTIVA" : ""}
                 </option>
               ))}
             </select>

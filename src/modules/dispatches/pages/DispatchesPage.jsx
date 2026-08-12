@@ -210,11 +210,7 @@ export const DispatchesPage = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
-                        onClick={() =>
-                          alert(
-                            `Próximamente: Detalles del despacho ${despacho.codigo_despacho}`,
-                          )
-                        }
+                        onClick={() => navigate(`/despachos/${despacho.id}`)}
                         className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors inline-flex"
                         title="Ver Detalles"
                       >

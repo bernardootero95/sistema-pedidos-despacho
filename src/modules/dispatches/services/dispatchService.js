@@ -41,10 +41,11 @@ export const dispatchService = {
 
   /**
    * Crea un despacho de forma atómica mediante la función RPC
-   * `crear_despacho_transaccional`: bloquea los pedidos seleccionados,
-   * valida que sigan 'pendiente' (evita doble asignación concurrente por
-   * dos despachadores), genera el consecutivo y marca los pedidos como
-   * 'despachado' — todo dentro de una única transacción.
+   * `crear_despacho_transaccional`: bloquea el vehículo y los pedidos
+   * seleccionados, valida que el vehículo no tenga ya un despacho activo
+   * y que los pedidos sigan 'pendiente' (evita doble asignación
+   * concurrente por dos despachadores), genera el consecutivo y marca los
+   * pedidos como 'despachado' — todo dentro de una única transacción.
    *
    * @param {Object} cabeceraData - { vehiculo_id, repartidor_id, fecha_despacho, notas }
    * @param {string[]} pedidosIds
@@ -60,6 +61,30 @@ export const dispatchService = {
 
     if (error) {
       throw new Error(error.message || "Error al crear el despacho.");
+    }
+
+    return data;
+  },
+
+  /**
+   * Obtiene la cabecera completa de un despacho (vehículo, repartidor,
+   * estado, fecha, notas) para la página de detalle.
+   */
+  async getDespachoCompleto(id) {
+    const { data, error } = await supabase
+      .from("despachos")
+      .select(
+        `
+        *,
+        vehiculo:vehiculos(placa, marca, modelo),
+        repartidor:perfiles(nombre_completo, nombre_usuario)
+      `,
+      )
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      throw new Error(`Error al obtener el despacho: ${error.message}`);
     }
 
     return data;
