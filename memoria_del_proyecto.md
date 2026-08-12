@@ -11,11 +11,11 @@ El sistema está construido priorizando la escalabilidad, mantenibilidad, veloci
 - **Frontend:** React, Vite, JavaScript (ES6+).
 - **Estilizado y UI:** Tailwind CSS v4 (configuración nativa mediante `@tailwindcss/vite` e inyección de variables dinámicas `@theme`).
 - **Iconografía:** Lucide React.
-- **Base de Datos y Backend as a Service (BaaS):** Supabase (PostgreSQL), empleando **Row Level Security (RLS)** y funciones con triggers autónomos para auditoría.
+- **Base de Datos y Backend as a Service (BaaS):** Supabase (PostgreSQL), empleando **Row Level Security (RLS) granular por rol** (`vendedor`, `despachador`, `repartidor`, `gerencia`, `soporte`, resueltos vía la función `obtener_rol_actual()`) y funciones con triggers autónomos para auditoría.
 - **Arquitectura General:** Arquitectura Modular Basada en Características (_Feature-Driven Architecture_).
 - **Optimización de Rendimiento:** Implementación de _Code Splitting_ mediante `React.lazy` y `Suspense` en el enrutador para reducir el tamaño del bundle inicial.
 - **Modelo de Despliegue (SaaS):** Marca Blanca (_White-Label_) / Multi-Empresa. Cada cliente cuenta con su propio entorno y base de datos, personalizando colores, logo y variables mediante archivos `.env` e inyección en el DOM (`tenantConfig.js`).
-- **Calidad y Patrones de Código:** Linter estándar (ESLint), validación modular desacoplada de la UI (SRP), paginación del lado del servidor (_Server-Side Pagination_) y transacciones atómicas para datos complejos.
+- **Calidad y Patrones de Código:** Linter estándar (ESLint), validación modular desacoplada de la UI (SRP), paginación del lado del servidor (_Server-Side Pagination_) y transacciones atómicas para datos complejos (creación de pedidos y despachos vía funciones RPC `SECURITY DEFINER` con bloqueo de filas `FOR UPDATE`, evitando condiciones de carrera entre usuarios concurrentes).
 
 ---
 
@@ -28,7 +28,7 @@ Es un **Sistema de Toma de Pedidos y Despacho (Order Management System - OMS)** 
 1. **Toma de Pedido (Vendedor):** El vendedor selecciona el cliente, busca productos en el catálogo y genera un pedido. En este punto se ejecuta el **congelamiento de precios e impuestos** (IVA e INC) para garantizar la inmutabilidad histórica requerida por normativas fiscales (DIAN en Colombia). El pedido nace en estado `pendiente`.
 2. **Preparación y Logística:** Los pedidos pendientes pasan a revisión.
 3. **Órdenes de Despacho (Despachador):** El despachador agrupa múltiples pedidos pendientes en una **Orden de Despacho**, asignándoles un vehículo de la flota y un conductor/repartidor registrado (usuarios con rol específico, e.g., `rol_id = 5`).
-4. **Ruta y Entrega (Repartidor):** El repartidor ejecuta la entrega en ruta y actualiza los estados en tiempo real (móvil/responsivo).
+4. **Ruta y Entrega (Repartidor):** El repartidor ejecuta la entrega en ruta y actualiza los estados en tiempo real (móvil/responsivo) por pedido individual (`despachos_pedidos.estado_entrega`: `pendiente`, `entregado`, `rechazado`).
 5. **Sincronización con ERP / Facturación:** Una vez entregado el pedido, los datos están disponibles para ser consumidos por el ERP principal y generar la facturación electrónica correspondiente.
 
 ---
@@ -81,6 +81,8 @@ eliminado (timestamp with time zone, para Soft Delete)
 
 Triggers conectados a la función registrar_auditoria().
 
+Seguridad: RLS granular por rol. Cada tabla operativa (clientes, productos, vehiculos, pedidos_cabecera, pedidos_detalle, despachos, despachos_pedidos, perfiles) tiene políticas explícitas por rol resueltas vía obtener_rol_actual(), no un simple "autenticado = acceso total". perfiles además tiene un trigger anti-escalada de privilegios (bloquear_autoescalada_privilegios) que impide que un usuario sin rol gerencia/soporte cambie su propio rol_id o estado, como defensa en profundidad ante un eventual error de política.
+
 Módulos de Base de Datos Base
 Usuarios y Auth: Tablas roles y perfiles (extienden auth nativo de Supabase).
 
@@ -93,13 +95,15 @@ Productos: Propiedades fiscales DIAN (precio_venta, iva, inc, clasificacion), je
 Vehículos: Registro de flota, capacidad, asignación de repartidor_id.
 
 Módulo Transaccional: Pedidos y Despachos
-pedidos_cabecera: Cliente, vendedor, fechas, estado (pendiente, despachado, etc.), y totales (subtotal, total_iva, total_inc, total).
+La creación de ambos NO se hace con INSERT directo desde el frontend: pasa por las funciones RPC crear_pedido_transaccional y crear_despacho_transaccional (SECURITY DEFINER), que bloquean las filas afectadas con FOR UPDATE antes de validar, evitando condiciones de carrera entre vendedores o despachadores concurrentes.
 
-pedidos_detalle (ON DELETE CASCADE): Relación pedido-producto. Congela precios e impuestos al momento de la venta para inmutabilidad.
+pedidos_cabecera: Cliente, vendedor, fechas, estado (pendiente, despachado, anulado, etc., texto libre sin CHECK), y total (numeric). El desglose de IVA/INC no se agrega a nivel de cabecera; vive por línea en pedidos_detalle.
 
-despachos: Cabecera de la orden de despacho (Vehículo, conductor, fecha, estado).
+pedidos_detalle (ON DELETE CASCADE): Relación pedido-producto. Congela precio_unitario, iva_porcentaje, inc_porcentaje y subtotal_linea al momento de la venta para inmutabilidad histórica.
 
-despachos_detalle: Vincula despachos con pedidos_cabecera. Aplica restricción única combinada para no duplicar pedidos en un mismo viaje.
+despachos: Cabecera de la orden de despacho (vehiculo_id, repartidor_id, fecha_despacho, notas, estado con CHECK: creado/en_ruta/completado/anulado).
+
+despachos_pedidos: Vincula despachos con pedidos_cabecera. Restricción única combinada UNIQUE(despacho_id, pedido_id) para no duplicar un pedido en un mismo viaje. Incluye estado_entrega (pendiente/entregado/rechazado) para el seguimiento del repartidor en ruta.
 
 ## 5. Archivos Clave del Repositorio
 
@@ -109,7 +113,7 @@ src/config/tenant.js: Motor de Marca Blanca que lee .env y aplica identidad corp
 
 src/routes/AppRouter.jsx: Enrutador protegido con Lazy Loading y PageLoader.
 
-src/layouts/MainLayout.jsx y src/components/layout/Footer.jsx: Contenedores visuales principales responsivos.
+src/components/layout/MainLayout.jsx y src/components/layout/Footer.jsx: Contenedores visuales principales responsivos.
 
 src/modules/*/services/*Service.js: Capa de persistencia (SQL/Supabase) que aísla la lógica de base de datos de los componentes visuales.
 
