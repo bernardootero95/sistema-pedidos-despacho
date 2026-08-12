@@ -36,6 +36,108 @@ $$;
 ALTER FUNCTION "public"."actualizar_timestamp"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."bloquear_autoescalada_privilegios"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  IF obtener_rol_actual() NOT IN ('gerencia', 'soporte') THEN
+    IF NEW.rol_id IS DISTINCT FROM OLD.rol_id THEN
+      RAISE EXCEPTION 'No tienes permiso para cambiar el rol de un usuario.';
+    END IF;
+    IF NEW.estado IS DISTINCT FROM OLD.estado THEN
+      RAISE EXCEPTION 'No tienes permiso para activar/desactivar usuarios.';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."bloquear_autoescalada_privilegios"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."crear_despacho_transaccional"("p_vehiculo_id" "uuid", "p_repartidor_id" "uuid", "p_fecha_despacho" timestamp with time zone, "p_notas" "text", "p_pedidos_ids" "uuid"[]) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+  v_pedido RECORD;
+  v_despacho_id UUID;
+  v_codigo_despacho TEXT;
+  v_siguiente_numero INTEGER;
+BEGIN
+  IF p_vehiculo_id IS NULL THEN
+    RAISE EXCEPTION 'Debe seleccionar un vehículo.';
+  END IF;
+
+  IF p_repartidor_id IS NULL THEN
+    RAISE EXCEPTION 'Debe asignar un conductor/repartidor.';
+  END IF;
+
+  IF p_pedidos_ids IS NULL OR array_length(p_pedidos_ids, 1) IS NULL THEN
+    RAISE EXCEPTION 'Debe asignar al menos un pedido a la ruta.';
+  END IF;
+
+  -- 1. Bloquear y validar cada pedido (evita doble asignación concurrente
+  --    por dos despachadores trabajando al mismo tiempo)
+  FOR v_pedido IN
+    SELECT id, numero_pedido, estado
+      FROM pedidos_cabecera
+      WHERE id = ANY(p_pedidos_ids)
+        AND eliminado IS NULL
+      ORDER BY id
+      FOR UPDATE
+  LOOP
+    IF v_pedido.estado <> 'pendiente' THEN
+      RAISE EXCEPTION 'El pedido % ya no está pendiente (estado actual: %). Puede que otro despachador ya lo haya asignado.',
+        v_pedido.numero_pedido, v_pedido.estado;
+    END IF;
+  END LOOP;
+
+  -- Verificar que todos los IDs enviados existan (evita ids "fantasma")
+  IF (SELECT COUNT(*) FROM pedidos_cabecera WHERE id = ANY(p_pedidos_ids) AND eliminado IS NULL)
+     <> array_length(p_pedidos_ids, 1) THEN
+    RAISE EXCEPTION 'Uno o más pedidos seleccionados ya no existen o fueron eliminados.';
+  END IF;
+
+  -- 2. Generar consecutivo del despacho (DSP-0001, DSP-0002, ...)
+  SELECT COALESCE(MAX(NULLIF(regexp_replace(codigo_despacho, '\D', '', 'g'), '')::INTEGER), 0) + 1
+    INTO v_siguiente_numero
+    FROM despachos;
+
+  v_codigo_despacho := 'DSP-' || LPAD(v_siguiente_numero::TEXT, 4, '0');
+
+  -- 3. Insertar cabecera del despacho
+  INSERT INTO despachos (
+    codigo_despacho, vehiculo_id, repartidor_id, fecha_despacho, notas, estado
+  ) VALUES (
+    v_codigo_despacho, p_vehiculo_id, p_repartidor_id, p_fecha_despacho, p_notas, 'creado'
+  )
+  RETURNING id INTO v_despacho_id;
+
+  -- 4. Insertar el detalle (pedidos asignados a la ruta)
+  INSERT INTO despachos_pedidos (despacho_id, pedido_id, estado_entrega)
+  SELECT v_despacho_id, unnest(p_pedidos_ids), 'pendiente';
+
+  -- 5. Marcar los pedidos como despachados
+  UPDATE pedidos_cabecera
+    SET estado = 'despachado', actualizado = NOW()
+    WHERE id = ANY(p_pedidos_ids);
+
+  RETURN jsonb_build_object(
+    'id', v_despacho_id,
+    'codigo_despacho', v_codigo_despacho
+  );
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."crear_despacho_transaccional"("p_vehiculo_id" "uuid", "p_repartidor_id" "uuid", "p_fecha_despacho" timestamp with time zone, "p_notas" "text", "p_pedidos_ids" "uuid"[]) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."crear_pedido_transaccional"("p_cliente_id" "uuid", "p_vendedor_id" "uuid", "p_notas" "text", "p_detalles" "jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $_$
@@ -147,6 +249,23 @@ $_$;
 ALTER FUNCTION "public"."crear_pedido_transaccional"("p_cliente_id" "uuid", "p_vendedor_id" "uuid", "p_notas" "text", "p_detalles" "jsonb") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."obtener_rol_actual"() RETURNS "text"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT r.nombre
+  FROM perfiles p
+  JOIN roles r ON r.id = p.rol_id
+  WHERE p.id = auth.uid()
+    AND p.estado = true
+    AND p.eliminado IS NULL
+  LIMIT 1;
+$$;
+
+
+ALTER FUNCTION "public"."obtener_rol_actual"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."registrar_auditoria"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -182,15 +301,24 @@ ALTER FUNCTION "public"."registrar_auditoria"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."toggle_user_status"("p_user_id" "uuid", "p_new_status" boolean) RETURNS json
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 DECLARE
-  v_result json;
+  v_result JSON;
 BEGIN
+  IF obtener_rol_actual() NOT IN ('gerencia', 'soporte') THEN
+    RAISE EXCEPTION 'No tienes permiso para activar/desactivar usuarios.';
+  END IF;
+
+  IF p_user_id = auth.uid() THEN
+    RAISE EXCEPTION 'No puedes cambiar tu propio estado de acceso.';
+  END IF;
+
   UPDATE public.perfiles
   SET estado = p_new_status
   WHERE id = p_user_id
   RETURNING row_to_json(perfiles.*) INTO v_result;
-  
+
   IF v_result IS NULL THEN
     RAISE EXCEPTION 'Usuario no encontrado';
   END IF;
@@ -652,6 +780,10 @@ CREATE OR REPLACE TRIGGER "set_timestamp_roles" BEFORE UPDATE ON "public"."roles
 
 
 
+CREATE OR REPLACE TRIGGER "trg_bloquear_autoescalada" BEFORE UPDATE ON "public"."perfiles" FOR EACH ROW EXECUTE FUNCTION "public"."bloquear_autoescalada_privilegios"();
+
+
+
 CREATE OR REPLACE TRIGGER "update_vehiculos_timestamp" BEFORE UPDATE ON "public"."vehiculos" FOR EACH ROW EXECUTE FUNCTION "public"."update_vehiculos_modtime"();
 
 
@@ -716,18 +848,6 @@ ALTER TABLE ONLY "public"."vehiculos"
 
 
 
-CREATE POLICY "Acceso total a clientes para usuarios autenticados" ON "public"."clientes" TO "authenticated" USING (true) WITH CHECK (true);
-
-
-
-CREATE POLICY "Acceso total productos" ON "public"."productos" TO "authenticated" USING (true) WITH CHECK (true);
-
-
-
-CREATE POLICY "Lectura de perfiles activos" ON "public"."perfiles" FOR SELECT TO "authenticated" USING ((("estado" = true) AND ("eliminado" IS NULL)));
-
-
-
 CREATE POLICY "Lectura de roles para usuarios autenticados" ON "public"."roles" FOR SELECT TO "authenticated" USING (("estado" = true));
 
 
@@ -740,56 +860,46 @@ CREATE POLICY "Lectura tipos_identificacion" ON "public"."tipos_identificacion" 
 
 
 
-CREATE POLICY "Los usuarios pueden ver su propio perfil" ON "public"."perfiles" TO "authenticated" USING (("auth"."uid"() = "id"));
-
-
-
-CREATE POLICY "Permitir actualizacion a usuarios autorizados" ON "public"."perfiles" FOR UPDATE TO "authenticated" USING (true) WITH CHECK (true);
-
-
-
-CREATE POLICY "Permitir actualización a usuarios autenticados" ON "public"."vehiculos" FOR UPDATE TO "authenticated" USING (true) WITH CHECK (true);
-
-
-
-CREATE POLICY "Permitir eliminación a usuarios autenticados" ON "public"."vehiculos" FOR DELETE TO "authenticated" USING (true);
-
-
-
-CREATE POLICY "Permitir inserción a usuarios autenticados" ON "public"."vehiculos" FOR INSERT TO "authenticated" WITH CHECK (true);
-
-
-
-CREATE POLICY "Permitir lectura a usuarios autenticados" ON "public"."vehiculos" FOR SELECT TO "authenticated" USING (true);
-
-
-
-CREATE POLICY "Permitir lectura y escritura a usuarios autenticados en despach" ON "public"."despachos" TO "authenticated" USING (true);
-
-
-
-CREATE POLICY "Permitir lectura y escritura a usuarios autenticados en despach" ON "public"."despachos_pedidos" TO "authenticated" USING (true);
-
-
-
-CREATE POLICY "Permitir todo a usuarios autenticados en cabecera" ON "public"."pedidos_cabecera" USING (("auth"."role"() = 'authenticated'::"text"));
-
-
-
-CREATE POLICY "Permitir todo a usuarios autenticados en detalle" ON "public"."pedidos_detalle" USING (("auth"."role"() = 'authenticated'::"text"));
-
-
-
 ALTER TABLE "public"."auditoria" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."clientes" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "clientes_insert_comercial" ON "public"."clientes" FOR INSERT TO "authenticated" WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text"])));
+
+
+
+CREATE POLICY "clientes_select_operativo" ON "public"."clientes" FOR SELECT TO "authenticated" USING (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text", 'despachador'::"text", 'repartidor'::"text"])));
+
+
+
+CREATE POLICY "clientes_update_comercial" ON "public"."clientes" FOR UPDATE TO "authenticated" USING (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text"]))) WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text"])));
+
+
+
 ALTER TABLE "public"."despachos" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "despachos_insert_logistica" ON "public"."despachos" FOR INSERT TO "authenticated" WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'despachador'::"text"])));
+
+
+
 ALTER TABLE "public"."despachos_pedidos" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "despachos_pedidos_select_operativo" ON "public"."despachos_pedidos" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."despachos" "d"
+  WHERE (("d"."id" = "despachos_pedidos"."despacho_id") AND (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'despachador'::"text"])) OR ("d"."repartidor_id" = "auth"."uid"()))))));
+
+
+
+CREATE POLICY "despachos_select_operativo" ON "public"."despachos" FOR SELECT TO "authenticated" USING ((("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'despachador'::"text"])) OR ("repartidor_id" = "auth"."uid"())));
+
+
+
+CREATE POLICY "despachos_update_logistica" ON "public"."despachos" FOR UPDATE TO "authenticated" USING ((("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'despachador'::"text"])) OR ("repartidor_id" = "auth"."uid"()))) WITH CHECK ((("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'despachador'::"text"])) OR ("repartidor_id" = "auth"."uid"())));
+
 
 
 ALTER TABLE "public"."municipios" ENABLE ROW LEVEL SECURITY;
@@ -798,13 +908,65 @@ ALTER TABLE "public"."municipios" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."pedidos_cabecera" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "pedidos_cabecera_insert_comercial" ON "public"."pedidos_cabecera" FOR INSERT TO "authenticated" WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text"])));
+
+
+
+CREATE POLICY "pedidos_cabecera_select_operativo" ON "public"."pedidos_cabecera" FOR SELECT TO "authenticated" USING ((("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text", 'despachador'::"text"])) OR (EXISTS ( SELECT 1
+   FROM ("public"."despachos_pedidos" "dp"
+     JOIN "public"."despachos" "d" ON (("d"."id" = "dp"."despacho_id")))
+  WHERE (("dp"."pedido_id" = "pedidos_cabecera"."id") AND ("d"."repartidor_id" = "auth"."uid"()))))));
+
+
+
+CREATE POLICY "pedidos_cabecera_update_comercial" ON "public"."pedidos_cabecera" FOR UPDATE TO "authenticated" USING ((("public"."obtener_rol_actual"() = ANY (ARRAY['gerencia'::"text", 'soporte'::"text"])) OR (("public"."obtener_rol_actual"() = 'vendedor'::"text") AND (("estado")::"text" = 'pendiente'::"text")))) WITH CHECK ((("public"."obtener_rol_actual"() = ANY (ARRAY['gerencia'::"text", 'soporte'::"text"])) OR (("public"."obtener_rol_actual"() = 'vendedor'::"text") AND (("estado")::"text" = 'pendiente'::"text"))));
+
+
+
 ALTER TABLE "public"."pedidos_detalle" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "pedidos_detalle_select_operativo" ON "public"."pedidos_detalle" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."pedidos_cabecera" "pc"
+  WHERE (("pc"."id" = "pedidos_detalle"."pedido_id") AND (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text", 'despachador'::"text"])) OR (EXISTS ( SELECT 1
+           FROM ("public"."despachos_pedidos" "dp"
+             JOIN "public"."despachos" "d" ON (("d"."id" = "dp"."despacho_id")))
+          WHERE (("dp"."pedido_id" = "pc"."id") AND ("d"."repartidor_id" = "auth"."uid"())))))))));
+
 
 
 ALTER TABLE "public"."perfiles" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "perfiles_insert_admin" ON "public"."perfiles" FOR INSERT TO "authenticated" WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['gerencia'::"text", 'soporte'::"text"])));
+
+
+
+CREATE POLICY "perfiles_select_activos" ON "public"."perfiles" FOR SELECT TO "authenticated" USING ((("estado" = true) AND ("eliminado" IS NULL)));
+
+
+
+CREATE POLICY "perfiles_select_admin_todos" ON "public"."perfiles" FOR SELECT TO "authenticated" USING (("public"."obtener_rol_actual"() = ANY (ARRAY['gerencia'::"text", 'soporte'::"text"])));
+
+
+
+CREATE POLICY "perfiles_update_admin" ON "public"."perfiles" FOR UPDATE TO "authenticated" USING (("public"."obtener_rol_actual"() = ANY (ARRAY['gerencia'::"text", 'soporte'::"text"]))) WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['gerencia'::"text", 'soporte'::"text"])));
+
+
+
+CREATE POLICY "perfiles_update_propio" ON "public"."perfiles" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "id")) WITH CHECK (("auth"."uid"() = "id"));
+
+
+
 ALTER TABLE "public"."productos" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "productos_select_operativo" ON "public"."productos" FOR SELECT TO "authenticated" USING (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text", 'despachador'::"text", 'repartidor'::"text"])));
+
+
+
+CREATE POLICY "productos_write_admin" ON "public"."productos" TO "authenticated" USING (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text"]))) WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text"])));
+
 
 
 ALTER TABLE "public"."roles" ENABLE ROW LEVEL SECURITY;
@@ -814,6 +976,14 @@ ALTER TABLE "public"."tipos_identificacion" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."vehiculos" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "vehiculos_select_operativo" ON "public"."vehiculos" FOR SELECT TO "authenticated" USING ((("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'despachador'::"text"])) OR ("conductor_id" = "auth"."uid"())));
+
+
+
+CREATE POLICY "vehiculos_write_logistica" ON "public"."vehiculos" TO "authenticated" USING (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'despachador'::"text"]))) WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'despachador'::"text"])));
+
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
@@ -829,9 +999,25 @@ GRANT ALL ON FUNCTION "public"."actualizar_timestamp"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."crear_pedido_transaccional"("p_cliente_id" "uuid", "p_vendedor_id" "uuid", "p_notas" "text", "p_detalles" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."bloquear_autoescalada_privilegios"() TO "anon";
+GRANT ALL ON FUNCTION "public"."bloquear_autoescalada_privilegios"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."bloquear_autoescalada_privilegios"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."crear_despacho_transaccional"("p_vehiculo_id" "uuid", "p_repartidor_id" "uuid", "p_fecha_despacho" timestamp with time zone, "p_notas" "text", "p_pedidos_ids" "uuid"[]) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."crear_despacho_transaccional"("p_vehiculo_id" "uuid", "p_repartidor_id" "uuid", "p_fecha_despacho" timestamp with time zone, "p_notas" "text", "p_pedidos_ids" "uuid"[]) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."crear_pedido_transaccional"("p_cliente_id" "uuid", "p_vendedor_id" "uuid", "p_notas" "text", "p_detalles" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."crear_pedido_transaccional"("p_cliente_id" "uuid", "p_vendedor_id" "uuid", "p_notas" "text", "p_detalles" "jsonb") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."obtener_rol_actual"() TO "anon";
+GRANT ALL ON FUNCTION "public"."obtener_rol_actual"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."obtener_rol_actual"() TO "service_role";
 
 
 
@@ -841,7 +1027,6 @@ GRANT ALL ON FUNCTION "public"."registrar_auditoria"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."toggle_user_status"("p_user_id" "uuid", "p_new_status" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."toggle_user_status"("p_user_id" "uuid", "p_new_status" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."toggle_user_status"("p_user_id" "uuid", "p_new_status" boolean) TO "service_role";
 
@@ -853,7 +1038,6 @@ GRANT ALL ON FUNCTION "public"."update_vehiculos_modtime"() TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."auditoria" TO "anon";
 GRANT ALL ON TABLE "public"."auditoria" TO "authenticated";
 GRANT ALL ON TABLE "public"."auditoria" TO "service_role";
 
@@ -865,25 +1049,21 @@ GRANT ALL ON SEQUENCE "public"."auditoria_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."clientes" TO "anon";
 GRANT ALL ON TABLE "public"."clientes" TO "authenticated";
 GRANT ALL ON TABLE "public"."clientes" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."despachos" TO "anon";
 GRANT ALL ON TABLE "public"."despachos" TO "authenticated";
 GRANT ALL ON TABLE "public"."despachos" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."despachos_pedidos" TO "anon";
 GRANT ALL ON TABLE "public"."despachos_pedidos" TO "authenticated";
 GRANT ALL ON TABLE "public"."despachos_pedidos" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."municipios" TO "anon";
 GRANT ALL ON TABLE "public"."municipios" TO "authenticated";
 GRANT ALL ON TABLE "public"."municipios" TO "service_role";
 
@@ -895,31 +1075,26 @@ GRANT ALL ON SEQUENCE "public"."municipios_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."pedidos_cabecera" TO "anon";
 GRANT ALL ON TABLE "public"."pedidos_cabecera" TO "authenticated";
 GRANT ALL ON TABLE "public"."pedidos_cabecera" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."pedidos_detalle" TO "anon";
 GRANT ALL ON TABLE "public"."pedidos_detalle" TO "authenticated";
 GRANT ALL ON TABLE "public"."pedidos_detalle" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."perfiles" TO "anon";
 GRANT ALL ON TABLE "public"."perfiles" TO "authenticated";
 GRANT ALL ON TABLE "public"."perfiles" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."productos" TO "anon";
 GRANT ALL ON TABLE "public"."productos" TO "authenticated";
 GRANT ALL ON TABLE "public"."productos" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."roles" TO "anon";
 GRANT ALL ON TABLE "public"."roles" TO "authenticated";
 GRANT ALL ON TABLE "public"."roles" TO "service_role";
 
@@ -931,7 +1106,6 @@ GRANT ALL ON SEQUENCE "public"."roles_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."tipos_identificacion" TO "anon";
 GRANT ALL ON TABLE "public"."tipos_identificacion" TO "authenticated";
 GRANT ALL ON TABLE "public"."tipos_identificacion" TO "service_role";
 
@@ -943,7 +1117,6 @@ GRANT ALL ON SEQUENCE "public"."tipos_identificacion_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."vehiculos" TO "anon";
 GRANT ALL ON TABLE "public"."vehiculos" TO "authenticated";
 GRANT ALL ON TABLE "public"."vehiculos" TO "service_role";
 
