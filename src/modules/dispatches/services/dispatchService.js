@@ -119,17 +119,58 @@ export const dispatchService = {
   },
 
   /**
-   * Actualiza el estado general del despacho (ej: 'en_ruta', 'completado')
+   * Cambia el estado general del despacho (ej: 'en_ruta', 'completado',
+   * 'anulado') de forma atómica mediante la función RPC
+   * `actualizar_estado_despacho_transaccional`. La validación de qué
+   * transiciones son válidas vive en el servidor, no solo en el
+   * frontend. Al completar el despacho, cascada automáticamente los
+   * pedidos pendientes de entrega a 'entregado'; al anular, libera los
+   * pedidos aún no entregados de vuelta a 'pendiente' para poder
+   * reasignarlos.
    */
-  async actualizarEstadoDespacho(id, nuevoEstado) {
-    const { data, error } = await supabase
-      .from("despachos")
-      .update({ estado: nuevoEstado, actualizado_en: new Date().toISOString() })
-      .eq("id", id)
-      .select()
-      .single();
+  async actualizarEstadoDespachoTransaccional(id, nuevoEstado) {
+    const { data, error } = await supabase.rpc(
+      "actualizar_estado_despacho_transaccional",
+      { p_despacho_id: id, p_nuevo_estado: nuevoEstado },
+    );
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(error.message || "No se pudo actualizar el estado.");
+    }
+
+    return data;
+  },
+
+  /**
+   * Corrige el estado de entrega de un pedido puntual dentro de la ruta
+   * (por ejemplo, si fue devuelto o ya se entregó antes de cerrar todo el
+   * despacho), sincronizando pedidos_cabecera.estado en la misma
+   * transacción vía `actualizar_estado_entrega_pedido_transaccional`.
+   *
+   * @param {string} despachoPedidoId - id de la fila en despachos_pedidos
+   * @param {'pendiente'|'entregado'|'rechazado'} nuevoEstadoEntrega
+   * @param {string} [notas]
+   */
+  async actualizarEstadoEntregaPedido(
+    despachoPedidoId,
+    nuevoEstadoEntrega,
+    notas = null,
+  ) {
+    const { data, error } = await supabase.rpc(
+      "actualizar_estado_entrega_pedido_transaccional",
+      {
+        p_despacho_pedido_id: despachoPedidoId,
+        p_nuevo_estado_entrega: nuevoEstadoEntrega,
+        p_notas_entrega: notas,
+      },
+    );
+
+    if (error) {
+      throw new Error(
+        error.message || "No se pudo actualizar la entrega del pedido.",
+      );
+    }
+
     return data;
   },
 

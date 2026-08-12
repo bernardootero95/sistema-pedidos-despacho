@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { dispatchService } from "../services/dispatchService";
+import { DispatchStatusControl } from "../components/DispatchStatusControl";
+import { EntregaStatusControl } from "../components/EntregaStatusControl";
 import {
   ArrowLeft,
   Truck,
@@ -11,22 +13,7 @@ import {
   AlertCircle,
   StickyNote,
 } from "lucide-react";
-
-// Solo estas transiciones están permitidas para el estado general del
-// despacho: un despacho creado puede pasar a ruta o anularse; uno en ruta
-// puede completarse o anularse; completado/anulado son estados finales.
-const TRANSICIONES_VALIDAS = {
-  creado: ["en_ruta", "anulado"],
-  en_ruta: ["completado", "anulado"],
-  completado: [],
-  anulado: [],
-};
-
-const ETIQUETAS_TRANSICION = {
-  en_ruta: "Marcar en ruta",
-  completado: "Marcar completado",
-  anulado: "Anular despacho",
-};
+import { ETIQUETAS_ESTADO_DESPACHO } from "../utils/dispatchStatus";
 
 export const DispatchDetailsPage = () => {
   const { id } = useParams();
@@ -36,10 +23,6 @@ export const DispatchDetailsPage = () => {
   const [pedidosAsignados, setPedidosAsignados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const [cambiandoEstado, setCambiandoEstado] = useState(false);
-  const [statusError, setStatusError] = useState("");
-  const [confirmandoAnulacion, setConfirmandoAnulacion] = useState(false);
 
   const cargarDatos = async () => {
     try {
@@ -84,68 +67,21 @@ export const DispatchDetailsPage = () => {
   const obtenerNombreCliente = (c) =>
     c?.razon_social || `${c?.primer_nombre || ""} ${c?.primer_apellido || ""}`;
 
-  const getStatusBadge = (estado) => {
-    const styles = {
-      creado: "bg-blue-100 text-blue-800 border-blue-200",
-      en_ruta: "bg-amber-100 text-amber-800 border-amber-200",
-      completado: "bg-emerald-100 text-emerald-800 border-emerald-200",
-      anulado: "bg-red-100 text-red-800 border-red-200",
-    };
-    const labels = {
-      creado: "Creado",
-      en_ruta: "En Ruta",
-      completado: "Completado",
-      anulado: "Anulado",
-    };
-    return (
-      <span
-        className={`px-3 py-1 rounded-full text-xs font-semibold border uppercase tracking-wider ${styles[estado] || "bg-slate-100 text-slate-800 border-slate-200"}`}
-      >
-        {labels[estado] || estado}
-      </span>
-    );
+  // Cuando el despacho cambia de estado (ej. a 'completado'), el servidor
+  // puede cascadear el estado_entrega de los pedidos automáticamente:
+  // recargamos todo para reflejarlo con exactitud en vez de adivinarlo.
+  const handleDespachoActualizado = () => {
+    cargarDatos();
   };
 
-  const getEntregaBadge = (estadoEntrega) => {
-    const styles = {
-      pendiente: "bg-slate-100 text-slate-600 border-slate-200",
-      entregado: "bg-emerald-100 text-emerald-800 border-emerald-200",
-      rechazado: "bg-red-100 text-red-800 border-red-200",
-    };
-    const labels = {
-      pendiente: "Pendiente",
-      entregado: "Entregado",
-      rechazado: "Rechazado",
-    };
-    return (
-      <span
-        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wide ${styles[estadoEntrega] || styles.pendiente}`}
-      >
-        {labels[estadoEntrega] || estadoEntrega}
-      </span>
+  const handleEntregaActualizada = (despachoPedidoId, resultado) => {
+    setPedidosAsignados((prev) =>
+      prev.map((p) =>
+        p.id === despachoPedidoId
+          ? { ...p, estado_entrega: resultado.estado_entrega }
+          : p,
+      ),
     );
-  };
-
-  const handleCambiarEstado = async (nuevoEstado) => {
-    if (nuevoEstado === "anulado" && !confirmandoAnulacion) {
-      setConfirmandoAnulacion(true);
-      return;
-    }
-
-    setCambiandoEstado(true);
-    setStatusError("");
-    try {
-      const actualizado = await dispatchService.actualizarEstadoDespacho(
-        id,
-        nuevoEstado,
-      );
-      setDespacho((prev) => ({ ...prev, estado: actualizado.estado }));
-      setConfirmandoAnulacion(false);
-    } catch (err) {
-      setStatusError(err.message || "No se pudo actualizar el estado.");
-    } finally {
-      setCambiandoEstado(false);
-    }
   };
 
   if (loading) {
@@ -176,7 +112,7 @@ export const DispatchDetailsPage = () => {
     );
   }
 
-  const transicionesDisponibles = TRANSICIONES_VALIDAS[despacho.estado] || [];
+  const despachoAnulado = despacho.estado === "anulado";
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 flex flex-col gap-6 pb-12">
@@ -195,7 +131,9 @@ export const DispatchDetailsPage = () => {
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
                 Despacho {despacho.codigo_despacho}
               </h1>
-              {getStatusBadge(despacho.estado)}
+              <span className="px-3 py-1 rounded-full text-xs font-semibold border uppercase tracking-wider bg-slate-100 text-slate-800 border-slate-200">
+                {ETIQUETAS_ESTADO_DESPACHO[despacho.estado] || despacho.estado}
+              </span>
             </div>
             <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
               <Calendar className="h-3.5 w-3.5" />{" "}
@@ -204,43 +142,12 @@ export const DispatchDetailsPage = () => {
           </div>
         </div>
 
-        {/* CONTROLES DE ESTADO */}
-        {transicionesDisponibles.length > 0 && (
-          <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
-            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-              {transicionesDisponibles.map((estadoDestino) => (
-                <button
-                  key={estadoDestino}
-                  onClick={() => handleCambiarEstado(estadoDestino)}
-                  disabled={cambiandoEstado}
-                  className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-medium text-sm transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 ${
-                    estadoDestino === "anulado"
-                      ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
-                      : "bg-blue-600 hover:bg-blue-700 text-white"
-                  }`}
-                >
-                  {cambiandoEstado && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
-                  {estadoDestino === "anulado" && confirmandoAnulacion
-                    ? "Confirmar anulación"
-                    : ETIQUETAS_TRANSICION[estadoDestino]}
-                </button>
-              ))}
-              {confirmandoAnulacion && (
-                <button
-                  onClick={() => setConfirmandoAnulacion(false)}
-                  className="px-4 py-2.5 rounded-xl font-medium text-sm text-slate-500 hover:bg-slate-100 transition-colors"
-                >
-                  Cancelar
-                </button>
-              )}
-            </div>
-            {statusError && (
-              <p className="text-xs text-red-500 font-medium">{statusError}</p>
-            )}
-          </div>
-        )}
+        <DispatchStatusControl
+          despachoId={despacho.id}
+          estado={despacho.estado}
+          onUpdated={handleDespachoActualizado}
+          variant="buttons"
+        />
       </div>
 
       {/* GRID DE INFORMACIÓN GENERAL */}
@@ -290,6 +197,11 @@ export const DispatchDetailsPage = () => {
             <Package className="h-5 w-5 text-blue-600" />
             Pedidos en esta Ruta ({pedidosAsignados.length})
           </h2>
+          {!despachoAnulado && (
+            <p className="text-xs text-slate-400 hidden sm:block">
+              Corrige aquí una entrega puntual (devolución, entrega anticipada)
+            </p>
+          )}
         </div>
 
         <div className="divide-y divide-slate-100">
@@ -304,12 +216,9 @@ export const DispatchDetailsPage = () => {
                 className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors"
               >
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
-                      Pedido #{item.pedido?.numero_pedido}
-                    </h3>
-                    {getEntregaBadge(item.estado_entrega)}
-                  </div>
+                  <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
+                    Pedido #{item.pedido?.numero_pedido}
+                  </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     {obtenerNombreCliente(item.pedido?.clientes)}
                   </p>
@@ -319,10 +228,18 @@ export const DispatchDetailsPage = () => {
                     </p>
                   )}
                 </div>
-                <div className="text-left sm:text-right pl-0 sm:pl-0">
+                <div className="flex items-center gap-4">
                   <p className="text-base font-bold text-slate-900">
                     {formatCurrency(item.pedido?.total)}
                   </p>
+                  <EntregaStatusControl
+                    despachoPedidoId={item.id}
+                    estadoEntrega={item.estado_entrega}
+                    disabled={despachoAnulado}
+                    onUpdated={(resultado) =>
+                      handleEntregaActualizada(item.id, resultado)
+                    }
+                  />
                 </div>
               </div>
             ))

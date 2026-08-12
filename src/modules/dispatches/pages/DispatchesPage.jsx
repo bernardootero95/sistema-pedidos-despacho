@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { dispatchService } from "../services/dispatchService";
+import { DispatchStatusControl } from "../components/DispatchStatusControl";
 import {
   Truck,
   Search,
@@ -10,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   MapPin,
-  CheckCircle2,
   XCircle,
 } from "lucide-react";
 
@@ -66,27 +66,14 @@ export const DispatchesPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, debouncedSearch]);
 
-  const getStatusBadge = (estado) => {
-    const styles = {
-      creado: "bg-blue-100 text-blue-800 border-blue-200",
-      en_ruta: "bg-amber-100 text-amber-800 border-amber-200",
-      completado: "bg-emerald-100 text-emerald-800 border-emerald-200",
-      anulado: "bg-red-100 text-red-800 border-red-200",
-    };
-
-    const labels = {
-      creado: "Creado",
-      en_ruta: "En Ruta",
-      completado: "Completado",
-      anulado: "Anulado",
-    };
-
-    return (
-      <span
-        className={`px-2.5 py-1 text-xs font-medium rounded-full border ${styles[estado] || "bg-gray-100 text-gray-800"}`}
-      >
-        {labels[estado] || estado}
-      </span>
+  // Al cambiar el estado de un despacho desde la tabla, se actualiza solo
+  // esa fila en memoria (evita recargar toda la página paginada por un
+  // solo cambio de estado).
+  const handleEstadoActualizado = (despachoId, nuevoEstado) => {
+    setDespachos((prev) =>
+      prev.map((d) =>
+        d.id === despachoId ? { ...d, estado: nuevoEstado } : d,
+      ),
     );
   };
 
@@ -206,7 +193,13 @@ export const DispatchesPage = () => {
                       {formatDate(despacho.fecha_despacho)}
                     </td>
                     <td className="px-6 py-4">
-                      {getStatusBadge(despacho.estado)}
+                      <DispatchStatusControl
+                        despachoId={despacho.id}
+                        estado={despacho.estado}
+                        onUpdated={(nuevoEstado) =>
+                          handleEstadoActualizado(despacho.id, nuevoEstado)
+                        }
+                      />
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
