@@ -2,10 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
-  Search,
-  Plus,
-  Minus,
-  Trash2,
   Save,
   Loader2,
   AlertCircle,
@@ -14,7 +10,14 @@ import {
 } from "lucide-react";
 import { supabase } from "../../../config/supabase";
 import { orderService } from "../services/orderService";
-import { validateOrderForm } from "../utils/orderValidations";
+import {
+  validateOrderForm,
+  validateOrderField,
+  validarStockParaAgregar,
+  validarStockParaCantidad,
+} from "../utils/orderValidations";
+import { ProductSearchBar } from "../components/ProductSearchBar";
+import { CarritoPedido } from "../components/CarritoPedido";
 
 export const OrderCreatePage = () => {
   const navigate = useNavigate();
@@ -34,6 +37,7 @@ export const OrderCreatePage = () => {
 
   // --- ESTADOS DE CONTROL ---
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cargar datos iniciales trayendo el campo 'disponible' de productos
@@ -80,34 +84,45 @@ export const OrderCreatePage = () => {
     fetchData();
   }, []);
 
-  // --- LÓGICA DEL CARRITO CON VALIDACIÓN DE STOCK ---
+  // --- VALIDACIÓN INMEDIATA DEL CLIENTE (mismo patrón que DispatchCreatePage) ---
+  const handleClienteChange = (value) => {
+    setClienteId(value);
+    if (touched.cliente_id) {
+      setErrors((prev) => ({
+        ...prev,
+        cliente_id: validateOrderField("cliente_id", value),
+      }));
+    }
+  };
+
+  const handleClienteBlur = () => {
+    setTouched((prev) => ({ ...prev, cliente_id: true }));
+    setErrors((prev) => ({
+      ...prev,
+      cliente_id: validateOrderField("cliente_id", clienteId),
+    }));
+  };
+
+  // --- LÓGICA DEL CARRITO CON VALIDACIÓN DE STOCK INLINE (sin alert()) ---
   const agregarAlCarrito = () => {
     if (!productoSeleccionado) return;
 
     const producto = productos.find((p) => p.id === productoSeleccionado);
     if (!producto) return;
 
-    // Validar si hay stock disponible inicial
-    if (producto.disponible <= 0) {
-      alert(
-        `El producto "${producto.nombre}" no tiene existencias disponibles.`,
-      );
-      return;
-    }
-
     const existeIndex = carrito.findIndex(
       (item) => item.producto_id === producto.id,
     );
+    const cantidadEnCarrito =
+      existeIndex >= 0 ? carrito[existeIndex].cantidad : 0;
+
+    const stockError = validarStockParaAgregar(producto, cantidadEnCarrito);
+    if (stockError) {
+      setErrors((prev) => ({ ...prev, carrito: stockError }));
+      return;
+    }
 
     if (existeIndex >= 0) {
-      const cantidadActual = carrito[existeIndex].cantidad;
-      if (cantidadActual + 1 > producto.disponible) {
-        alert(
-          `No puedes agregar más unidades. Stock disponible: ${producto.disponible}`,
-        );
-        return;
-      }
-
       const nuevoCarrito = [...carrito];
       nuevoCarrito[existeIndex].cantidad += 1;
       nuevoCarrito[existeIndex].subtotal_linea =
@@ -145,17 +160,20 @@ export const OrderCreatePage = () => {
       return;
     }
 
-    // Validar contra el stock disponible
-    if (nuevaCantidad > item.disponible) {
-      alert(
-        `Stock máximo alcanzado para este producto (${item.disponible} unidades disponibles).`,
-      );
+    const stockError = validarStockParaCantidad(
+      nuevaCantidad,
+      item.disponible,
+      item.nombre,
+    );
+    if (stockError) {
+      setErrors((prev) => ({ ...prev, carrito: stockError }));
       return;
     }
 
     item.cantidad = nuevaCantidad;
     item.subtotal_linea = nuevaCantidad * item.precio_unitario;
     setCarrito(nuevoCarrito);
+    setErrors((prev) => ({ ...prev, carrito: "" }));
   };
 
   const actualizarCantidadInput = (index, valorTexto) => {
@@ -165,10 +183,16 @@ export const OrderCreatePage = () => {
     const nuevoCarrito = [...carrito];
     const item = nuevoCarrito[index];
 
-    if (cantidad > item.disponible) {
-      alert(`La cantidad excede el stock disponible (${item.disponible}).`);
+    const stockError = validarStockParaCantidad(
+      cantidad,
+      item.disponible,
+      item.nombre,
+    );
+    if (stockError) {
+      setErrors((prev) => ({ ...prev, carrito: stockError }));
       item.cantidad = item.disponible;
     } else {
+      setErrors((prev) => ({ ...prev, carrito: "" }));
       item.cantidad = cantidad;
     }
 
@@ -197,6 +221,7 @@ export const OrderCreatePage = () => {
     };
 
     const validationErrors = validateOrderForm(cabeceraData, carrito);
+    setTouched((prev) => ({ ...prev, cliente_id: true }));
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
@@ -284,10 +309,8 @@ export const OrderCreatePage = () => {
           </label>
           <select
             value={clienteId}
-            onChange={(e) => {
-              setClienteId(e.target.value);
-              setErrors((p) => ({ ...p, cliente_id: "" }));
-            }}
+            onChange={(e) => handleClienteChange(e.target.value)}
+            onBlur={handleClienteBlur}
             className={`w-full p-3 border rounded-xl outline-none bg-white text-base transition-all ${errors.cliente_id ? "border-red-500 ring-2 ring-red-100" : "border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
           >
             <option value="">-- Toca para elegir cliente --</option>
@@ -305,124 +328,24 @@ export const OrderCreatePage = () => {
         </div>
 
         {/* BUSCADOR DE PRODUCTOS CON STOCK VISIBLE */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-            Agregar Productos
-          </label>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <select
-                value={productoSeleccionado}
-                onChange={(e) => setProductoSeleccionado(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl outline-none bg-white text-base focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
-              >
-                <option value="">-- Seleccionar producto --</option>
-                {productos.map((p) => (
-                  <option key={p.id} value={p.id} disabled={p.disponible <= 0}>
-                    {p.codigo} - {p.nombre} ({formatCurrency(p.precio_venta)})
-                    [Stock: {p.disponible}]{" "}
-                    {p.disponible <= 0 ? "(AGOTADO)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="button"
-              onClick={agregarAlCarrito}
-              disabled={!productoSeleccionado}
-              className="bg-blue-600 text-white px-5 py-3 rounded-xl flex items-center justify-center hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-            >
-              <Plus className="h-6 w-6" />
-            </button>
-          </div>
-          {errors.carrito && (
-            <p className="text-red-500 text-sm mt-2 font-medium">
-              {errors.carrito}
-            </p>
-          )}
-        </div>
+        <ProductSearchBar
+          productos={productos}
+          productoSeleccionado={productoSeleccionado}
+          onSelectChange={setProductoSeleccionado}
+          onAgregar={agregarAlCarrito}
+          error={errors.carrito}
+          formatCurrency={formatCurrency}
+        />
 
         {/* CARRITO */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-slate-700">
-            Productos en el Pedido ({carrito.length})
-          </h2>
-
-          {carrito.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 text-sm border-2 border-dashed border-slate-100 rounded-xl">
-              No hay productos agregados todavía.
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {carrito.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl gap-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-800 text-sm">
-                      {item.nombre}
-                    </p>
-                    <p className="text-xs text-slate-500 font-mono">
-                      Cod: {item.codigo} |{" "}
-                      <span className="text-emerald-600 font-medium">
-                        Stock: {item.disponible}
-                      </span>
-                    </p>
-                    <p className="text-xs font-semibold text-blue-600 mt-1">
-                      {formatCurrency(item.precio_unitario)} c/u
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between w-full sm:w-auto gap-4">
-                    <div className="flex items-center bg-white border border-slate-300 rounded-xl shadow-sm overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => modificarCantidad(index, -1)}
-                        className="p-2 text-slate-600 hover:bg-slate-100 transition-colors active:bg-slate-200"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </button>
-                      <input
-                        type="text"
-                        value={item.cantidad}
-                        onChange={(e) =>
-                          actualizarCantidadInput(index, e.target.value)
-                        }
-                        className="w-12 text-center font-bold text-slate-800 outline-none text-sm bg-transparent"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => modificarCantidad(index, 1)}
-                        className="p-2 text-slate-600 hover:bg-slate-100 transition-colors active:bg-slate-200"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    <div className="text-right min-w-22.5">
-                      <span className="text-xs text-slate-400 block">
-                        Subtotal
-                      </span>
-                      <span className="font-bold text-slate-800 text-sm">
-                        {formatCurrency(item.subtotal_linea)}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => eliminarDelCarrito(index)}
-                      className="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <CarritoPedido
+          carrito={carrito}
+          onModificarCantidad={modificarCantidad}
+          onActualizarCantidadInput={actualizarCantidadInput}
+          onEliminar={eliminarDelCarrito}
+          formatCurrency={formatCurrency}
+          error={errors.carrito}
+        />
 
         {/* NOTAS Y TOTAL */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">

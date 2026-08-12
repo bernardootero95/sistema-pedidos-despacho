@@ -39,6 +39,16 @@ export const validators = {
 };
 
 /**
+ * Valida un único campo por nombre (patrón consistente con
+ * dispatchValidations.validateDispatchField), usado para validación
+ * inmediata onBlur/onChange en el formulario.
+ */
+export const validateOrderField = (name, value) => {
+  const validator = validators[name];
+  return validator ? validator(value) : "";
+};
+
+/**
  * Función para validar todo el formulario de creación de pedidos antes de enviar
  * @param {Object} cabeceraData - Datos de la cabecera (cliente_id, vendedor_id, notas)
  * @param {Array} carritoData - Array de productos agregados al pedido
@@ -59,4 +69,42 @@ export const validateOrderForm = (cabeceraData, carritoData) => {
   if (carritoError) errors.carrito = carritoError;
 
   return errors;
+};
+
+// --- VALIDACIONES DE STOCK (puras, sin dependencia de UI ni de alert()) ---
+
+/**
+ * Valida si un producto puede agregarse al carrito por primera vez o
+ * incrementarse una unidad más, contra su stock disponible.
+ * @param {Object} producto - { nombre, disponible }
+ * @param {number} cantidadEnCarrito - Cantidad que ya tiene el producto en el carrito (0 si aún no está)
+ * @returns {string} Mensaje de error, o "" si es válido
+ */
+export const validarStockParaAgregar = (producto, cantidadEnCarrito = 0) => {
+  if (producto.disponible <= 0) {
+    return `El producto "${producto.nombre}" no tiene existencias disponibles.`;
+  }
+  if (cantidadEnCarrito + 1 > producto.disponible) {
+    return `No puedes agregar más unidades de "${producto.nombre}". Stock disponible: ${producto.disponible}.`;
+  }
+  return "";
+};
+
+/**
+ * Valida una cantidad deseada (por botones +/- o por input directo) contra
+ * el stock disponible de la línea del carrito.
+ * @param {number} cantidadDeseada
+ * @param {number} disponible
+ * @param {string} nombreProducto
+ * @returns {string} Mensaje de error, o "" si es válido
+ */
+export const validarStockParaCantidad = (
+  cantidadDeseada,
+  disponible,
+  nombreProducto = "este producto",
+) => {
+  if (cantidadDeseada > disponible) {
+    return `Stock máximo alcanzado para "${nombreProducto}" (${disponible} unidades disponibles).`;
+  }
+  return "";
 };
