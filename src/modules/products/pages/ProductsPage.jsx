@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { productService } from "../services/productService";
 import { ProductForm } from "../components/ProductForm";
+import { useToast } from "../../../context/useToast";
 import {
   Package,
   Search,
@@ -150,6 +151,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
 };
 
 export const ProductsPage = () => {
+  const { showError } = useToast();
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -218,7 +220,7 @@ export const ProductsPage = () => {
       );
       await productService.toggleEstado(id, !estadoActual);
     } catch (err) {
-      alert(err.message);
+      showError(err.message);
       cargarProductos();
     }
   };
@@ -231,7 +233,7 @@ export const ProductsPage = () => {
       await productService.eliminarProducto(id);
       cargarProductos();
     } catch (err) {
-      alert(err.message);
+      showError(err.message);
       cargarProductos();
     }
   };

@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { X, Package, Loader2, AlertCircle, ExternalLink } from "lucide-react";
 import { orderService } from "../services/orderService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
+import { useToast } from "../../../context/useToast";
 
 export const OrderDetailsModal = ({ orderId, onClose }) => {
+  const { showError } = useToast();
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -108,6 +110,8 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     setIsGeneratingPdf(true);
     try {
       await imprimirPedidoPdf(pedido);
+    } catch (err) {
+      showError(err.message);
     } finally {
       setIsGeneratingPdf(false);
     }

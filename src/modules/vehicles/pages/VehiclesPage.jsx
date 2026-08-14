@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { vehicleService } from "../services/vehicleService";
+import { useToast } from "../../../context/useToast";
 import {
   Truck,
   Search,
@@ -18,6 +19,7 @@ import {
 
 export const VehiclesPage = () => {
   const navigate = useNavigate();
+  const { showError } = useToast();
   const [vehiculos, setVehiculos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -71,7 +73,7 @@ export const VehiclesPage = () => {
       );
       await vehicleService.toggleEstado(id, !estadoActual);
     } catch (err) {
-      alert(err.message);
+      showError(err.message);
       cargarVehiculos();
     }
   };
@@ -88,7 +90,7 @@ export const VehiclesPage = () => {
       await vehicleService.eliminarVehiculo(id);
       cargarVehiculos();
     } catch (err) {
-      alert(err.message);
+      showError(err.message);
       cargarVehiculos();
     }
   };

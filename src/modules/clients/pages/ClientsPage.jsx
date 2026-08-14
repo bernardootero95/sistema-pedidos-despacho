@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { clientService } from "../services/clientService";
 import { ClientForm } from "../components/ClientForm";
+import { useToast } from "../../../context/useToast";
 import {
   Users,
   Search,
@@ -115,6 +116,7 @@ const ClientDetailsModal = ({ client, onClose }) => {
 };
 
 export const ClientsPage = () => {
+  const { showError } = useToast();
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -197,7 +199,7 @@ export const ClientsPage = () => {
       );
       await clientService.toggleEstado(id, !estadoActual);
     } catch (err) {
-      alert(err.message);
+      showError(err.message);
       cargarClientes();
     }
   };
@@ -209,7 +211,7 @@ export const ClientsPage = () => {
       await clientService.eliminarCliente(id);
       cargarClientes();
     } catch (err) {
-      alert(err.message);
+      showError(err.message);
       cargarClientes();
     }
   };

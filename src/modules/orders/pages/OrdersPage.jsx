@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
+import { useToast } from "../../../context/useToast";
 import {
   ShoppingCart,
   Search,
@@ -18,6 +19,7 @@ import {
 
 export const OrdersPage = () => {
   const navigate = useNavigate();
+  const { showError } = useToast();
 
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +121,7 @@ export const OrdersPage = () => {
       );
       await orderService.anularPedido(id, motivo);
     } catch (err) {
-      alert("Error al anular: " + err.message);
+      showError("Error al anular: " + err.message);
       cargarPedidos();
     }
   };
@@ -131,7 +133,7 @@ export const OrdersPage = () => {
       await imprimirPedidoPdf(pedidoCompleto);
     } catch (err) {
       console.error("Error al generar PDF directo:", err);
-      alert("No se pudo generar el comprobante del pedido.");
+      showError("No se pudo generar el comprobante del pedido.");
     } finally {
       setPrintingId(null);
     }
