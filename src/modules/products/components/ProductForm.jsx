@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { productService } from "../services/productService";
 import {
   validateProductField,

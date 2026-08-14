@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Clock, PackageCheck, PackageX, Loader2 } from "lucide-react";
 import { dispatchService } from "../services/dispatchService";
 import { ETIQUETAS_ESTADO_ENTREGA } from "../utils/dispatchStatus";
