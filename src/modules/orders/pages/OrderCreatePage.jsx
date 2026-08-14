@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -216,8 +216,6 @@ export const OrderCreatePage = () => {
       cliente_id: clienteId,
       vendedor_id: vendedorId,
       notas,
-      total: totalPedido,
-      numero_pedido: `PED-${Date.now().toString().slice(-6)}`,
     };
 
     const validationErrors = validateOrderForm(cabeceraData, carrito);
@@ -228,6 +226,7 @@ export const OrderCreatePage = () => {
     }
 
     const detallesParaGuardar = carrito.map(
+      // eslint-disable-next-line no-unused-vars -- se destructuran para excluirlas de "rest"
       ({ nombre, codigo, disponible, ...rest }) => rest,
     );
 
