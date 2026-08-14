@@ -1,5 +1,4 @@
 // src/modules/orders/utils/printUtils.js
-import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
 
 export const imprimirPedidoPdf = async (pedidoCompleto) => {
   if (!pedidoCompleto) return;
@@ -137,6 +136,13 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
   };
 
   try {
+    // Import dinámico: html2pdf.js (~900KB) solo se descarga cuando se
+    // imprime un comprobante, no en el chunk inicial de cada página que
+    // importa este util.
+    const { default: html2pdf } = await import(
+      "html2pdf.js/dist/html2pdf.min.js"
+    );
+
     // Damos un pequeño respiro de 250ms para garantizar que el DOM pinte el contenido antes de convertir a PDF
     await new Promise((resolve) => setTimeout(resolve, 250));
 
