@@ -17,6 +17,21 @@
   --color-secondary-hover: var(--color-secondary-hover);
 }
 
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-toast-enter {
+  animation: toast-enter 0.2s ease-out;
+}
+
 body {
   background-color: #f8fafc;
   color: #1e293b;
