@@ -27,7 +27,7 @@ export const authService = {
         error?.error_description ||
         "Error de conexión con el servidor.";
       console.error("[AuthService] Error detallado:", errorMessage);
-      throw new Error(this.traducirErrorAuth(errorMessage));
+      throw new Error(this.traducirErrorAuth(errorMessage), { cause: error });
     }
   },
 
