@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
+import { useToast } from "../../../context/useToast";
 import {
   ArrowLeft,
   Printer,
@@ -17,6 +18,7 @@ import {
 export const OrderDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showError } = useToast();
 
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +67,8 @@ export const OrderDetailsPage = () => {
     setIsPrinting(true);
     try {
       await imprimirPedidoPdf(pedido);
+    } catch (err) {
+      showError(err.message);
     } finally {
       setIsPrinting(false);
     }

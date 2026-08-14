@@ -147,7 +147,9 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
     window.open(pdfUrl, "_blank");
   } catch (error) {
     console.error("Error al generar el PDF térmico:", error);
-    alert("No se pudo generar el comprobante PDF.");
+    throw new Error("No se pudo generar el comprobante PDF.", {
+      cause: error,
+    });
   } finally {
     document.body.removeChild(container);
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { userService } from "../services/userService";
 import { UserForm } from "../components/UserForm";
+import { useToast } from "../../../context/useToast";
 import {
   UserCog,
   Search,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 
 export const UsersPage = () => {
+  const { showError } = useToast();
   const [usuarios, setUsuarios] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +54,7 @@ export const UsersPage = () => {
       );
       await userService.toggleEstado(userId, !estadoActual);
     } catch (err) {
-      alert(err.message);
+      showError(err.message);
       cargarDatos();
     }
   };
