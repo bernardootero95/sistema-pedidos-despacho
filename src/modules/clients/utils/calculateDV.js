@@ -11,7 +11,7 @@ export const calculateDV = (nit) => {
 
   const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
   let x = 0;
-  let y = 0;
+  let y;
   const z = nit.length;
 
   for (let i = 0; i < z; i++) {
