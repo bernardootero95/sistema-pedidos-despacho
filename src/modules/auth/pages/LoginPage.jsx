@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useAuth } from "../../../context/AuthContext";
+import { useState } from "react";
+import { useAuth } from "../../../context/useAuth";
 import { tenantConfig } from "../../../config/tenant";
 import { ShieldAlert, LogIn, Building2 } from "lucide-react";
 

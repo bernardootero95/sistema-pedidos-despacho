@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import { tenantConfig } from "../../config/tenant";
 import { Footer } from "./Footer"; // <-- Asegúrate de ajustar esta ruta donde hayas guardado Footer.jsx
 import {

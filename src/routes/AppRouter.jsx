@@ -1,6 +1,6 @@
-import React, { lazy, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { LoginPage } from "../modules/auth/pages/LoginPage";
 import { MainLayout } from "../components/layout/MainLayout";
 import { Loader2 } from "lucide-react";
