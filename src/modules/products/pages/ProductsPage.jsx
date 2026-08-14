@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { productService } from "../services/productService";
 import { ProductForm } from "../components/ProductForm";
 import {
@@ -196,7 +196,7 @@ export const ProductsPage = () => {
   };
 
   useEffect(() => {
-    cargarProductos();
+    queueMicrotask(cargarProductos);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, debouncedSearch]);
 

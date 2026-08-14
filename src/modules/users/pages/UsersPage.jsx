@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { userService } from "../services/userService";
 import { UserForm } from "../components/UserForm";
 import {
@@ -39,7 +39,7 @@ export const UsersPage = () => {
   };
 
   useEffect(() => {
-    cargarDatos();
+    queueMicrotask(cargarDatos);
   }, []);
 
   const handleToggleEstado = async (userId, estadoActual) => {

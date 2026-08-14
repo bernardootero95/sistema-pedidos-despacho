@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
@@ -63,7 +63,7 @@ export const OrdersPage = () => {
   };
 
   useEffect(() => {
-    cargarPedidos();
+    queueMicrotask(cargarPedidos);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, debouncedSearch]);
 

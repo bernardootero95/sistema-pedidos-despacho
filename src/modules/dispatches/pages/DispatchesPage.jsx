@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { dispatchService } from "../services/dispatchService";
 import { DispatchStatusControl } from "../components/DispatchStatusControl";
@@ -64,7 +64,7 @@ export const DispatchesPage = () => {
   };
 
   useEffect(() => {
-    cargarDespachos();
+    queueMicrotask(cargarDespachos);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, debouncedSearch]);
 
