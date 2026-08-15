@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { dispatchService } from "../services/dispatchService";
 import { DispatchStatusControl } from "../components/DispatchStatusControl";
+import { usePaginatedList } from "../../../hooks/usePaginatedList";
 import {
   Truck,
   Search,
@@ -19,54 +19,20 @@ import {
 export const DispatchesPage = () => {
   const navigate = useNavigate();
 
-  const [despachos, setDespachos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  // Paginación y Búsqueda
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const pageSize = 10;
-
-  // Efecto para el Debounce de búsqueda
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setCurrentPage(1); // Volver a la página 1 al buscar
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
-  // Cargar Despachos
-  const cargarDespachos = async () => {
-    try {
-      setLoading(true);
-      const {
-        data,
-        total,
-        totalPages: pages,
-      } = await dispatchService.getDespachosPaginados(
-        currentPage,
-        pageSize,
-        debouncedSearch,
-      );
-      setDespachos(data);
-      setTotalItems(total);
-      setTotalPages(pages);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    queueMicrotask(cargarDespachos);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearch]);
+  const {
+    items: despachos,
+    setItems: setDespachos,
+    loading,
+    error,
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    totalItems,
+  } = usePaginatedList((page, pageSize, search) =>
+    dispatchService.getDespachosPaginados(page, pageSize, search),
+  );
 
   // Al cambiar el estado de un despacho desde la tabla o la tarjeta, se
   // actualiza solo esa fila en memoria (evita recargar toda la página

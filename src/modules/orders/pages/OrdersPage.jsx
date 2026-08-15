@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
 import { useToast } from "../../../context/useToast";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
+import { usePaginatedList } from "../../../hooks/usePaginatedList";
 import {
   ShoppingCart,
   Search,
@@ -22,53 +23,22 @@ export const OrdersPage = () => {
   const navigate = useNavigate();
   const { showError } = useToast();
 
-  const [pedidos, setPedidos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const {
+    items: pedidos,
+    setItems: setPedidos,
+    loading,
+    error,
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    totalItems,
+    reload: cargarPedidos,
+  } = usePaginatedList((page, pageSize, search) =>
+    orderService.getPedidosPaginados(page, pageSize, search),
+  );
   const [printingId, setPrintingId] = useState(null);
-
-  // Paginación y Búsqueda
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const pageSize = 10;
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
-  const cargarPedidos = async () => {
-    try {
-      setLoading(true);
-      const {
-        data,
-        total,
-        totalPages: pages,
-      } = await orderService.getPedidosPaginados(
-        currentPage,
-        pageSize,
-        debouncedSearch,
-      );
-      setPedidos(data);
-      setTotalItems(total);
-      setTotalPages(pages);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    queueMicrotask(cargarPedidos);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearch]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("es-CO", {

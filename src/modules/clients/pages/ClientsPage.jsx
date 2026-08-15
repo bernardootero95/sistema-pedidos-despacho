@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { clientService } from "../services/clientService";
 import { ClientForm } from "../components/ClientForm";
 import { useToast } from "../../../context/useToast";
+import { usePaginatedList } from "../../../hooks/usePaginatedList";
 import {
   Users,
   Search,
@@ -117,57 +118,26 @@ const ClientDetailsModal = ({ client, onClose }) => {
 
 export const ClientsPage = () => {
   const { showError } = useToast();
-  const [clientes, setClientes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  // Paginación y Búsqueda
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const pageSize = 10;
+  const {
+    items: clientes,
+    setItems: setClientes,
+    loading,
+    error,
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    totalItems,
+    reload: cargarClientes,
+  } = usePaginatedList((page, pageSize, search) =>
+    clientService.getClientesPaginados(page, pageSize, search),
+  );
 
   // Estados de modales
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState(null);
   const [clientToView, setClientToView] = useState(null);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
-  const cargarClientes = async () => {
-    try {
-      setLoading(true);
-      const {
-        data,
-        total,
-        totalPages: pages,
-      } = await clientService.getClientesPaginados(
-        currentPage,
-        pageSize,
-        debouncedSearch,
-      );
-      setClientes(data);
-      setTotalItems(total);
-      setTotalPages(pages);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    queueMicrotask(cargarClientes);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearch]);
 
   const getDisplayName = (client) => {
     if (client.tipo_organizacion === "juridica") return client.razon_social;

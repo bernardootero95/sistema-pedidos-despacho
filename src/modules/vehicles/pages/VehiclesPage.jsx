@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { vehicleService } from "../services/vehicleService";
 import { useToast } from "../../../context/useToast";
+import { usePaginatedList } from "../../../hooks/usePaginatedList";
 import {
   Truck,
   Search,
@@ -20,51 +20,22 @@ import {
 export const VehiclesPage = () => {
   const navigate = useNavigate();
   const { showError } = useToast();
-  const [vehiculos, setVehiculos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  // Paginación y Búsqueda
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const pageSize = 10;
-
-  // Debounce para optimizar las consultas a la base de datos
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
-  // Cargar lista paginada
-  const cargarVehiculos = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const res = await vehicleService.getVehiculosPaginados(
-        currentPage,
-        pageSize,
-        debouncedSearch,
-      );
-      setVehiculos(res.data);
-      setTotalPages(res.totalPages);
-      setTotalItems(res.total);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    queueMicrotask(cargarVehiculos);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearch]);
+  const {
+    items: vehiculos,
+    setItems: setVehiculos,
+    loading,
+    error,
+    searchTerm,
+    setSearchTerm,
+    debouncedSearch,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    totalItems,
+    reload: cargarVehiculos,
+  } = usePaginatedList((page, pageSize, search) =>
+    vehicleService.getVehiculosPaginados(page, pageSize, search),
+  );
 
   const handleToggleEstado = async (id, estadoActual) => {
     try {

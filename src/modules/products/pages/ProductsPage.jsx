@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { productService } from "../services/productService";
 import { ProductForm } from "../components/ProductForm";
 import { useToast } from "../../../context/useToast";
+import { usePaginatedList } from "../../../hooks/usePaginatedList";
 import {
   Package,
   Search,
@@ -152,55 +153,25 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
 export const ProductsPage = () => {
   const { showError } = useToast();
-  const [productos, setProductos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const pageSize = 10;
+  const {
+    items: productos,
+    setItems: setProductos,
+    loading,
+    error,
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    totalItems,
+    reload: cargarProductos,
+  } = usePaginatedList((page, pageSize, search) =>
+    productService.getProductosPaginados(page, pageSize, search),
+  );
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
   const [productToView, setProductToView] = useState(null);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
-  const cargarProductos = async () => {
-    try {
-      setLoading(true);
-      const {
-        data,
-        total,
-        totalPages: pages,
-      } = await productService.getProductosPaginados(
-        currentPage,
-        pageSize,
-        debouncedSearch,
-      );
-      setProductos(data);
-      setTotalItems(total);
-      setTotalPages(pages);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    queueMicrotask(cargarProductos);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearch]);
 
   const handleOpenForm = (product = null) => {
     setProductToEdit(product);
