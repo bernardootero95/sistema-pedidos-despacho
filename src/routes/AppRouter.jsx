@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { LoginPage } from "../modules/auth/pages/LoginPage";
 import { MainLayout } from "../components/layout/MainLayout";
+import { RoleGuard } from "./RoleGuard";
+import { ROLES_MODULO } from "../config/roles";
 import { Loader2 } from "lucide-react";
 
 // Carga perezosa (Lazy Loading) de las páginas
@@ -98,27 +100,48 @@ export const AppRouter = () => {
             element={user ? <MainLayout /> : <Navigate to="/login" replace />}
           >
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
+
+            <Route element={<RoleGuard roles={ROLES_MODULO.DASHBOARD} />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+            </Route>
 
             {/* Módulos de Administración */}
-            <Route path="/usuarios" element={<UsersPage />} />
+            <Route element={<RoleGuard roles={ROLES_MODULO.USUARIOS} />}>
+              <Route path="/usuarios" element={<UsersPage />} />
+            </Route>
 
             {/* Módulos de Catálogos */}
-            <Route path="/clientes" element={<ClientsPage />} />
-            <Route path="/productos" element={<ProductsPage />} />
+            <Route element={<RoleGuard roles={ROLES_MODULO.CLIENTES} />}>
+              <Route path="/clientes" element={<ClientsPage />} />
+            </Route>
+            <Route element={<RoleGuard roles={ROLES_MODULO.PRODUCTOS} />}>
+              <Route path="/productos" element={<ProductsPage />} />
+            </Route>
 
             {/* Módulos de Vehículos */}
-            <Route path="/vehiculos" element={<VehiclesPage />} />
-            <Route path="/vehiculos/nuevo" element={<VehicleFormPage />} />
-            <Route path="/vehiculos/editar/:id" element={<VehicleFormPage />} />
+            <Route element={<RoleGuard roles={ROLES_MODULO.VEHICULOS} />}>
+              <Route path="/vehiculos" element={<VehiclesPage />} />
+              <Route path="/vehiculos/nuevo" element={<VehicleFormPage />} />
+              <Route
+                path="/vehiculos/editar/:id"
+                element={<VehicleFormPage />}
+              />
+            </Route>
 
             {/* Módulos Operativos */}
-            <Route path="/pedidos" element={<OrdersPage />} />
-            <Route path="/orders/new" element={<OrderCreatePage />} />
-            <Route path="/orders/:id" element={<OrderDetailsPage />} />
-            <Route path="/despachos" element={<DispatchesPage />} />
-            <Route path="/despachos/nuevo" element={<DispatchCreatePage />} />
-            <Route path="/despachos/:id" element={<DispatchDetailsPage />} />
+            <Route element={<RoleGuard roles={ROLES_MODULO.PEDIDOS} />}>
+              <Route path="/pedidos" element={<OrdersPage />} />
+              <Route path="/orders/new" element={<OrderCreatePage />} />
+              <Route path="/orders/:id" element={<OrderDetailsPage />} />
+            </Route>
+            <Route element={<RoleGuard roles={ROLES_MODULO.DESPACHOS} />}>
+              <Route path="/despachos" element={<DispatchesPage />} />
+              <Route
+                path="/despachos/nuevo"
+                element={<DispatchCreatePage />}
+              />
+              <Route path="/despachos/:id" element={<DispatchDetailsPage />} />
+            </Route>
           </Route>
 
           {/* Captura de rutas inexistentes */}

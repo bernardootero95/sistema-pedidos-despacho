@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
 import { tenantConfig } from "../../config/tenant";
+import { ROLES_MODULO } from "../../config/roles";
 import { Footer } from "./Footer"; // <-- Asegúrate de ajustar esta ruta donde hayas guardado Footer.jsx
 import {
   LayoutDashboard,
@@ -31,43 +32,43 @@ export const MainLayout = () => {
       path: "/dashboard",
       label: "Panel Principal",
       icon: LayoutDashboard,
-      roles: ["soporte", "gerencia", "vendedor", "despachador", "repartidor"],
+      roles: ROLES_MODULO.DASHBOARD,
     },
     {
       path: "/usuarios",
       label: "Gestión de Personal",
       icon: UserCog,
-      roles: ["soporte", "gerencia"],
+      roles: ROLES_MODULO.USUARIOS,
     },
     {
       path: "/pedidos",
       label: "Toma de Pedidos",
       icon: ShoppingCart,
-      roles: ["soporte", "gerencia", "vendedor", "despachador"],
+      roles: ROLES_MODULO.PEDIDOS,
     },
     {
       path: "/despachos",
       label: "Órdenes de Despacho",
       icon: Truck,
-      roles: ["soporte", "gerencia", "despachador", "repartidor"],
+      roles: ROLES_MODULO.DESPACHOS,
     },
     {
       path: "/clientes",
       label: "Clientes",
       icon: Users,
-      roles: ["soporte", "gerencia", "vendedor"],
+      roles: ROLES_MODULO.CLIENTES,
     },
     {
       path: "/productos",
       label: "Catálogo de Productos",
       icon: Package,
-      roles: ["soporte", "gerencia", "vendedor", "despachador"],
+      roles: ROLES_MODULO.PRODUCTOS,
     },
     {
       path: "/vehiculos",
       label: "Flota de Vehículos",
       icon: Truck,
-      roles: ["soporte", "gerencia", "despachador"],
+      roles: ROLES_MODULO.VEHICULOS,
     },
   ];
 
