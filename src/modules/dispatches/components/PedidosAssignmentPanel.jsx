@@ -6,11 +6,10 @@ import {
   Loader2,
   Inbox,
 } from "lucide-react";
+import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
 const nombreClientePedido = (pedido) =>
-  pedido.clientes?.razon_social ||
-  `${pedido.clientes?.primer_nombre || ""} ${pedido.clientes?.primer_apellido || ""}`.trim() ||
-  "Cliente sin nombre";
+  getNombreCliente(pedido.clientes) || "Cliente sin nombre";
 
 /**
  * Panel de asignación de pedidos pendientes a la ruta de despacho.

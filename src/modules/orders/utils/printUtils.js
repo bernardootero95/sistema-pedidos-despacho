@@ -1,4 +1,5 @@
 // src/modules/orders/utils/printUtils.js
+import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
 export const imprimirPedidoPdf = async (pedidoCompleto) => {
   if (!pedidoCompleto) return;
@@ -25,9 +26,7 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
     if (porcInc === 8) acumInc8 += baseLinea * (8 / 100);
   });
 
-  const clienteNombre =
-    pedidoCompleto.clientes?.razon_social ||
-    `${pedidoCompleto.clientes?.primer_nombre || ""} ${pedidoCompleto.clientes?.primer_apellido || ""}`;
+  const clienteNombre = getNombreCliente(pedidoCompleto.clientes);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("es-CO", {

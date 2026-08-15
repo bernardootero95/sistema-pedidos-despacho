@@ -18,6 +18,7 @@ import {
 } from "../utils/orderValidations";
 import { ProductSearchBar } from "../components/ProductSearchBar";
 import { CarritoPedido } from "../components/CarritoPedido";
+import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
 export const OrderCreatePage = () => {
   const navigate = useNavigate();
@@ -252,9 +253,6 @@ export const OrderCreatePage = () => {
     }).format(amount);
   };
 
-  const obtenerNombreCliente = (c) =>
-    c.razon_social || `${c.primer_nombre} ${c.primer_apellido}`;
-
   if (loadingData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-500 gap-3">
@@ -315,7 +313,7 @@ export const OrderCreatePage = () => {
             <option value="">-- Toca para elegir cliente --</option>
             {clientes.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.numero_identificacion} - {obtenerNombreCliente(c)}
+                {c.numero_identificacion} - {getNombreCliente(c)}
               </option>
             ))}
           </select>

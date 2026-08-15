@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
 import { useToast } from "../../../context/useToast";
+import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import {
   ShoppingCart,
   Search,
@@ -258,8 +259,7 @@ export const OrdersPage = () => {
                       <div className="font-semibold text-slate-700 flex items-start gap-2">
                         <User className="h-4 w-4 text-slate-400 mt-0.5" />
                         <div>
-                          {pedido.clientes?.razon_social ||
-                            `${pedido.clientes?.primer_nombre || ""} ${pedido.clientes?.primer_apellido || ""}`}
+                          {getNombreCliente(pedido.clientes)}
                           <div className="text-xs text-slate-500 font-normal mt-0.5">
                             ID: {pedido.clientes?.numero_identificacion}
                           </div>
@@ -308,8 +308,7 @@ export const OrdersPage = () => {
                         </td>
                         <td className="p-4">
                           <div className="font-medium text-slate-800">
-                            {pedido.clientes?.razon_social ||
-                              `${pedido.clientes?.primer_nombre || ""} ${pedido.clientes?.primer_apellido || ""}`}
+                            {getNombreCliente(pedido.clientes)}
                           </div>
                           <div className="text-xs text-slate-500">
                             ID: {pedido.clientes?.numero_identificacion}

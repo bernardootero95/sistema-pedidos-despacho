@@ -3,6 +3,7 @@ import { useAuth } from "../../../context/useAuth";
 import { tenantConfig } from "../../../config/tenant";
 import { dashboardService } from "../services/dashboardService";
 import { DashboardKpiCard } from "../components/DashboardKpiCard";
+import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import {
   ShoppingCart,
   Truck,
@@ -63,10 +64,6 @@ export const DashboardPage = () => {
       day: "numeric",
     });
   };
-
-  const getClienteNombre = (clientes) =>
-    clientes?.razon_social ||
-    `${clientes?.primer_nombre || ""} ${clientes?.primer_apellido || ""}`;
 
   const getStatusBadge = (estado) => {
     switch (estado) {
@@ -200,7 +197,7 @@ export const DashboardPage = () => {
                     {getStatusBadge(pedido.estado)}
                   </div>
                   <p className="font-bold text-slate-800 text-sm">
-                    {getClienteNombre(pedido.clientes)}
+                    {getNombreCliente(pedido.clientes)}
                   </p>
                   <div className="flex items-center justify-between text-xs pt-1">
                     <span className="text-slate-500">
@@ -237,7 +234,7 @@ export const DashboardPage = () => {
                         {pedido.numero_pedido}
                       </td>
                       <td className="py-3 px-4 font-medium text-slate-700">
-                        {getClienteNombre(pedido.clientes)}
+                        {getNombreCliente(pedido.clientes)}
                       </td>
                       <td className="py-3 px-4 text-slate-500 text-xs">
                         {pedido.vendedor?.nombre_completo}

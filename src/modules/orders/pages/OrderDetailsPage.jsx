@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
 import { useToast } from "../../../context/useToast";
+import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import {
   ArrowLeft,
   Printer,
@@ -156,9 +157,7 @@ export const OrderDetailsPage = () => {
   }
 
   const cliente = pedido.clientes;
-  const clienteNombre =
-    cliente?.razon_social ||
-    `${cliente?.primer_nombre || ""} ${cliente?.primer_apellido || ""}`;
+  const clienteNombre = getNombreCliente(cliente);
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 flex flex-col gap-6 pb-12">

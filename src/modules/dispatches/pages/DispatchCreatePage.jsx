@@ -11,6 +11,7 @@ import {
 } from "../utils/dispatchValidations";
 import { DispatchHeaderForm } from "../components/DispatchHeaderForm";
 import { PedidosAssignmentPanel } from "../components/PedidosAssignmentPanel";
+import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
 export const DispatchCreatePage = () => {
   const navigate = useNavigate();
@@ -72,10 +73,7 @@ export const DispatchCreatePage = () => {
     return pedidosPendientes.filter((p) => {
       if (pedidosSeleccionadosIds.includes(p.id)) return false;
       if (!term) return true;
-      const nombreCliente = (
-        p.clientes?.razon_social ||
-        `${p.clientes?.primer_nombre || ""} ${p.clientes?.primer_apellido || ""}`
-      ).toLowerCase();
+      const nombreCliente = getNombreCliente(p.clientes).toLowerCase();
       return (
         nombreCliente.includes(term) ||
         p.numero_pedido?.toString().toLowerCase().includes(term)

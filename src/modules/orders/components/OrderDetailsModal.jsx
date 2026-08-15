@@ -3,6 +3,7 @@ import { X, Package, Loader2, AlertCircle, ExternalLink } from "lucide-react";
 import { orderService } from "../services/orderService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
 import { useToast } from "../../../context/useToast";
+import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
 export const OrderDetailsModal = ({ orderId, onClose }) => {
   const { showError } = useToast();
@@ -117,9 +118,6 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     }
   };
 
-  const obtenerNombreCliente = (c) =>
-    c?.razon_social || `${c?.primer_nombre || ""} ${c?.primer_apellido || ""}`;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[95vh] flex flex-col overflow-hidden relative">
@@ -194,7 +192,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
               >
                 <p>
                   <span className="font-semibold">Cliente:</span>{" "}
-                  {obtenerNombreCliente(pedido.clientes)}
+                  {getNombreCliente(pedido.clientes)}
                 </p>
                 <p>
                   <span className="font-semibold">Tipo ID:</span>{" "}

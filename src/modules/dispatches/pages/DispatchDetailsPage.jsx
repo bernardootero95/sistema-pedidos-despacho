@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { dispatchService } from "../services/dispatchService";
 import { DispatchStatusControl } from "../components/DispatchStatusControl";
 import { EntregaStatusControl } from "../components/EntregaStatusControl";
+import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import {
   ArrowLeft,
   Truck,
@@ -63,9 +64,6 @@ export const DispatchDetailsPage = () => {
       minute: "2-digit",
     });
   };
-
-  const obtenerNombreCliente = (c) =>
-    c?.razon_social || `${c?.primer_nombre || ""} ${c?.primer_apellido || ""}`;
 
   // Cuando el despacho cambia de estado (ej. a 'completado'), el servidor
   // puede cascadear el estado_entrega de los pedidos automáticamente:
@@ -220,7 +218,7 @@ export const DispatchDetailsPage = () => {
                     Pedido #{item.pedido?.numero_pedido}
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {obtenerNombreCliente(item.pedido?.clientes)}
+                    {getNombreCliente(item.pedido?.clientes)}
                   </p>
                   {item.notas_entrega && (
                     <p className="text-xs text-slate-500 italic mt-1">
