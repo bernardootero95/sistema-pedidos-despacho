@@ -1,5 +1,8 @@
-import { DEMO_DATA } from "../../../mock/demoData";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../../context/useAuth";
+import { tenantConfig } from "../../../config/tenant";
+import { dashboardService } from "../services/dashboardService";
+import { DashboardKpiCard } from "../components/DashboardKpiCard";
 import {
   ShoppingCart,
   Truck,
@@ -7,30 +10,63 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  Loader2,
+  PackageX,
 } from "lucide-react";
 
 export const DashboardPage = () => {
   const { user } = useAuth();
 
-  const totalPedidos = DEMO_DATA.pedidos.length;
-  const pedidosPendientes = DEMO_DATA.pedidos.filter(
-    (p) => p.estado === "pendiente",
-  ).length;
-  const despachosActivos = DEMO_DATA.despachos.filter(
-    (d) => d.estado === "en_ruta",
-  ).length;
-  const ventasTotales = DEMO_DATA.pedidos.reduce(
-    (acc, pedido) => acc + pedido.total,
-    0,
-  );
+  const [resumen, setResumen] = useState({
+    ventasTotales: 0,
+    totalPedidos: 0,
+    pedidosPendientes: 0,
+    despachosActivos: 0,
+  });
+  const [ultimosPedidos, setUltimosPedidos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const cargarDashboard = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const [resumenData, pedidosData] = await Promise.all([
+          dashboardService.obtenerResumen(),
+          dashboardService.obtenerUltimosPedidos(),
+        ]);
+        setResumen(resumenData);
+        setUltimosPedidos(pedidosData);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarDashboard();
+  }, []);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(amount || 0);
   };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("es-CO", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const getClienteNombre = (clientes) =>
+    clientes?.razon_social ||
+    `${clientes?.primer_nombre || ""} ${clientes?.primer_apellido || ""}`;
 
   const getStatusBadge = (estado) => {
     switch (estado) {
@@ -52,10 +88,33 @@ export const DashboardPage = () => {
             <CheckCircle2 className="w-3 h-3 shrink-0" /> Entregado
           </span>
         );
+      case "anulado":
+        return (
+          <span className="px-2.5 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold inline-flex items-center gap-1 w-fit">
+            <PackageX className="w-3 h-3 shrink-0" /> Anulado
+          </span>
+        );
       default:
         return null;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 text-slate-500 p-12">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+        Cargando panel...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white p-6 rounded-xl border border-red-200 text-red-600 text-sm">
+        Error al cargar el panel: {error}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -74,68 +133,38 @@ export const DashboardPage = () => {
         <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-slate-200 text-xs text-slate-600 font-medium">
           <AlertCircle className="w-4 h-4 text-primary shrink-0" />
           <span className="truncate">
-            Empresa: <strong>{DEMO_DATA.empresa.nombre}</strong>
+            Empresa: <strong>{tenantConfig.name}</strong>
           </span>
         </div>
       </div>
 
       {/* TARJETAS DE INDICADORES (KPIs) - Adaptables a móvil */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Ventas Totales
-            </p>
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-              {formatCurrency(ventasTotales)}
-            </h3>
-          </div>
-          <div className="p-3 bg-emerald-100 text-emerald-600 rounded-lg shrink-0">
-            <DollarSign className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Total Pedidos
-            </p>
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-              {totalPedidos}
-            </h3>
-          </div>
-          <div className="p-3 bg-blue-100 text-blue-600 rounded-lg shrink-0">
-            <ShoppingCart className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Por Despachar
-            </p>
-            <h3 className="text-xl sm:text-2xl font-black text-amber-600 mt-1">
-              {pedidosPendientes}
-            </h3>
-          </div>
-          <div className="p-3 bg-amber-100 text-amber-600 rounded-lg shrink-0">
-            <Clock className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Rutas Activas
-            </p>
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-              {despachosActivos}
-            </h3>
-          </div>
-          <div className="p-3 bg-purple-100 text-purple-600 rounded-lg shrink-0">
-            <Truck className="w-6 h-6" />
-          </div>
-        </div>
+        <DashboardKpiCard
+          label="Ventas Totales"
+          value={formatCurrency(resumen.ventasTotales)}
+          icon={DollarSign}
+          color="emerald"
+        />
+        <DashboardKpiCard
+          label="Total Pedidos"
+          value={resumen.totalPedidos}
+          icon={ShoppingCart}
+          color="blue"
+        />
+        <DashboardKpiCard
+          label="Por Despachar"
+          value={resumen.pedidosPendientes}
+          icon={Clock}
+          color="amber"
+          valueClassName="text-amber-600"
+        />
+        <DashboardKpiCard
+          label="Rutas Activas"
+          value={resumen.despachosActivos}
+          icon={Truck}
+          color="purple"
+        />
       </div>
 
       {/* ÚLTIMOS PEDIDOS REGISTRADOS */}
@@ -150,75 +179,85 @@ export const DashboardPage = () => {
             </p>
           </div>
           <span className="text-xs font-semibold text-primary bg-primary-light px-3 py-1 rounded-full shrink-0">
-            {totalPedidos} total
+            {ultimosPedidos.length} recientes
           </span>
         </div>
 
-        {/* VISTA MÓVIL (TARJETAS) */}
-        <div className="block sm:hidden divide-y divide-slate-100">
-          {DEMO_DATA.pedidos.map((pedido) => (
-            <div key={pedido.id} className="p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-mono font-black text-slate-900 text-sm">
-                  {pedido.id}
-                </span>
-                {getStatusBadge(pedido.estado)}
-              </div>
-              <p className="font-bold text-slate-800 text-sm">
-                {pedido.cliente_nombre}
-              </p>
-              <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-slate-500">
-                  Vendedor: {pedido.vendedor_nombre}
-                </span>
-                <span className="font-black text-slate-900 text-sm">
-                  {formatCurrency(pedido.total)}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* VISTA ESCRITORIO (TABLA) */}
-        <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                <th className="py-3 px-4">ID Pedido</th>
-                <th className="py-3 px-4">Cliente</th>
-                <th className="py-3 px-4">Vendedor Asignado</th>
-                <th className="py-3 px-4">Fecha</th>
-                <th className="py-3 px-4">Total</th>
-                <th className="py-3 px-4">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 text-sm">
-              {DEMO_DATA.pedidos.map((pedido) => (
-                <tr
-                  key={pedido.id}
-                  className="hover:bg-slate-50/80 transition-colors"
-                >
-                  <td className="py-3 px-4 font-bold text-slate-900">
-                    {pedido.id}
-                  </td>
-                  <td className="py-3 px-4 font-medium text-slate-700">
-                    {pedido.cliente_nombre}
-                  </td>
-                  <td className="py-3 px-4 text-slate-500 text-xs">
-                    {pedido.vendedor_nombre}
-                  </td>
-                  <td className="py-3 px-4 text-slate-500 text-xs">
-                    {pedido.fecha}
-                  </td>
-                  <td className="py-3 px-4 font-bold text-slate-900">
-                    {formatCurrency(pedido.total)}
-                  </td>
-                  <td className="py-3 px-4">{getStatusBadge(pedido.estado)}</td>
-                </tr>
+        {ultimosPedidos.length === 0 ? (
+          <div className="p-8 text-center text-sm text-slate-500">
+            Aún no hay pedidos registrados.
+          </div>
+        ) : (
+          <>
+            {/* VISTA MÓVIL (TARJETAS) */}
+            <div className="block sm:hidden divide-y divide-slate-100">
+              {ultimosPedidos.map((pedido) => (
+                <div key={pedido.id} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-black text-slate-900 text-sm">
+                      {pedido.numero_pedido}
+                    </span>
+                    {getStatusBadge(pedido.estado)}
+                  </div>
+                  <p className="font-bold text-slate-800 text-sm">
+                    {getClienteNombre(pedido.clientes)}
+                  </p>
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <span className="text-slate-500">
+                      Vendedor: {pedido.vendedor?.nombre_completo}
+                    </span>
+                    <span className="font-black text-slate-900 text-sm">
+                      {formatCurrency(pedido.total)}
+                    </span>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            {/* VISTA ESCRITORIO (TABLA) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3 px-4">ID Pedido</th>
+                    <th className="py-3 px-4">Cliente</th>
+                    <th className="py-3 px-4">Vendedor Asignado</th>
+                    <th className="py-3 px-4">Fecha</th>
+                    <th className="py-3 px-4">Total</th>
+                    <th className="py-3 px-4">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-sm">
+                  {ultimosPedidos.map((pedido) => (
+                    <tr
+                      key={pedido.id}
+                      className="hover:bg-slate-50/80 transition-colors"
+                    >
+                      <td className="py-3 px-4 font-bold text-slate-900">
+                        {pedido.numero_pedido}
+                      </td>
+                      <td className="py-3 px-4 font-medium text-slate-700">
+                        {getClienteNombre(pedido.clientes)}
+                      </td>
+                      <td className="py-3 px-4 text-slate-500 text-xs">
+                        {pedido.vendedor?.nombre_completo}
+                      </td>
+                      <td className="py-3 px-4 text-slate-500 text-xs">
+                        {formatDate(pedido.fecha_pedido)}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-slate-900">
+                        {formatCurrency(pedido.total)}
+                      </td>
+                      <td className="py-3 px-4">
+                        {getStatusBadge(pedido.estado)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
