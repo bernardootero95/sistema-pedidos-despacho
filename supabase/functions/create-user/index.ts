@@ -19,6 +19,44 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // verify_jwt=true (config.toml) ya rechaza requests sin un JWT válido
+    // antes de llegar aquí, pero eso solo confirma "hay una sesión válida",
+    // no "esta sesión es de gerencia/soporte". Crear un usuario (con
+    // cualquier rol, incluido gerencia/soporte) es una acción sensible que
+    // exige verificar el rol del llamante explícitamente, igual que en
+    // reset-user-password.
+    const authHeader = req.headers.get('Authorization') ?? ''
+    const jwt = authHeader.replace(/^Bearer\s+/i, '')
+
+    const { data: { user: caller }, error: callerError } =
+      await supabaseAdmin.auth.getUser(jwt)
+
+    if (callerError || !caller) {
+      return new Response(
+        JSON.stringify({ error: 'No autenticado.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      )
+    }
+
+    const { data: callerProfile, error: profileLookupError } = await supabaseAdmin
+      .from('perfiles')
+      .select('estado, roles ( nombre )')
+      .eq('id', caller.id)
+      .single()
+
+    const callerRole = callerProfile?.roles?.nombre
+    const autorizado =
+      !profileLookupError &&
+      callerProfile?.estado === true &&
+      (callerRole === 'gerencia' || callerRole === 'soporte')
+
+    if (!autorizado) {
+      return new Response(
+        JSON.stringify({ error: 'No tienes permiso para crear usuarios.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      )
+    }
+
     const { email, password, nombre_usuario, nombre_completo, rol_id, correo } = await req.json()
 
     // 1. Crear usuario en el motor de Auth nativo

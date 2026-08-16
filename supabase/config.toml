@@ -1,7 +1,12 @@
 
 [functions.create-user]
 enabled = true
-verify_jwt = false
+# true: exige un JWT válido antes de correr, y el código además verifica
+# que ese JWT pertenezca a un usuario con rol gerencia/soporte antes de
+# crear la cuenta (mismo patrón que reset-user-password). Antes estaba en
+# false sin ningún chequeo de rol interno: cualquiera con la URL de la
+# función podía crear usuarios con cualquier rol, incluido gerencia.
+verify_jwt = true
 import_map = "./functions/create-user/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
@@ -12,9 +17,8 @@ entrypoint = "./functions/create-user/index.ts"
 
 [functions.reset-user-password]
 enabled = true
-# true a propósito (a diferencia de create-user): esta función exige un JWT
-# válido antes de correr, y además verifica dentro del código que ese JWT
-# pertenece a un usuario con rol gerencia/soporte.
+# true: exige un JWT válido antes de correr, y además verifica dentro del
+# código que ese JWT pertenece a un usuario con rol gerencia/soporte.
 verify_jwt = true
 import_map = "./functions/reset-user-password/deno.json"
 entrypoint = "./functions/reset-user-password/index.ts"
