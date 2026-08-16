@@ -61,6 +61,35 @@ export const orderService = {
   },
 
   /**
+   * Edita un pedido pendiente (productos, cantidades, notas) de forma
+   * atómica mediante la función RPC `editar_pedido_transaccional`. Igual
+   * que crear, el precio/IVA/INC de cada línea se recalcula en el
+   * servidor desde `productos` — nunca se confía en lo que mande el
+   * cliente. Rechaza pedidos que ya no estén 'pendiente'.
+   *
+   * @param {string} pedidoId
+   * @param {{ notas?: string, detalles: Array<{producto_id: string, cantidad: number}> }} data
+   */
+  async editarPedido(pedidoId, { notas, detalles }) {
+    const detallesParaRpc = detalles.map((item) => ({
+      producto_id: item.producto_id,
+      cantidad: Number(item.cantidad),
+    }));
+
+    const { data, error } = await supabase.rpc("editar_pedido_transaccional", {
+      p_pedido_id: pedidoId,
+      p_notas: notas || null,
+      p_detalles: detallesParaRpc,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Error al editar el pedido.");
+    }
+
+    return data;
+  },
+
+  /**
    * Obtiene los pedidos en estado 'pendiente' disponibles para asignar a
    * una orden de despacho. Sin paginación a propósito: el despachador
    * necesita ver el universo completo de pendientes para armar la ruta,

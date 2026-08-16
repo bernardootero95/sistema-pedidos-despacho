@@ -7,6 +7,7 @@ import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import {
   ArrowLeft,
   Printer,
+  Edit,
   Package,
   User,
   MapPin,
@@ -185,18 +186,29 @@ export const OrderDetailsPage = () => {
           </div>
         </div>
 
-        <button
-          onClick={handlePrint}
-          disabled={isPrinting}
-          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
-        >
-          {isPrinting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Printer className="h-4 w-4" />
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          {pedido.estado === "pendiente" && (
+            <button
+              onClick={() => navigate(`/orders/${id}/editar`)}
+              className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2 shadow-sm"
+            >
+              <Edit className="h-4 w-4" />
+              Editar Pedido
+            </button>
           )}
-          Imprimir Tiquete 80mm
-        </button>
+          <button
+            onClick={handlePrint}
+            disabled={isPrinting}
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+          >
+            {isPrinting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Printer className="h-4 w-4" />
+            )}
+            Imprimir Tiquete 80mm
+          </button>
+        </div>
       </div>
 
       {/* GRID DE INFORMACIÓN GENERAL */}

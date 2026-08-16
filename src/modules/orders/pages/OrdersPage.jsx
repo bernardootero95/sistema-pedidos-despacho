@@ -11,6 +11,7 @@ import {
   Search,
   PlusCircle,
   Eye,
+  Edit,
   Ban,
   Printer,
   Loader2,
@@ -138,6 +139,16 @@ export const OrdersPage = () => {
       >
         <Eye className="h-5 w-5" />
       </button>
+
+      {pedido.estado === "pendiente" && (
+        <button
+          onClick={() => navigate(`/orders/${pedido.id}/editar`)}
+          className="p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 rounded-lg transition-colors"
+          title="Editar Pedido"
+        >
+          <Edit className="h-5 w-5" />
+        </button>
+      )}
 
       {pedido.estado !== "anulado" && (
         <button

@@ -54,6 +54,11 @@ const OrderDetailsPage = lazy(() =>
     default: m.OrderDetailsPage,
   })),
 );
+const OrderEditPage = lazy(() =>
+  import("../modules/orders/pages/OrderEditPage").then((m) => ({
+    default: m.OrderEditPage,
+  })),
+);
 const DispatchesPage = lazy(() =>
   import("../modules/dispatches/pages/DispatchesPage").then((m) => ({
     default: m.DispatchesPage,
@@ -147,6 +152,7 @@ export const AppRouter = () => {
               <Route path="/pedidos" element={<OrdersPage />} />
               <Route path="/orders/new" element={<OrderCreatePage />} />
               <Route path="/orders/:id" element={<OrderDetailsPage />} />
+              <Route path="/orders/:id/editar" element={<OrderEditPage />} />
             </Route>
             <Route element={<RoleGuard roles={ROLES_MODULO.DESPACHOS} />}>
               <Route path="/despachos" element={<DispatchesPage />} />

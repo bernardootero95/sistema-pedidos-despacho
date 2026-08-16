@@ -1,38 +1,45 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Save,
   Loader2,
   AlertCircle,
-  UserCheck,
   ShoppingCart,
+  Lock,
 } from "lucide-react";
 import { supabase } from "../../../config/supabase";
 import { orderService } from "../services/orderService";
-import { validateOrderForm, validateOrderField } from "../utils/orderValidations";
+import { validateOrderField } from "../utils/orderValidations";
 import { useCarritoPedido } from "../hooks/useCarritoPedido";
 import { ProductSearchBar } from "../components/ProductSearchBar";
 import { CarritoPedido } from "../components/CarritoPedido";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
-export const OrderCreatePage = () => {
+/**
+ * Edita un pedido pendiente: mismo carrito/buscador de productos que
+ * OrderCreatePage (comparten useCarritoPedido), pero cliente y vendedor
+ * quedan fijos — editar es ajustar productos/cantidades/notas, no
+ * reasignar el pedido a otro cliente.
+ */
+export const OrderEditPage = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
 
-  // --- ESTADOS DE DATOS EXTERNOS ---
-  const [clientes, setClientes] = useState([]);
+  const [pedido, setPedido] = useState(null);
   const [productos, setProductos] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
-  // --- ESTADOS DEL FORMULARIO ---
-  const [clienteId, setClienteId] = useState("");
-  const [vendedorId, setVendedorId] = useState("");
-  const [vendedorNombre, setVendedorNombre] = useState("");
   const [notas, setNotas] = useState("");
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
+  const [carritoError, setCarritoError] = useState("");
+  const [globalError, setGlobalError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     carrito,
+    setCarrito,
     errorStock,
     agregarAlCarrito: agregarProductoAlCarrito,
     modificarCantidad,
@@ -41,73 +48,73 @@ export const OrderCreatePage = () => {
     totalPedido,
   } = useCarritoPedido(productos);
 
-  // --- ESTADOS DE CONTROL ---
-  const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Cargar datos iniciales trayendo el campo 'disponible' de productos
   useEffect(() => {
-    const fetchData = async () => {
+    const cargarDatos = async () => {
       try {
         setLoadingData(true);
+        setLoadError("");
 
-        const { data: authData, error: authError } =
-          await supabase.auth.getUser();
-        if (authData?.user) {
-          setVendedorId(authData.user.id);
-          const { data: perfil } = await supabase
-            .from("perfiles")
-            .select("nombre_completo")
-            .eq("id", authData.user.id)
-            .single();
-          if (perfil) setVendedorNombre(perfil.nombre_completo);
-        } else if (authError) {
-          console.error("Error obteniendo sesión:", authError);
-        }
-
-        const [resClientes, resProductos] = await Promise.all([
-          supabase
-            .from("clientes")
-            .select(
-              "id, razon_social, primer_nombre, primer_apellido, numero_identificacion",
-            )
-            .is("eliminado", null),
+        const [pedidoData, { data: productosData }] = await Promise.all([
+          orderService.getPedidoCompleto(id),
           supabase
             .from("productos")
-            .select("id, nombre, codigo, precio_venta, iva, inc, disponible") // Incluimos disponible
+            .select("id, nombre, codigo, precio_venta, iva, inc, disponible")
             .is("eliminado", null),
         ]);
 
-        if (resClientes.data) setClientes(resClientes.data);
-        if (resProductos.data) setProductos(resProductos.data);
-      } catch (error) {
-        console.error("Error cargando datos base:", error);
+        setPedido(pedidoData);
+
+        if (pedidoData.estado !== "pendiente") {
+          setLoadError(
+            `Este pedido ya no se puede editar (estado actual: ${pedidoData.estado}).`,
+          );
+          return;
+        }
+
+        const detalles = pedidoData.detalles || [];
+
+        // El stock que este pedido ya tenía reservado se suma de vuelta al
+        // "techo" disponible: editar_pedido_transaccional también lo
+        // devuelve antes de re-validar, así que el vendedor debe poder
+        // subir hasta ahí, no solo hasta el disponible crudo del catálogo.
+        const productosAjustados = (productosData || []).map((p) => {
+          const detallePrevio = detalles.find((d) => d.producto_id === p.id);
+          return detallePrevio
+            ? { ...p, disponible: p.disponible + detallePrevio.cantidad }
+            : p;
+        });
+
+        const itemsIniciales = detalles.map((d) => {
+          const productoAjustado = productosAjustados.find(
+            (p) => p.id === d.producto_id,
+          );
+          return {
+            producto_id: d.producto_id,
+            nombre: d.producto?.nombre || "Producto",
+            codigo: d.producto?.codigo || "",
+            cantidad: d.cantidad,
+            precio_unitario: Number(d.precio_unitario),
+            iva_porcentaje: Number(d.iva_porcentaje),
+            inc_porcentaje: Number(d.inc_porcentaje),
+            subtotal_linea: Number(d.subtotal_linea),
+            disponible: productoAjustado?.disponible ?? 0,
+          };
+        });
+
+        setNotas(pedidoData.notas || "");
+        setProductos(productosAjustados);
+        setCarrito(itemsIniciales);
+      } catch (err) {
+        console.error(err);
+        setLoadError("No se pudo cargar el pedido para edición.");
       } finally {
         setLoadingData(false);
       }
     };
-    fetchData();
-  }, []);
 
-  // --- VALIDACIÓN INMEDIATA DEL CLIENTE (mismo patrón que DispatchCreatePage) ---
-  const handleClienteChange = (value) => {
-    setClienteId(value);
-    if (touched.cliente_id) {
-      setErrors((prev) => ({
-        ...prev,
-        cliente_id: validateOrderField("cliente_id", value),
-      }));
-    }
-  };
-
-  const handleClienteBlur = () => {
-    setTouched((prev) => ({ ...prev, cliente_id: true }));
-    setErrors((prev) => ({
-      ...prev,
-      cliente_id: validateOrderField("cliente_id", clienteId),
-    }));
-  };
+    if (id) cargarDatos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const agregarAlCarrito = () => {
     agregarProductoAlCarrito(productoSeleccionado);
@@ -116,55 +123,71 @@ export const OrderCreatePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setGlobalError("");
 
-    const cabeceraData = {
-      cliente_id: clienteId,
-      vendedor_id: vendedorId,
-      notas,
-    };
-
-    const validationErrors = validateOrderForm(cabeceraData, carrito);
-    setTouched((prev) => ({ ...prev, cliente_id: true }));
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+    const errorCarrito = validateOrderField("carrito", carrito);
+    if (errorCarrito) {
+      setCarritoError(errorCarrito);
       return;
     }
+    setCarritoError("");
 
-    const detallesParaGuardar = carrito.map(
-      // eslint-disable-next-line no-unused-vars -- se destructuran para excluirlas de "rest"
-      ({ nombre, codigo, disponible, ...rest }) => rest,
-    );
+    const detallesParaGuardar = carrito.map((item) => ({
+      producto_id: item.producto_id,
+      cantidad: item.cantidad,
+    }));
 
     try {
       setIsSubmitting(true);
-      await orderService.crearPedido(cabeceraData, detallesParaGuardar);
-      navigate("/pedidos");
-    } catch (error) {
-      console.error(error);
-      setErrors({
-        global: error.message || "Ocurrió un error al guardar el pedido.",
+      await orderService.editarPedido(id, {
+        notas,
+        detalles: detallesParaGuardar,
       });
+      navigate(`/orders/${id}`);
+    } catch (err) {
+      console.error(err);
+      setGlobalError(
+        err.message || "Ocurrió un error al guardar los cambios.",
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("es-CO", {
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
       maximumFractionDigits: 0,
-    }).format(amount);
-  };
+    }).format(amount || 0);
 
   if (loadingData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-500 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <p>Preparando punto de venta móvil...</p>
+        <p>Cargando pedido...</p>
       </div>
     );
   }
+
+  if (loadError) {
+    return (
+      <div className="p-6 max-w-lg mx-auto">
+        <div className="bg-amber-50 text-amber-800 p-4 rounded-xl flex items-center gap-3 border border-amber-200">
+          <Lock className="h-6 w-6 shrink-0" />
+          <p className="text-sm font-medium">{loadError}</p>
+        </div>
+        <button
+          onClick={() => navigate(pedido ? `/orders/${id}` : "/pedidos")}
+          className="mt-4 flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+        >
+          <ArrowLeft className="h-4 w-4" /> Volver
+        </button>
+      </div>
+    );
+  }
+
+  const cliente = pedido?.clientes;
 
   return (
     <div className="flex flex-col min-h-full bg-slate-50 pb-24">
@@ -172,7 +195,7 @@ export const OrderCreatePage = () => {
       <div className="flex items-center justify-between p-4 bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate("/pedidos")}
+            onClick={() => navigate(`/orders/${id}`)}
             className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="h-6 w-6" />
@@ -180,14 +203,8 @@ export const OrderCreatePage = () => {
           <div>
             <h1 className="text-lg font-bold text-slate-800 flex items-center gap-1.5">
               <ShoppingCart className="h-5 w-5 text-blue-600" />
-              Nuevo Pedido
+              Editar Pedido #{pedido?.numero_pedido}
             </h1>
-            {vendedorNombre && (
-              <p className="text-xs text-slate-500 flex items-center gap-1">
-                <UserCheck className="h-3 w-3 text-emerald-500" />{" "}
-                {vendedorNombre}
-              </p>
-            )}
           </div>
         </div>
       </div>
@@ -196,36 +213,24 @@ export const OrderCreatePage = () => {
         onSubmit={handleSubmit}
         className="p-4 flex flex-col gap-4 max-w-3xl mx-auto w-full"
       >
-        {errors.global && (
+        {globalError && (
           <div className="bg-red-50 text-red-700 p-3 rounded-xl flex items-center gap-2 text-sm border border-red-200">
             <AlertCircle className="h-5 w-5 shrink-0" />
-            {errors.global}
+            {globalError}
           </div>
         )}
 
-        {/* CLIENTE */}
+        {/* CLIENTE (solo lectura: editar es ajustar productos, no reasignar) */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-            Seleccionar Cliente *
-          </label>
-          <select
-            value={clienteId}
-            onChange={(e) => handleClienteChange(e.target.value)}
-            onBlur={handleClienteBlur}
-            className={`w-full p-3 border rounded-xl outline-none bg-white text-base transition-all ${errors.cliente_id ? "border-red-500 ring-2 ring-red-100" : "border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
-          >
-            <option value="">-- Toca para elegir cliente --</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.numero_identificacion} - {getNombreCliente(c)}
-              </option>
-            ))}
-          </select>
-          {errors.cliente_id && (
-            <p className="text-red-500 text-xs mt-1 font-medium">
-              {errors.cliente_id}
-            </p>
-          )}
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            Cliente
+          </p>
+          <p className="text-base font-bold text-slate-800">
+            {getNombreCliente(cliente)}
+          </p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            El cliente no se puede cambiar desde la edición.
+          </p>
         </div>
 
         {/* BUSCADOR DE PRODUCTOS CON STOCK VISIBLE */}
@@ -234,7 +239,7 @@ export const OrderCreatePage = () => {
           productoSeleccionado={productoSeleccionado}
           onSelectChange={setProductoSeleccionado}
           onAgregar={agregarAlCarrito}
-          error={errorStock || errors.carrito}
+          error={errorStock || carritoError}
           formatCurrency={formatCurrency}
         />
 
@@ -245,7 +250,7 @@ export const OrderCreatePage = () => {
           onActualizarCantidadInput={actualizarCantidadInput}
           onEliminar={eliminarDelCarrito}
           formatCurrency={formatCurrency}
-          error={errorStock || errors.carrito}
+          error={errorStock || carritoError}
         />
 
         {/* NOTAS Y TOTAL */}
@@ -281,7 +286,7 @@ export const OrderCreatePage = () => {
             ) : (
               <Save className="h-5 w-5" />
             )}
-            Guardar Pedido
+            Guardar Cambios
           </button>
         </div>
       </form>
