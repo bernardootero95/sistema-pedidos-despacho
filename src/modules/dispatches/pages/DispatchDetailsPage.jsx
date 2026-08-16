@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { dispatchService } from "../services/dispatchService";
+import { orderService } from "../../orders/services/orderService";
 import { DispatchStatusControl } from "../components/DispatchStatusControl";
 import { EntregaStatusControl } from "../components/EntregaStatusControl";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
+import { useToast } from "../../../context/useToast";
 import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
+import { imprimirTiqueteYFacturasDespacho } from "../utils/dispatchPrintUtils";
 import {
   ArrowLeft,
   Truck,
@@ -14,17 +17,20 @@ import {
   Loader2,
   AlertCircle,
   StickyNote,
+  Printer,
 } from "lucide-react";
 import { ETIQUETAS_ESTADO_DESPACHO } from "../utils/dispatchStatus";
 
 export const DispatchDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showError } = useToast();
 
   const [despacho, setDespacho] = useState(null);
   const [pedidosAsignados, setPedidosAsignados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const cargarDatos = async () => {
     try {
@@ -94,6 +100,26 @@ export const DispatchDetailsPage = () => {
     );
   };
 
+  const handleImprimirTiqueteYFacturas = async () => {
+    if (pedidosAsignados.length === 0) return;
+    setIsPrinting(true);
+    try {
+      const pedidosCompletos = await Promise.all(
+        pedidosAsignados.map((item) =>
+          orderService.getPedidoCompleto(item.pedido.id),
+        ),
+      );
+      await imprimirTiqueteYFacturasDespacho(despacho, pedidosCompletos);
+    } catch (err) {
+      console.error(err);
+      showError(
+        err.message || "No se pudo generar el tiquete o las facturas.",
+      );
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-500 gap-3">
@@ -152,12 +178,26 @@ export const DispatchDetailsPage = () => {
           </div>
         </div>
 
-        <DispatchStatusControl
-          despachoId={despacho.id}
-          estado={despacho.estado}
-          onUpdated={handleDespachoActualizado}
-          variant="buttons"
-        />
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={handleImprimirTiqueteYFacturas}
+            disabled={isPrinting || pedidosAsignados.length === 0}
+            className="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+          >
+            {isPrinting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Printer className="h-4 w-4" />
+            )}
+            Imprimir Tiquete + Facturas
+          </button>
+          <DispatchStatusControl
+            despachoId={despacho.id}
+            estado={despacho.estado}
+            onUpdated={handleDespachoActualizado}
+            variant="buttons"
+          />
+        </div>
       </div>
 
       {/* GRID DE INFORMACIÓN GENERAL */}

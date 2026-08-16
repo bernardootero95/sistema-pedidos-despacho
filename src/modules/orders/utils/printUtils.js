@@ -1,10 +1,31 @@
 // src/modules/orders/utils/printUtils.js
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
-export const imprimirPedidoPdf = async (pedidoCompleto) => {
-  if (!pedidoCompleto) return;
+export const formatCurrencyPdf = (amount) =>
+  new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }).format(amount || 0);
 
-  const companyName = import.meta.env.VITE_COMPANY_NAME || "SISTEMA DE PEDIDOS";
+export const formatDatePdf = (dateString) =>
+  new Date(dateString).toLocaleDateString("es-CO", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+/**
+ * Arma el HTML del comprobante térmico 80mm de un pedido individual.
+ * Separado de imprimirPedidoPdf para poder reutilizarlo en el lote de
+ * comprobantes de un despacho (dispatches/utils/dispatchPrintUtils.js)
+ * sin duplicar esta plantilla.
+ */
+export const construirComprobantePedidoHtml = (pedidoCompleto) => {
+  const companyName =
+    import.meta.env.VITE_COMPANY_NAME || "SISTEMA DE PEDIDOS";
 
   let subtotalGeneral = 0;
   let acumIva19 = 0;
@@ -28,40 +49,13 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
 
   const clienteNombre = getNombreCliente(pedidoCompleto.clientes);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("es-CO", {
-      style: "currency",
-      currency: "COP",
-      maximumFractionDigits: 0,
-    }).format(amount || 0);
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("es-CO", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // Creamos el contenedor asegurando que el DOM lo procese físicamente
-  const container = document.createElement("div");
-  container.style.position = "fixed";
-  container.style.left = "0";
-  container.style.top = "0";
-  container.style.opacity = "0";
-  container.style.pointerEvents = "none";
-  container.style.zIndex = "-1000";
-
-  container.innerHTML = `
+  return `
     <div style="background-color: #ffffff; color: #000000; width: 72mm; padding: 12px; font-family: monospace; font-size: 11px; display: flex; flex-direction: column; gap: 10px;">
       <div style="text-align: center; padding-bottom: 8px; border-bottom: 1px dashed #000000;">
         <h3 style="font-weight: bold; font-size: 14px; text-transform: uppercase; margin: 0;">${companyName}</h3>
         <p style="font-weight: bold; font-size: 11px; text-transform: uppercase; margin: 2px 0;">COMPROBANTE DE DESPACHO</p>
         <p style="font-weight: bold; font-size: 13px; margin: 4px 0;">Pedido N°: ${pedidoCompleto.numero_pedido}</p>
-        <p style="font-size: 10px; color: #333333; margin: 0;">Fecha: ${formatDate(pedidoCompleto.fecha_pedido)}</p>
+        <p style="font-size: 10px; color: #333333; margin: 0;">Fecha: ${formatDatePdf(pedidoCompleto.fecha_pedido)}</p>
       </div>
 
       <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; font-size: 10px; display: flex; flex-direction: column; gap: 2px;">
@@ -86,9 +80,9 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
               <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); font-size: 10px;">
                 <span style="grid-column: span 2 / span 2; text-align: center; font-weight: bold;">${item.cantidad}</span>
                 <span style="grid-column: span 6 / span 6; font-weight: 500;">${item.producto?.nombre}</span>
-                <span style="grid-column: span 4 / span 4; text-align: right;">${formatCurrency(item.subtotal_linea)}</span>
+                <span style="grid-column: span 4 / span 4; text-align: right;">${formatCurrencyPdf(item.subtotal_linea)}</span>
               </div>
-              <div style="font-size: 9px; padding-left: 8px; color: #555555;">V. Unit: ${formatCurrency(item.precio_unitario)}</div>
+              <div style="font-size: 9px; padding-left: 8px; color: #555555;">V. Unit: ${formatCurrencyPdf(item.precio_unitario)}</div>
             </div>
           `,
             )
@@ -97,12 +91,12 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
       </div>
 
       <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; display: flex; flex-direction: column; gap: 4px; font-size: 10px;">
-        <div style="display: flex; justify-content: space-between;"><span>SUBTOTAL:</span><span>${formatCurrency(subtotalGeneral)}</span></div>
-        <div style="display: flex; justify-content: space-between;"><span>IVA 19%:</span><span>${formatCurrency(acumIva19)}</span></div>
-        <div style="display: flex; justify-content: space-between;"><span>IVA 5%:</span><span>${formatCurrency(acumIva5)}</span></div>
-        <div style="display: flex; justify-content: space-between;"><span>INC 8%:</span><span>${formatCurrency(acumInc8)}</span></div>
+        <div style="display: flex; justify-content: space-between;"><span>SUBTOTAL:</span><span>${formatCurrencyPdf(subtotalGeneral)}</span></div>
+        <div style="display: flex; justify-content: space-between;"><span>IVA 19%:</span><span>${formatCurrencyPdf(acumIva19)}</span></div>
+        <div style="display: flex; justify-content: space-between;"><span>IVA 5%:</span><span>${formatCurrencyPdf(acumIva5)}</span></div>
+        <div style="display: flex; justify-content: space-between;"><span>INC 8%:</span><span>${formatCurrencyPdf(acumInc8)}</span></div>
         <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; border-top: 1px solid #000000; padding-top: 4px; margin-top: 2px;">
-          <span>TOTAL:</span><span>${formatCurrency(pedidoCompleto.total)}</span>
+          <span>TOTAL:</span><span>${formatCurrencyPdf(pedidoCompleto.total)}</span>
         </div>
       </div>
 
@@ -123,12 +117,30 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
       </div>
     </div>
   `;
+};
+
+/**
+ * Convierte un fragmento HTML (string, ya armado por construirXHtml) en un
+ * blob URL de PDF térmico 80mm vía html2pdf.js. No abre ni descarga nada
+ * por sí solo — cada llamador decide qué hacer con la URL (abrir en
+ * pestaña nueva, forzar descarga, etc.), ya que eso varía según el caso
+ * de uso (un comprobante suelto vs. un lote de varios).
+ */
+export const generarPdfBlobUrl = async (html, filename) => {
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "0";
+  container.style.top = "0";
+  container.style.opacity = "0";
+  container.style.pointerEvents = "none";
+  container.style.zIndex = "-1000";
+  container.innerHTML = html;
 
   document.body.appendChild(container);
 
   const opt = {
     margin: 0,
-    filename: `comprobante-pedido-${pedidoCompleto.numero_pedido}.pdf`,
+    filename,
     image: { type: "jpeg", quality: 1 },
     html2canvas: { scale: 2, useCORS: true, logging: false },
     jsPDF: { unit: "mm", format: [80, 200], orientation: "portrait" },
@@ -136,8 +148,8 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
 
   try {
     // Import dinámico: html2pdf.js (~900KB) solo se descarga cuando se
-    // imprime un comprobante, no en el chunk inicial de cada página que
-    // importa este util.
+    // imprime algo, no en el chunk inicial de cada página que importa
+    // este util.
     const { default: html2pdf } = await import(
       "html2pdf.js/dist/html2pdf.min.js"
     );
@@ -145,17 +157,29 @@ export const imprimirPedidoPdf = async (pedidoCompleto) => {
     // Damos un pequeño respiro de 250ms para garantizar que el DOM pinte el contenido antes de convertir a PDF
     await new Promise((resolve) => setTimeout(resolve, 250));
 
-    const pdfUrl = await html2pdf()
+    return await html2pdf()
       .set(opt)
       .from(container.firstElementChild)
       .output("bloburl");
+  } finally {
+    document.body.removeChild(container);
+  }
+};
+
+export const imprimirPedidoPdf = async (pedidoCompleto) => {
+  if (!pedidoCompleto) return;
+
+  try {
+    const html = construirComprobantePedidoHtml(pedidoCompleto);
+    const pdfUrl = await generarPdfBlobUrl(
+      html,
+      `comprobante-pedido-${pedidoCompleto.numero_pedido}.pdf`,
+    );
     window.open(pdfUrl, "_blank");
   } catch (error) {
     console.error("Error al generar el PDF térmico:", error);
     throw new Error("No se pudo generar el comprobante PDF.", {
       cause: error,
     });
-  } finally {
-    document.body.removeChild(container);
   }
 };
