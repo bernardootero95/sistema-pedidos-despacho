@@ -101,8 +101,6 @@ export const UsersPage = () => {
       u.roles.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const domain = import.meta.env.VITE_COMPANY_DOMAIN || "empresa.com";
-
   if (loading && usuarios.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-slate-500">
@@ -268,9 +266,6 @@ export const UsersPage = () => {
                   <td className="py-4 px-6">
                     <p className="font-semibold text-slate-700">
                       {user.nombre_usuario}
-                    </p>
-                    <p className="text-[10px] text-slate-400">
-                      {user.nombre_usuario}@{domain}
                     </p>
                     {user.correo ? (
                       <p className="mt-1 text-[10px] font-semibold text-emerald-600 flex items-center gap-1">

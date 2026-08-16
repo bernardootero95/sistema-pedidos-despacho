@@ -119,7 +119,7 @@ export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
                   {userToEdit.nombre_completo}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {userToEdit.nombre_usuario}@{domain}
+                  @{userToEdit.nombre_usuario}
                 </p>
               </div>
             )}
@@ -150,20 +150,15 @@ export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                     Nombre de Usuario (Login)
                   </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="nombre_usuario"
-                      value={formData.nombre_usuario}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      placeholder="ej: maria.gomez"
-                      className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all pr-24 ${errors.nombre_usuario ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-                    />
-                    <span className="absolute right-3 top-3 text-xs font-bold text-slate-400 select-none">
-                      @{domain}
-                    </span>
-                  </div>
+                  <input
+                    type="text"
+                    name="nombre_usuario"
+                    value={formData.nombre_usuario}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="ej: maria.gomez"
+                    className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${errors.nombre_usuario ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                  />
                   {errors.nombre_usuario && (
                     <p className="mt-1 text-xs text-red-500 font-bold">
                       {errors.nombre_usuario}

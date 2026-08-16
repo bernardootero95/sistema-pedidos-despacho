@@ -28,8 +28,6 @@ export const LoginPage = () => {
     tone: "", // "success" | "info" | "error"
   });
 
-  const domain = import.meta.env.VITE_COMPANY_DOMAIN || "empresa.com";
-
   const validateField = (name, value) => {
     let errorMsg = "";
     if (name === "nombreUsuario") {
@@ -179,7 +177,7 @@ export const LoginPage = () => {
                   >
                     Nombre de Usuario
                   </label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
+                  <div className="mt-1">
                     <input
                       id="recoveryUsername"
                       type="text"
@@ -188,9 +186,6 @@ export const LoginPage = () => {
                       onChange={(e) => setRecoveryUsername(e.target.value)}
                       className="block w-full rounded-xl sm:rounded-lg border border-slate-300 px-4 py-3.5 sm:py-2.5 text-base sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors"
                     />
-                    <span className="absolute right-3 top-3.5 sm:top-2.5 text-xs font-bold text-slate-400 select-none">
-                      @{domain}
-                    </span>
                   </div>
                 </div>
 
@@ -221,7 +216,7 @@ export const LoginPage = () => {
                   >
                     Nombre de Usuario
                   </label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
+                  <div className="mt-1">
                     <input
                       id="nombreUsuario"
                       name="nombreUsuario"
@@ -237,9 +232,6 @@ export const LoginPage = () => {
                           : "border-slate-300 focus:border-primary focus:ring-primary/20"
                       }`}
                     />
-                    <span className="absolute right-3 top-3.5 sm:top-2.5 text-xs font-bold text-slate-400 select-none">
-                      @{domain}
-                    </span>
                   </div>
                   {errors.nombreUsuario && (
                     <p className="mt-1.5 text-xs text-red-600 font-bold">
