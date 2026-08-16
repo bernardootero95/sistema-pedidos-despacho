@@ -11,5 +11,8 @@ export const ROLES_MODULO = {
   PRODUCTOS: ["soporte", "gerencia", "vendedor", "despachador"],
   VEHICULOS: ["soporte", "gerencia", "despachador"],
   PEDIDOS: ["soporte", "gerencia", "vendedor", "despachador"],
-  DESPACHOS: ["soporte", "gerencia", "despachador", "repartidor"],
+  // repartidor ya no ve el listado/detalle de escritorio: tiene su propia
+  // vista simplificada en MI_RUTA.
+  DESPACHOS: ["soporte", "gerencia", "despachador"],
+  MI_RUTA: ["repartidor"],
 };

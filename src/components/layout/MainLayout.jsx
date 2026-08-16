@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   UserCog,
+  MapPin,
 } from "lucide-react";
 
 export const MainLayout = () => {
@@ -52,6 +53,12 @@ export const MainLayout = () => {
       label: "Órdenes de Despacho",
       icon: Truck,
       roles: ROLES_MODULO.DESPACHOS,
+    },
+    {
+      path: "/despachos/mi-ruta",
+      label: "Mi Ruta de Hoy",
+      icon: MapPin,
+      roles: ROLES_MODULO.MI_RUTA,
     },
     {
       path: "/clientes",

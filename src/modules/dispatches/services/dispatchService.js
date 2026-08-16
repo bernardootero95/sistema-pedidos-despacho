@@ -103,7 +103,7 @@ export const dispatchService = {
           id,
           numero_pedido,
           total,
-          clientes(razon_social, primer_nombre, primer_apellido)
+          clientes(razon_social, primer_nombre, primer_apellido, direccion, telefono)
         )
       `,
       )
@@ -116,6 +116,47 @@ export const dispatchService = {
     }
 
     return data;
+  },
+
+  /**
+   * Despacho activo del repartidor autenticado (el más reciente en curso,
+   * estado 'creado' o 'en_ruta') con sus pedidos asignados, para la vista
+   * simplificada de "mi ruta de hoy". RLS ya restringe despachos/pedidos al
+   * propio repartidor_id, pero se filtra explícito para que el contrato
+   * del método sea claro sin depender solo de RLS para leerlo.
+   *
+   * @returns {Promise<{despacho: Object, pedidos: Array}|null>} null si no
+   * tiene ninguna ruta activa en este momento.
+   */
+  async obtenerRutaActivaRepartidor(repartidorId) {
+    const { data: despacho, error: despachoError } = await supabase
+      .from("despachos")
+      .select(
+        `
+        id,
+        codigo_despacho,
+        estado,
+        fecha_despacho,
+        notas,
+        vehiculo:vehiculos(placa, marca, modelo)
+      `,
+      )
+      .eq("repartidor_id", repartidorId)
+      .in("estado", ["creado", "en_ruta"])
+      .is("eliminado", null)
+      .order("fecha_despacho", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (despachoError) {
+      throw new Error(
+        `Error al obtener tu ruta activa: ${despachoError.message}`,
+      );
+    }
+    if (!despacho) return null;
+
+    const pedidos = await this.obtenerDetallesDespacho(despacho.id);
+    return { despacho, pedidos };
   },
 
   /**

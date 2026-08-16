@@ -69,6 +69,11 @@ const DispatchDetailsPage = lazy(() =>
     default: m.DispatchDetailsPage,
   })),
 );
+const RepartidorRoutePage = lazy(() =>
+  import("../modules/dispatches/pages/RepartidorRoutePage").then((m) => ({
+    default: m.RepartidorRoutePage,
+  })),
+);
 const ResetPasswordPage = lazy(() =>
   import("../modules/auth/pages/ResetPasswordPage").then((m) => ({
     default: m.ResetPasswordPage,
@@ -150,6 +155,9 @@ export const AppRouter = () => {
                 element={<DispatchCreatePage />}
               />
               <Route path="/despachos/:id" element={<DispatchDetailsPage />} />
+            </Route>
+            <Route element={<RoleGuard roles={ROLES_MODULO.MI_RUTA} />}>
+              <Route path="/despachos/mi-ruta" element={<RepartidorRoutePage />} />
             </Route>
           </Route>
 
