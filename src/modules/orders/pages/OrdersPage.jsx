@@ -5,6 +5,7 @@ import { imprimirPedidoPdf } from "../utils/printUtils";
 import { useToast } from "../../../context/useToast";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { usePaginatedList } from "../../../hooks/usePaginatedList";
+import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
 import {
   ShoppingCart,
   Search,
@@ -39,6 +40,10 @@ export const OrdersPage = () => {
     orderService.getPedidosPaginados(page, pageSize, search),
   );
   const [printingId, setPrintingId] = useState(null);
+
+  // Si un vendedor crea un pedido o cambia de estado desde otra sesión,
+  // esta lista se refresca sola en vez de esperar a que alguien recargue.
+  useRealtimeSubscription("pedidos_cabecera", () => cargarPedidos());
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("es-CO", {

@@ -4,6 +4,7 @@ import { dispatchService } from "../services/dispatchService";
 import { DispatchStatusControl } from "../components/DispatchStatusControl";
 import { EntregaStatusControl } from "../components/EntregaStatusControl";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
+import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
 import {
   ArrowLeft,
   Truck,
@@ -46,6 +47,17 @@ export const DispatchDetailsPage = () => {
     if (id) queueMicrotask(cargarDatos);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Si el repartidor marca una entrega desde su celular, o alguien más
+  // cambia el estado del despacho, esta vista se refresca sola.
+  useRealtimeSubscription("despachos_pedidos", () => cargarDatos(), {
+    filter: `despacho_id=eq.${id}`,
+    enabled: Boolean(id),
+  });
+  useRealtimeSubscription("despachos", () => cargarDatos(), {
+    filter: `id=eq.${id}`,
+    enabled: Boolean(id),
+  });
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("es-CO", {

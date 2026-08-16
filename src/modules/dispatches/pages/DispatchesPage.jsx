@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { dispatchService } from "../services/dispatchService";
 import { DispatchStatusControl } from "../components/DispatchStatusControl";
 import { usePaginatedList } from "../../../hooks/usePaginatedList";
+import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
 import {
   Truck,
   Search,
@@ -30,9 +31,14 @@ export const DispatchesPage = () => {
     setCurrentPage,
     totalPages,
     totalItems,
+    reload: cargarDespachos,
   } = usePaginatedList((page, pageSize, search) =>
     dispatchService.getDespachosPaginados(page, pageSize, search),
   );
+
+  // Si otro despachador crea un despacho o cambia su estado, esta lista
+  // se refresca sola en vez de esperar a que alguien recargue.
+  useRealtimeSubscription("despachos", () => cargarDespachos());
 
   // Al cambiar el estado de un despacho desde la tabla o la tarjeta, se
   // actualiza solo esa fila en memoria (evita recargar toda la página

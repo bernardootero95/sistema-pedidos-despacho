@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../../context/useAuth";
 import { dispatchService } from "../services/dispatchService";
 import { EntregaPedidoCard } from "../components/EntregaPedidoCard";
+import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
 import { Truck, Loader2, PackageOpen, Calendar } from "lucide-react";
 
 /**
@@ -19,25 +20,37 @@ export const RepartidorRoutePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const cargarRuta = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const data = await dispatchService.obtenerRutaActivaRepartidor(
-          user.id,
-        );
-        setDespacho(data?.despacho || null);
-        setPedidos(data?.pedidos || []);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const cargarRuta = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const data = await dispatchService.obtenerRutaActivaRepartidor(
+        user.id,
+      );
+      setDespacho(data?.despacho || null);
+      setPedidos(data?.pedidos || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    cargarRuta();
+  useEffect(() => {
+    queueMicrotask(cargarRuta);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id]);
+
+  // Cubre tanto una ruta nueva asignada en el momento (despachos) como
+  // correcciones de entrega hechas por otro rol sobre esta misma ruta
+  // (despachos_pedidos) — en ambos casos, se refresca sola.
+  useRealtimeSubscription("despachos", () => cargarRuta(), {
+    filter: `repartidor_id=eq.${user.id}`,
+  });
+  useRealtimeSubscription("despachos_pedidos", () => cargarRuta(), {
+    filter: despacho ? `despacho_id=eq.${despacho.id}` : undefined,
+    enabled: Boolean(despacho),
+  });
 
   const handleActualizado = (despachoPedidoId, nuevoEstado) => {
     setPedidos((prev) =>
