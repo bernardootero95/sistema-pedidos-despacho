@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { userService } from "../services/userService";
 import { UserForm } from "../components/UserForm";
+import { ResetPasswordModal } from "../components/ResetPasswordModal";
 import { useToast } from "../../../context/useToast";
 import {
   UserCog,
@@ -13,10 +14,11 @@ import {
   Mail,
   MailX,
   Edit,
+  KeyRound,
 } from "lucide-react";
 
 export const UsersPage = () => {
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const [usuarios, setUsuarios] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,9 @@ export const UsersPage = () => {
   // Estado para el modal de creación / edición de correo
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState(null);
+
+  // Estado para el modal de restablecer contraseña (Opción B: admin)
+  const [userToReset, setUserToReset] = useState(null);
 
   const cargarDatos = async () => {
     try {
@@ -84,6 +89,11 @@ export const UsersPage = () => {
     setUserToEdit(null);
   };
 
+  const handleResetSuccess = () => {
+    setUserToReset(null);
+    showSuccess("Contraseña restablecida exitosamente.");
+  };
+
   const filteredUsers = usuarios.filter(
     (u) =>
       u.nombre_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -111,6 +121,15 @@ export const UsersPage = () => {
           userToEdit={userToEdit}
           onSuccess={handleFormSuccess}
           onCancel={handleFormCancel}
+        />
+      )}
+
+      {/* MODAL DE RESTABLECER CONTRASEÑA (Opción B: admin) */}
+      {userToReset && (
+        <ResetPasswordModal
+          user={userToReset}
+          onSuccess={handleResetSuccess}
+          onCancel={() => setUserToReset(null)}
         />
       )}
 
@@ -204,6 +223,13 @@ export const UsersPage = () => {
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
+                    onClick={() => setUserToReset(user)}
+                    title="Restablecer contraseña"
+                    className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => handleToggleEstado(user.id, user.estado)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                       user.estado
@@ -281,6 +307,13 @@ export const UsersPage = () => {
                         className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                       >
                         <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setUserToReset(user)}
+                        title="Restablecer contraseña"
+                        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                      >
+                        <KeyRound className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleToggleEstado(user.id, user.estado)}

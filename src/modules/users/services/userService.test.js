@@ -92,3 +92,47 @@ describe("userService.crearUsuario", () => {
     );
   });
 });
+
+describe("userService.resetearPassword", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("invoca reset-user-password con user_id y new_password", async () => {
+    supabase.functions.invoke.mockResolvedValue({
+      data: { message: "Contraseña restablecida exitosamente." },
+      error: null,
+    });
+
+    await userService.resetearPassword("user-1", "claveNueva123");
+
+    expect(supabase.functions.invoke).toHaveBeenCalledWith(
+      "reset-user-password",
+      { body: { user_id: "user-1", new_password: "claveNueva123" } },
+    );
+  });
+
+  it("lanza un error si la Edge Function devuelve error de transporte", async () => {
+    supabase.functions.invoke.mockResolvedValue({
+      data: null,
+      error: { message: "network" },
+    });
+
+    await expect(
+      userService.resetearPassword("user-1", "claveNueva123"),
+    ).rejects.toThrow(
+      "Error de conexión con el servidor al restablecer la contraseña.",
+    );
+  });
+
+  it("lanza el mensaje de negocio cuando la función responde con data.error (ej. sin permiso)", async () => {
+    supabase.functions.invoke.mockResolvedValue({
+      data: { error: "No tienes permiso para restablecer contraseñas." },
+      error: null,
+    });
+
+    await expect(
+      userService.resetearPassword("user-1", "claveNueva123"),
+    ).rejects.toThrow("No tienes permiso para restablecer contraseñas.");
+  });
+});

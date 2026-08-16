@@ -95,4 +95,24 @@ export const userService = {
 
     return true;
   },
+
+  /**
+   * Restablece la contraseña de cualquier usuario (tenga o no correo real)
+   * vía la Edge Function reset-user-password, que verifica del lado del
+   * servidor que quien llama sea gerencia/soporte.
+   */
+  async resetearPassword(userId, nuevaPassword) {
+    const { data, error } = await supabase.functions.invoke(
+      "reset-user-password",
+      { body: { user_id: userId, new_password: nuevaPassword } },
+    );
+
+    if (error)
+      throw new Error(
+        "Error de conexión con el servidor al restablecer la contraseña.",
+      );
+    if (data?.error) throw new Error(data.error);
+
+    return data;
+  },
 };
