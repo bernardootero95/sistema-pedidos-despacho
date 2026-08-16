@@ -4,6 +4,7 @@ import { useAuth } from "../../context/useAuth";
 import { tenantConfig } from "../../config/tenant";
 import { ROLES_MODULO } from "../../config/roles";
 import { Footer } from "./Footer"; // <-- Asegúrate de ajustar esta ruta donde hayas guardado Footer.jsx
+import { ProfileMenu } from "./ProfileMenu";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -186,9 +187,7 @@ export const MainLayout = () => {
                 {user?.rol}
               </p>
             </div>
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shadow-sm">
-              {user?.nombre_completo?.charAt(0).toUpperCase() || "U"}
-            </div>
+            <ProfileMenu />
           </div>
         </header>
 
