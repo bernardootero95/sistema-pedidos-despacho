@@ -13,6 +13,7 @@ export const userService = {
         nombre_usuario,
         nombre_completo,
         estado,
+        correo,
         roles (
           id,
           nombre
@@ -74,5 +75,24 @@ export const userService = {
     if (data?.error) throw new Error(data.error);
 
     return data;
+  },
+
+  /**
+   * Actualiza el correo de recuperación de un perfil. A diferencia de la
+   * creación de usuarios, esto no requiere Edge Function ni SERVICE_ROLE:
+   * `correo` solo vive en `perfiles` (nunca en auth.users), y las políticas
+   * RLS ya cubren esta escritura (el propio usuario sobre su fila, o
+   * gerencia/soporte sobre cualquiera).
+   */
+  async actualizarCorreo(userId, correo) {
+    const { error } = await supabase
+      .from("perfiles")
+      .update({ correo: correo || null })
+      .eq("id", userId);
+
+    if (error)
+      throw new Error("Error al actualizar el correo: " + error.message);
+
+    return true;
   },
 };

@@ -69,6 +69,11 @@ const DispatchDetailsPage = lazy(() =>
     default: m.DispatchDetailsPage,
   })),
 );
+const ResetPasswordPage = lazy(() =>
+  import("../modules/auth/pages/ResetPasswordPage").then((m) => ({
+    default: m.ResetPasswordPage,
+  })),
+);
 
 // Componente visual mientras carga el chunk del módulo
 const PageLoader = () => (
@@ -87,13 +92,17 @@ export const AppRouter = () => {
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          {/* Ruta pública */}
+          {/* Rutas públicas */}
           <Route
             path="/login"
             element={
               !user ? <LoginPage /> : <Navigate to="/dashboard" replace />
             }
           />
+          {/* Sin guard por `user` a propósito: llega desde el enlace del
+              correo de recuperación con una sesión temporal propia, que
+              ResetPasswordPage valida por su cuenta (ver sessionValida). */}
+          <Route path="/restablecer-password" element={<ResetPasswordPage />} />
 
           {/* Rutas Protegidas por Layout Principal */}
           <Route

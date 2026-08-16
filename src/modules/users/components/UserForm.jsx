@@ -1,15 +1,23 @@
 import { useState } from "react";
 import { userService } from "../services/userService";
+import { validateUserField, validateUserForm } from "../utils/userValidations";
 import { X, Save, ShieldAlert } from "lucide-react";
 
-export const UserForm = ({ roles, onSuccess, onCancel }) => {
+/**
+ * Alta y edición de usuarios. En modo edición (userToEdit presente) solo
+ * el correo de recuperación es editable desde aquí: usuario, contraseña y
+ * rol no tienen flujo de edición todavía (fuera de alcance de este form).
+ */
+export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
   const domain = import.meta.env.VITE_COMPANY_DOMAIN || "empresa.com";
+  const editMode = Boolean(userToEdit);
 
   const [formData, setFormData] = useState({
-    nombre_completo: "",
-    nombre_usuario: "",
+    nombre_completo: userToEdit?.nombre_completo || "",
+    nombre_usuario: userToEdit?.nombre_usuario || "",
     password: "",
     rol_id: "",
+    correo: userToEdit?.correo || "",
   });
 
   const [errors, setErrors] = useState({});
@@ -17,89 +25,58 @@ export const UserForm = ({ roles, onSuccess, onCancel }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  // Validación inmediata por campo
-  const validateField = (name, value) => {
-    let errorMsg = "";
-
-    switch (name) {
-      case "nombre_completo":
-        if (!value.trim()) errorMsg = "El nombre completo es obligatorio.";
-        break;
-      case "nombre_usuario":
-        if (!value.trim()) errorMsg = "El nombre de usuario es obligatorio.";
-        else if (/\s/.test(value)) errorMsg = "No debe contener espacios.";
-        else if (value.includes("@"))
-          errorMsg = "Ingresa solo el usuario, sin el dominio.";
-        break;
-      case "password":
-        if (!value) errorMsg = "La contraseña es obligatoria.";
-        else if (value.length < 6)
-          errorMsg = "Debe tener al menos 6 caracteres.";
-        break;
-      case "rol_id":
-        if (!value) errorMsg = "Debes asignar un rol al usuario.";
-        break;
-      default:
-        break;
-    }
-    return errorMsg;
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
     if (touched[name]) {
-      setErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
+      setErrors((prev) => ({ ...prev, [name]: validateUserField(name, value) }));
     }
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
-    setErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
+    setErrors((prev) => ({ ...prev, [name]: validateUserField(name, value) }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError("");
 
-    // Validar todo antes de enviar
-    const newErrors = {
-      nombre_completo: validateField(
-        "nombre_completo",
-        formData.nombre_completo,
-      ),
-      nombre_usuario: validateField("nombre_usuario", formData.nombre_usuario),
-      password: validateField("password", formData.password),
-      rol_id: validateField("rol_id", formData.rol_id),
-    };
-
-    setTouched({
-      nombre_completo: true,
-      nombre_usuario: true,
-      password: true,
-      rol_id: true,
-    });
+    const newErrors = validateUserForm(formData, { editMode });
+    setTouched(
+      Object.keys(newErrors).length || !editMode
+        ? {
+            nombre_completo: true,
+            nombre_usuario: true,
+            password: true,
+            rol_id: true,
+            correo: true,
+          }
+        : { correo: true },
+    );
     setErrors(newErrors);
 
-    // Si hay algún error, detenemos el flujo
-    if (Object.values(newErrors).some((err) => err !== "")) return;
+    if (Object.keys(newErrors).length > 0) return;
 
     setIsSubmitting(true);
     try {
-      const email = `${formData.nombre_usuario.trim().toLowerCase()}@${domain}`;
-
-      const payload = {
-        email,
-        password: formData.password,
-        nombre_usuario: formData.nombre_usuario.trim().toLowerCase(),
-        nombre_completo: formData.nombre_completo.trim(),
-        rol_id: parseInt(formData.rol_id),
-      };
-
-      await userService.crearUsuario(payload);
-      onSuccess(); // Cierra el modal y recarga la lista
+      if (editMode) {
+        await userService.actualizarCorreo(userToEdit.id, formData.correo.trim());
+      } else {
+        const email = `${formData.nombre_usuario.trim().toLowerCase()}@${domain}`;
+        const payload = {
+          email,
+          password: formData.password,
+          nombre_usuario: formData.nombre_usuario.trim().toLowerCase(),
+          nombre_completo: formData.nombre_completo.trim(),
+          rol_id: parseInt(formData.rol_id),
+          correo: formData.correo.trim() || null,
+        };
+        await userService.crearUsuario(payload);
+      }
+      onSuccess();
     } catch (error) {
       setServerError(error.message);
     } finally {
@@ -112,7 +89,7 @@ export const UserForm = ({ roles, onSuccess, onCancel }) => {
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100">
           <h2 className="text-lg font-bold text-slate-900">
-            Crear Nuevo Usuario
+            {editMode ? "Editar Correo de Recuperación" : "Crear Nuevo Usuario"}
           </h2>
           <button
             onClick={onCancel}
@@ -136,92 +113,131 @@ export const UserForm = ({ roles, onSuccess, onCancel }) => {
             className="space-y-4"
             noValidate
           >
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Nombre Completo
-              </label>
-              <input
-                type="text"
-                name="nombre_completo"
-                value={formData.nombre_completo}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="Ej. María Gómez"
-                className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${errors.nombre_completo ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-              />
-              {errors.nombre_completo && (
-                <p className="mt-1 text-xs text-red-500 font-bold">
-                  {errors.nombre_completo}
+            {editMode && (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+                <p className="font-bold text-slate-800">
+                  {userToEdit.nombre_completo}
                 </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Nombre de Usuario (Login)
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="nombre_usuario"
-                  value={formData.nombre_usuario}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="ej: maria.gomez"
-                  className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all pr-24 ${errors.nombre_usuario ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-                />
-                <span className="absolute right-3 top-3 text-xs font-bold text-slate-400 select-none">
-                  @{domain}
-                </span>
+                <p className="text-xs text-slate-500">
+                  {userToEdit.nombre_usuario}@{domain}
+                </p>
               </div>
-              {errors.nombre_usuario && (
-                <p className="mt-1 text-xs text-red-500 font-bold">
-                  {errors.nombre_usuario}
-                </p>
-              )}
-            </div>
+            )}
+
+            {!editMode && (
+              <>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Nombre Completo
+                  </label>
+                  <input
+                    type="text"
+                    name="nombre_completo"
+                    value={formData.nombre_completo}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Ej. María Gómez"
+                    className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${errors.nombre_completo ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                  />
+                  {errors.nombre_completo && (
+                    <p className="mt-1 text-xs text-red-500 font-bold">
+                      {errors.nombre_completo}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Nombre de Usuario (Login)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="nombre_usuario"
+                      value={formData.nombre_usuario}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="ej: maria.gomez"
+                      className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all pr-24 ${errors.nombre_usuario ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                    />
+                    <span className="absolute right-3 top-3 text-xs font-bold text-slate-400 select-none">
+                      @{domain}
+                    </span>
+                  </div>
+                  {errors.nombre_usuario && (
+                    <p className="mt-1 text-xs text-red-500 font-bold">
+                      {errors.nombre_usuario}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Contraseña Temporal
+                  </label>
+                  <input
+                    type="text"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Debe tener al menos 6 caracteres"
+                    className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${errors.password ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                  />
+                  {errors.password && (
+                    <p className="mt-1 text-xs text-red-500 font-bold">
+                      {errors.password}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Rol de Sistema
+                  </label>
+                  <select
+                    name="rol_id"
+                    value={formData.rol_id}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${errors.rol_id ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                  >
+                    <option value="">-- Selecciona un rol --</option>
+                    {roles.map((rol) => (
+                      <option key={rol.id} value={rol.id} className="capitalize">
+                        {rol.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.rol_id && (
+                    <p className="mt-1 text-xs text-red-500 font-bold">
+                      {errors.rol_id}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Contraseña Temporal
+                Correo de Recuperación (opcional)
               </label>
               <input
                 type="text"
-                name="password"
-                value={formData.password}
+                name="correo"
+                value={formData.correo}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                placeholder="Debe tener al menos 6 caracteres"
-                className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${errors.password ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                placeholder="ej: maria.gomez@gmail.com"
+                className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${errors.correo ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
               />
-              {errors.password && (
+              <p className="mt-1 text-xs text-slate-400">
+                Habilita "olvidé mi contraseña" en el login para este
+                usuario. Déjalo vacío si no tiene un correo real.
+              </p>
+              {errors.correo && (
                 <p className="mt-1 text-xs text-red-500 font-bold">
-                  {errors.password}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Rol de Sistema
-              </label>
-              <select
-                name="rol_id"
-                value={formData.rol_id}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${errors.rol_id ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-              >
-                <option value="">-- Selecciona un rol --</option>
-                {roles.map((rol) => (
-                  <option key={rol.id} value={rol.id} className="capitalize">
-                    {rol.nombre}
-                  </option>
-                ))}
-              </select>
-              {errors.rol_id && (
-                <p className="mt-1 text-xs text-red-500 font-bold">
-                  {errors.rol_id}
+                  {errors.correo}
                 </p>
               )}
             </div>
@@ -244,7 +260,11 @@ export const UserForm = ({ roles, onSuccess, onCancel }) => {
             className="px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-bold rounded-lg shadow-sm flex items-center gap-2 transition-all"
           >
             <Save className="w-4 h-4" />
-            {isSubmitting ? "Creando..." : "Guardar Usuario"}
+            {isSubmitting
+              ? "Guardando..."
+              : editMode
+                ? "Guardar Correo"
+                : "Guardar Usuario"}
           </button>
         </div>
       </div>

@@ -97,4 +97,57 @@ export const authService = {
       return "La cuenta no ha sido habilitada por gerencia.";
     return "Ocurrió un error de seguridad al intentar iniciar sesión.";
   },
+
+  /**
+   * Flujo self-service de "olvidé mi contraseña", solo disponible para
+   * cuentas con `correo` configurado (ver tiene_correo_recuperacion en la
+   * migración). El envío se dispara con el email sintético de login, no
+   * con `correo`: Supabase solo entrega a la dirección registrada en
+   * auth.users, que sigue siendo nombre_usuario@DOMAIN.
+   *
+   * @returns {Promise<{ enviado: boolean }>}
+   */
+  async solicitarRecuperacionPassword(nombreUsuario) {
+    const usuario = nombreUsuario.trim().toLowerCase();
+
+    const { data: tieneCorreo, error: errorConsulta } = await supabase.rpc(
+      "tiene_correo_recuperacion",
+      { p_nombre_usuario: usuario },
+    );
+
+    if (errorConsulta) {
+      throw new Error("No se pudo verificar la cuenta. Intenta de nuevo.");
+    }
+    if (!tieneCorreo) {
+      return { enviado: false };
+    }
+
+    const correoLogin = `${usuario}@${DOMAIN}`;
+    const { error } = await supabase.auth.resetPasswordForEmail(correoLogin, {
+      redirectTo: `${window.location.origin}/restablecer-password`,
+    });
+
+    if (error) {
+      throw new Error("No se pudo enviar el enlace de recuperación.");
+    }
+    return { enviado: true };
+  },
+
+  /**
+   * Fija una nueva contraseña para la sesión actual. La reutilizan tanto
+   * la página de restablecimiento (tras el enlace de recuperación) como el
+   * modal de "cambiar mi contraseña" (usuario ya logueado): en ambos casos
+   * ya existe una sesión válida, así que es la misma llamada.
+   */
+  async actualizarPassword(nuevaPassword) {
+    const { error } = await supabase.auth.updateUser({
+      password: nuevaPassword,
+    });
+    if (error) {
+      throw new Error(
+        error.message || "No se pudo actualizar la contraseña.",
+      );
+    }
+    return true;
+  },
 };

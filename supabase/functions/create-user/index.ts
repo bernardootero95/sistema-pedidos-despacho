@@ -19,7 +19,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { email, password, nombre_usuario, nombre_completo, rol_id } = await req.json()
+    const { email, password, nombre_usuario, nombre_completo, rol_id, correo } = await req.json()
 
     // 1. Crear usuario en el motor de Auth nativo
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -38,6 +38,7 @@ serve(async (req) => {
         nombre_usuario,
         nombre_completo,
         rol_id,
+        correo: correo || null,
         estado: true
       })
 
