@@ -1,4 +1,5 @@
 import { Component } from "react";
+import * as Sentry from "@sentry/react";
 import { AlertTriangle, RotateCw, Home } from "lucide-react";
 
 /**
@@ -24,6 +25,12 @@ export class ErrorBoundary extends Component {
       error,
       errorInfo?.componentStack,
     );
+    // Sentry.captureException es un no-op seguro si nunca se llamó
+    // Sentry.init (sin VITE_SENTRY_DSN, ver config/sentry.js) — no hace
+    // falta chequear acá si Sentry está activo.
+    Sentry.captureException(error, {
+      contexts: { react: { componentStack: errorInfo?.componentStack } },
+    });
   }
 
   handleReload = () => {

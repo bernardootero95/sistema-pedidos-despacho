@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import * as Sentry from "@sentry/react";
 import { ErrorBoundary } from "./ErrorBoundary";
+
+vi.mock("@sentry/react", () => ({ captureException: vi.fn() }));
 
 const Throws = () => {
   throw new Error("boom");
@@ -12,6 +15,8 @@ describe("ErrorBoundary", () => {
   let consoleErrorSpy;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
     // React también loguea el error de render por su cuenta en modo dev;
     // silenciamos consola para no ensuciar la salida del test, pero
     // seguimos pudiendo inspeccionar las llamadas del spy.
@@ -72,6 +77,18 @@ describe("ErrorBoundary", () => {
     screen.getByText("Recargar").click();
 
     expect(window.location.reload).toHaveBeenCalled();
+  });
+
+  it("reporta el error capturado a Sentry", () => {
+    render(
+      <ErrorBoundary>
+        <Throws />
+      </ErrorBoundary>,
+    );
+
+    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+    const [error] = Sentry.captureException.mock.calls[0];
+    expect(error.message).toBe("boom");
   });
 
   it("el botón Volver al inicio navega a la raíz", () => {
