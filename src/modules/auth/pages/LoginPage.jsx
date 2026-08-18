@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "../../../context/useAuth";
 import { tenantConfig } from "../../../config/tenant";
 import { authService } from "../services/authService";
+import { CaptchaWidget } from "../../../components/ui/CaptchaWidget";
+import { captchaEnabled } from "../../../config/captcha";
 import { ShieldAlert, LogIn, Building2, KeyRound, ArrowLeft } from "lucide-react";
 
 export const LoginPage = () => {
@@ -19,6 +21,8 @@ export const LoginPage = () => {
     password: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const loginCaptchaRef = useRef(null);
 
   // Estado independiente del formulario de recuperación
   const [recoveryUsername, setRecoveryUsername] = useState("");
@@ -27,6 +31,8 @@ export const LoginPage = () => {
     message: "",
     tone: "", // "success" | "info" | "error"
   });
+  const [recoveryCaptchaToken, setRecoveryCaptchaToken] = useState("");
+  const recoveryCaptchaRef = useRef(null);
 
   const validateField = (name, value) => {
     let errorMsg = "";
@@ -69,13 +75,23 @@ export const LoginPage = () => {
 
     if (userError || passError) return;
 
+    if (captchaEnabled && !captchaToken) {
+      setErrors((prev) => ({
+        ...prev,
+        general: "Completa la verificación de seguridad.",
+      }));
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await login(formData.nombreUsuario, formData.password);
+      await login(formData.nombreUsuario, formData.password, captchaToken);
     } catch (error) {
       setErrors((prev) => ({ ...prev, general: error.message }));
     } finally {
       setIsSubmitting(false);
+      loginCaptchaRef.current?.reset();
+      setCaptchaToken("");
     }
   };
 
@@ -90,10 +106,21 @@ export const LoginPage = () => {
       return;
     }
 
+    if (captchaEnabled && !recoveryCaptchaToken) {
+      setRecoveryStatus({
+        loading: false,
+        tone: "error",
+        message: "Completa la verificación de seguridad.",
+      });
+      return;
+    }
+
     setRecoveryStatus({ loading: true, tone: "", message: "" });
     try {
-      const { enviado } =
-        await authService.solicitarRecuperacionPassword(recoveryUsername);
+      const { enviado } = await authService.solicitarRecuperacionPassword(
+        recoveryUsername,
+        recoveryCaptchaToken,
+      );
       setRecoveryStatus(
         enviado
           ? {
@@ -111,6 +138,9 @@ export const LoginPage = () => {
       );
     } catch (error) {
       setRecoveryStatus({ loading: false, tone: "error", message: error.message });
+    } finally {
+      recoveryCaptchaRef.current?.reset();
+      setRecoveryCaptchaToken("");
     }
   };
 
@@ -188,6 +218,12 @@ export const LoginPage = () => {
                     />
                   </div>
                 </div>
+
+                <CaptchaWidget
+                  ref={recoveryCaptchaRef}
+                  onVerify={setRecoveryCaptchaToken}
+                  onExpire={() => setRecoveryCaptchaToken("")}
+                />
 
                 <button
                   type="submit"
@@ -279,6 +315,12 @@ export const LoginPage = () => {
                     </button>
                   </div>
                 </div>
+
+                <CaptchaWidget
+                  ref={loginCaptchaRef}
+                  onVerify={setCaptchaToken}
+                  onExpire={() => setCaptchaToken("")}
+                />
 
                 <button
                   type="submit"

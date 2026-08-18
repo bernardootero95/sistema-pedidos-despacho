@@ -6,13 +6,14 @@ export const authService = {
   /**
    * Inicia sesión combinando el nombre de usuario corto con el dominio de la empresa
    */
-  async login(nombreUsuario, password) {
+  async login(nombreUsuario, password, captchaToken) {
     try {
       const correo = `${nombreUsuario.trim().toLowerCase()}@${DOMAIN}`;
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: correo,
         password: password,
+        options: captchaToken ? { captchaToken } : undefined,
       });
 
       if (error) throw error;
@@ -108,7 +109,7 @@ export const authService = {
    *
    * @returns {Promise<{ enviado: boolean }>}
    */
-  async solicitarRecuperacionPassword(nombreUsuario) {
+  async solicitarRecuperacionPassword(nombreUsuario, captchaToken) {
     const usuario = nombreUsuario.trim().toLowerCase();
 
     const { data: tieneCorreo, error: errorConsulta } = await supabase.rpc(
@@ -126,6 +127,7 @@ export const authService = {
     const correoLogin = `${usuario}@${DOMAIN}`;
     const { error } = await supabase.auth.resetPasswordForEmail(correoLogin, {
       redirectTo: `${window.location.origin}/restablecer-password`,
+      ...(captchaToken && { captchaToken }),
     });
 
     if (error) {

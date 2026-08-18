@@ -46,8 +46,12 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const login = async (nombreUsuario, password) => {
-    const loggedUser = await authService.login(nombreUsuario, password);
+  const login = async (nombreUsuario, password, captchaToken) => {
+    const loggedUser = await authService.login(
+      nombreUsuario,
+      password,
+      captchaToken,
+    );
     setUser(loggedUser);
     return loggedUser;
   };
