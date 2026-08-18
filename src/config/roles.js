@@ -7,8 +7,13 @@
 export const ROLES_MODULO = {
   DASHBOARD: ["soporte", "gerencia", "vendedor", "despachador", "repartidor"],
   USUARIOS: ["soporte", "gerencia"],
-  CLIENTES: ["soporte", "gerencia", "vendedor"],
-  PRODUCTOS: ["soporte", "gerencia", "vendedor", "despachador"],
+  // El vendedor selecciona/crea clientes desde Nuevo Pedido (quick-add), no
+  // necesita el directorio completo con edición/suspensión/eliminación.
+  CLIENTES: ["soporte", "gerencia"],
+  // Igual que clientes: el vendedor ve productos al armar un pedido (fetch
+  // propio en OrderCreatePage), pero nunca pudo escribir en el catálogo
+  // (productos_write_admin ya era solo soporte/gerencia).
+  PRODUCTOS: ["soporte", "gerencia", "despachador"],
   VEHICULOS: ["soporte", "gerencia", "despachador"],
   PEDIDOS: ["soporte", "gerencia", "vendedor", "despachador"],
   // repartidor ya no ve el listado/detalle de escritorio: tiene su propia
