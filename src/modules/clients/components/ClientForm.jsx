@@ -146,13 +146,11 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
         nombre_comercial: !isNatural ? formData.nombre_comercial.trim() : null,
       };
 
-      if (isEditing) {
-        await clientService.actualizarCliente(clientToEdit.id, payload);
-      } else {
-        await clientService.crearCliente(payload);
-      }
+      const clienteGuardado = isEditing
+        ? await clientService.actualizarCliente(clientToEdit.id, payload)
+        : await clientService.crearCliente(payload);
 
-      onSuccess();
+      onSuccess(clienteGuardado);
     } catch (error) {
       setServerError(error.message);
     } finally {

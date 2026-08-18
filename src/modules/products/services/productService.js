@@ -36,6 +36,25 @@ export const productService = {
   },
 
   /**
+   * Obtiene todos los productos activos sin paginar, para selectores (ej. el
+   * buscador de productos en Nuevo Pedido). No usar para listados con
+   * tabla: para eso está getProductosPaginados.
+   */
+  async getProductosActivos() {
+    const { data, error } = await supabase
+      .from("productos")
+      .select("id, nombre, codigo, precio_venta, iva, inc, disponible")
+      .is("eliminado", null)
+      .order("nombre", { ascending: true });
+
+    if (error)
+      throw new Error(
+        "Error al cargar la lista de productos: " + error.message,
+      );
+    return data || [];
+  },
+
+  /**
    * Crea un nuevo producto
    */
   async crearProducto(productoData) {

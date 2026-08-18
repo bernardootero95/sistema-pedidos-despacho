@@ -34,6 +34,25 @@ export const clientService = {
   },
 
   /**
+   * Obtiene todos los clientes activos sin paginar, para selectores (ej. el
+   * selector de cliente en Nuevo Pedido). No usar para listados con tabla:
+   * para eso está getClientesPaginados.
+   */
+  async getClientesActivos() {
+    const { data, error } = await supabase
+      .from("clientes")
+      .select(
+        "id, razon_social, primer_nombre, primer_apellido, numero_identificacion",
+      )
+      .is("eliminado", null)
+      .order("creado", { ascending: false });
+
+    if (error)
+      throw new Error("Error al cargar la lista de clientes: " + error.message);
+    return data || [];
+  },
+
+  /**
    * Obtiene los tipos de identificación activos y no eliminados
    */
   async getTiposIdentificacion() {

@@ -7,13 +7,17 @@ import {
   AlertCircle,
   UserCheck,
   ShoppingCart,
+  UserPlus,
 } from "lucide-react";
 import { supabase } from "../../../config/supabase";
 import { orderService } from "../services/orderService";
+import { clientService } from "../../clients/services/clientService";
+import { productService } from "../../products/services/productService";
 import { validateOrderForm, validateOrderField } from "../utils/orderValidations";
 import { useCarritoPedido } from "../hooks/useCarritoPedido";
 import { ProductSearchBar } from "../components/ProductSearchBar";
 import { CarritoPedido } from "../components/CarritoPedido";
+import { ClientForm } from "../../clients/components/ClientForm";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
 export const OrderCreatePage = () => {
@@ -30,6 +34,7 @@ export const OrderCreatePage = () => {
   const [vendedorNombre, setVendedorNombre] = useState("");
   const [notas, setNotas] = useState("");
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
+  const [isClientFormOpen, setIsClientFormOpen] = useState(false);
 
   const {
     carrito,
@@ -66,21 +71,13 @@ export const OrderCreatePage = () => {
           console.error("Error obteniendo sesión:", authError);
         }
 
-        const [resClientes, resProductos] = await Promise.all([
-          supabase
-            .from("clientes")
-            .select(
-              "id, razon_social, primer_nombre, primer_apellido, numero_identificacion",
-            )
-            .is("eliminado", null),
-          supabase
-            .from("productos")
-            .select("id, nombre, codigo, precio_venta, iva, inc, disponible") // Incluimos disponible
-            .is("eliminado", null),
+        const [clientesData, productosData] = await Promise.all([
+          clientService.getClientesActivos(),
+          productService.getProductosActivos(),
         ]);
 
-        if (resClientes.data) setClientes(resClientes.data);
-        if (resProductos.data) setProductos(resProductos.data);
+        setClientes(clientesData);
+        setProductos(productosData);
       } catch (error) {
         console.error("Error cargando datos base:", error);
       } finally {
@@ -89,6 +86,18 @@ export const OrderCreatePage = () => {
     };
     fetchData();
   }, []);
+
+  // Refresca el selector de clientes tras crear uno nuevo desde el
+  // quick-add y lo deja preseleccionado, sin recargar toda la página.
+  const handleClienteCreado = async (clienteNuevo) => {
+    setIsClientFormOpen(false);
+    try {
+      const clientesData = await clientService.getClientesActivos();
+      setClientes(clientesData);
+    } finally {
+      if (clienteNuevo?.id) handleClienteChange(clienteNuevo.id);
+    }
+  };
 
   // --- VALIDACIÓN INMEDIATA DEL CLIENTE (mismo patrón que DispatchCreatePage) ---
   const handleClienteChange = (value) => {
@@ -205,9 +214,19 @@ export const OrderCreatePage = () => {
 
         {/* CLIENTE */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-            Seleccionar Cliente *
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-sm font-semibold text-slate-700">
+              Seleccionar Cliente *
+            </label>
+            <button
+              type="button"
+              onClick={() => setIsClientFormOpen(true)}
+              className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Cliente nuevo
+            </button>
+          </div>
           <select
             value={clienteId}
             onChange={(e) => handleClienteChange(e.target.value)}
@@ -227,6 +246,13 @@ export const OrderCreatePage = () => {
             </p>
           )}
         </div>
+
+        {isClientFormOpen && (
+          <ClientForm
+            onSuccess={handleClienteCreado}
+            onCancel={() => setIsClientFormOpen(false)}
+          />
+        )}
 
         {/* BUSCADOR DE PRODUCTOS CON STOCK VISIBLE */}
         <ProductSearchBar
