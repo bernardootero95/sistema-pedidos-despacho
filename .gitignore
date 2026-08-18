@@ -26,3 +26,6 @@ dist-ssr
 
 # Claude Code local settings (personal, no compartir)
 .claude/settings.local.json
+
+# Cache local del Supabase CLI (link de proyecto, versiones, etc.)
+supabase/.temp/
