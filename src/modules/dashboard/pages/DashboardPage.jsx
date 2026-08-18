@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/useAuth";
 import { tenantConfig } from "../../../config/tenant";
 import { dashboardService } from "../services/dashboardService";
 import { DashboardKpiCard } from "../components/DashboardKpiCard";
+import { DailySalesChart } from "../components/DailySalesChart";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import {
   ShoppingCart,
@@ -13,10 +15,13 @@ import {
   AlertCircle,
   Loader2,
   PackageX,
+  PlusCircle,
 } from "lucide-react";
 
 export const DashboardPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const esVendedor = user?.rol === "vendedor";
 
   const [resumen, setResumen] = useState({
     ventasTotales: 0,
@@ -25,6 +30,7 @@ export const DashboardPage = () => {
     despachosActivos: 0,
   });
   const [ultimosPedidos, setUltimosPedidos] = useState([]);
+  const [ventasDiarias, setVentasDiarias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -33,12 +39,14 @@ export const DashboardPage = () => {
       try {
         setLoading(true);
         setError("");
-        const [resumenData, pedidosData] = await Promise.all([
+        const [resumenData, pedidosData, ventasDiariasData] = await Promise.all([
           dashboardService.obtenerResumen(),
           dashboardService.obtenerUltimosPedidos(),
+          dashboardService.obtenerVentasDiarias(),
         ]);
         setResumen(resumenData);
         setUltimosPedidos(pedidosData);
+        setVentasDiarias(ventasDiariasData);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -127,16 +135,32 @@ export const DashboardPage = () => {
             el sistema logística.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-slate-200 text-xs text-slate-600 font-medium">
-          <AlertCircle className="w-4 h-4 text-primary shrink-0" />
-          <span className="truncate">
-            Empresa: <strong>{tenantConfig.name}</strong>
-          </span>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {esVendedor && (
+            <button
+              onClick={() => navigate("/orders/new")}
+              className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors"
+            >
+              <PlusCircle className="w-4 h-4 shrink-0" />
+              Nuevo Pedido
+            </button>
+          )}
+          <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-slate-200 text-xs text-slate-600 font-medium">
+            <AlertCircle className="w-4 h-4 text-primary shrink-0" />
+            <span className="truncate">
+              Empresa: <strong>{tenantConfig.name}</strong>
+            </span>
+          </div>
         </div>
       </div>
 
       {/* TARJETAS DE INDICADORES (KPIs) - Adaptables a móvil */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* Un vendedor no despacha ni tiene rutas: solo ve sus propias
+          ventas/pedidos (ya acotados por RLS), no despachos ni pendientes
+          de toda la empresa. */}
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 ${esVendedor ? "" : "lg:grid-cols-4"}`}
+      >
         <DashboardKpiCard
           label="Ventas Totales"
           value={formatCurrency(resumen.ventasTotales)}
@@ -149,20 +173,27 @@ export const DashboardPage = () => {
           icon={ShoppingCart}
           color="blue"
         />
-        <DashboardKpiCard
-          label="Por Despachar"
-          value={resumen.pedidosPendientes}
-          icon={Clock}
-          color="amber"
-          valueClassName="text-amber-600"
-        />
-        <DashboardKpiCard
-          label="Rutas Activas"
-          value={resumen.despachosActivos}
-          icon={Truck}
-          color="purple"
-        />
+        {!esVendedor && (
+          <>
+            <DashboardKpiCard
+              label="Por Despachar"
+              value={resumen.pedidosPendientes}
+              icon={Clock}
+              color="amber"
+              valueClassName="text-amber-600"
+            />
+            <DashboardKpiCard
+              label="Rutas Activas"
+              value={resumen.despachosActivos}
+              icon={Truck}
+              color="purple"
+            />
+          </>
+        )}
       </div>
+
+      {/* VENTAS DIARIAS (últimos 30 días) */}
+      <DailySalesChart datos={ventasDiarias} formatCurrency={formatCurrency} />
 
       {/* ÚLTIMOS PEDIDOS REGISTRADOS */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

@@ -26,7 +26,7 @@ export const dashboardService = {
    * Sin paginación: es una vista previa acotada, no el listado completo
    * (para eso está /pedidos).
    */
-  async obtenerUltimosPedidos(limit = 8) {
+  async obtenerUltimosPedidos(limit = 3) {
     const { data, error } = await supabase
       .from("pedidos_cabecera")
       .select(
@@ -49,5 +49,24 @@ export const dashboardService = {
     }
 
     return data || [];
+  },
+
+  /**
+   * Serie de ventas diarias (últimos 30 días) para el gráfico del
+   * dashboard, calculada en el servidor vía `obtener_ventas_diarias`.
+   * No es SECURITY DEFINER: respeta la misma RLS por rol que el resto de
+   * `pedidos_cabecera` (un vendedor ve su propia curva, no la de todos).
+   */
+  async obtenerVentasDiarias() {
+    const { data, error } = await supabase.rpc("obtener_ventas_diarias");
+
+    if (error) {
+      throw new Error(`Error al obtener las ventas diarias: ${error.message}`);
+    }
+
+    return (data || []).map((punto) => ({
+      fecha: punto.fecha,
+      total: Number(punto.total || 0),
+    }));
   },
 };
