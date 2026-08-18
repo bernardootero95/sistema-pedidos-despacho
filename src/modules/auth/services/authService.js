@@ -95,6 +95,7 @@ export const authService = {
       return "Nombre de usuario o contraseña incorrectos.";
     if (mensaje.includes("Email not confirmed"))
       return "La cuenta no ha sido habilitada por gerencia.";
+    if (mensaje.includes("bloqueada temporalmente")) return mensaje;
     return "Ocurrió un error de seguridad al intentar iniciar sesión.";
   },
 
