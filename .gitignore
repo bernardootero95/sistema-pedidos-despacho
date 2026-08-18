@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 *.env*
+
+# Claude Code local settings (personal, no compartir)
+.claude/settings.local.json
