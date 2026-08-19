@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { productService } from "../services/productService";
 import { ProductForm } from "../components/ProductForm";
+import { ProductImportModal } from "../components/ProductImportModal";
+import { useAuth } from "../../../context/useAuth";
 import { useToast } from "../../../context/useToast";
 import { usePaginatedList } from "../../../hooks/usePaginatedList";
 import {
@@ -18,6 +20,7 @@ import {
   ChevronRight,
   Tag,
   AlertTriangle,
+  FileSpreadsheet,
 } from "lucide-react";
 
 const formatCurrency = (amount) => {
@@ -152,7 +155,9 @@ const ProductDetailsModal = ({ product, onClose }) => {
 };
 
 export const ProductsPage = () => {
-  const { showError } = useToast();
+  const { user } = useAuth();
+  const { showError, showSuccess } = useToast();
+  const esSoporte = user?.rol === "soporte";
   const {
     items: productos,
     setItems: setProductos,
@@ -172,6 +177,13 @@ export const ProductsPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
   const [productToView, setProductToView] = useState(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  const handleImportSuccess = () => {
+    setIsImportOpen(false);
+    showSuccess("Productos importados correctamente.");
+    cargarProductos();
+  };
 
   const handleOpenForm = (product = null) => {
     setProductToEdit(product);
@@ -218,6 +230,12 @@ export const ProductsPage = () => {
           onCancel={() => setIsFormOpen(false)}
         />
       )}
+      {isImportOpen && (
+        <ProductImportModal
+          onSuccess={handleImportSuccess}
+          onCancel={() => setIsImportOpen(false)}
+        />
+      )}
       <ProductDetailsModal
         product={productToView}
         onClose={() => setProductToView(null)}
@@ -233,13 +251,24 @@ export const ProductsPage = () => {
             Administración de catálogo, stock e impuestos (DIAN).
           </p>
         </div>
-        <button
-          onClick={() => handleOpenForm()}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white text-sm font-bold rounded-xl sm:rounded-lg shadow-sm transition-all"
-        >
-          <PlusCircle className="w-4 h-4 shrink-0" />
-          <span>Nuevo Producto</span>
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          {esSoporte && (
+            <button
+              onClick={() => setIsImportOpen(true)}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-white border border-slate-300 hover:bg-slate-50 active:scale-95 text-slate-700 text-sm font-bold rounded-xl sm:rounded-lg shadow-sm transition-all"
+            >
+              <FileSpreadsheet className="w-4 h-4 shrink-0" />
+              <span>Cargar Excel</span>
+            </button>
+          )}
+          <button
+            onClick={() => handleOpenForm()}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white text-sm font-bold rounded-xl sm:rounded-lg shadow-sm transition-all"
+          >
+            <PlusCircle className="w-4 h-4 shrink-0" />
+            <span>Nuevo Producto</span>
+          </button>
+        </div>
       </div>
 
       {error && (

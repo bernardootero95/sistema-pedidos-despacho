@@ -135,4 +135,25 @@ export const productService = {
       throw new Error("Error al eliminar el producto: " + error.message);
     return data;
   },
+
+  /**
+   * Carga masiva desde el Excel del ERP (sincronización manual mientras no
+   * esté lista la automática). Vía RPC transaccional `importar_productos_excel`,
+   * restringida a soporte en el servidor: si el código ya existe solo
+   * actualiza `disponible`, si no existe lo crea como gravado con IVA 19%.
+   */
+  async importarProductosExcel(productos) {
+    const { data, error } = await supabase.rpc("importar_productos_excel", {
+      p_productos: productos,
+    });
+
+    if (error) {
+      throw new Error("Error al importar los productos: " + error.message);
+    }
+
+    return {
+      creados: data?.creados ?? 0,
+      actualizados: data?.actualizados ?? 0,
+    };
+  },
 };
