@@ -436,25 +436,20 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Ciudad / Municipio *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="ciudad_municipio"
-                    list="municipios-list"
-                    autoComplete="off"
-                    placeholder="Escribe para buscar..."
                     value={formData.ciudad_municipio}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.ciudad_municipio ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-                  />
-                  <datalist id="municipios-list">
+                  >
+                    <option value="">Selecciona...</option>
                     {municipios.map((m) => (
-                      <option
-                        key={m.id}
-                        value={`${m.nombre} - ${m.departamento}`}
-                      />
+                      <option key={m.id} value={`${m.nombre} - ${m.departamento}`}>
+                        {m.nombre} - {m.departamento}
+                      </option>
                     ))}
-                  </datalist>
+                  </select>
                   {errors.ciudad_municipio && (
                     <p className="mt-1 text-xs text-red-500 font-bold">
                       {errors.ciudad_municipio}
