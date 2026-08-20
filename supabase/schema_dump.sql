@@ -13,14 +13,185 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
-CREATE SCHEMA IF NOT EXISTS "public";
-
-
-ALTER SCHEMA "public" OWNER TO "pg_database_owner";
-
-
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
+
+
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
+
+
+
+
+
+
+CREATE OR REPLACE FUNCTION "public"."actualizar_estado_despacho_transaccional"("p_despacho_id" "uuid", "p_nuevo_estado" "text") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_estado_actual TEXT;
+  v_transiciones_validas TEXT[];
+BEGIN
+  IF obtener_rol_actual() NOT IN ('despachador', 'repartidor', 'gerencia', 'soporte') THEN
+    RAISE EXCEPTION 'No tienes permiso para cambiar el estado de un despacho.';
+  END IF;
+
+  -- Autoriza ante trg_bloquear_edicion_directa_despacho el UPDATE de
+  -- estado que hace esta función más abajo.
+  PERFORM set_config('app.rpc_autorizado', 'true', true);
+
+  -- Bloquear el despacho para evitar que dos usuarios cambien su estado
+  -- al mismo tiempo (ej. uno completa mientras otro anula)
+  SELECT estado INTO v_estado_actual
+    FROM despachos
+    WHERE id = p_despacho_id
+      AND eliminado IS NULL
+    FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'El despacho no existe o fue eliminado.';
+  END IF;
+
+  -- Mismo mapa de transiciones válidas que valida el frontend, pero aquí
+  -- es la fuente de verdad: creado/en_ruta son estados abiertos,
+  -- completado/anulado son finales.
+  v_transiciones_validas := CASE v_estado_actual
+    WHEN 'creado' THEN ARRAY['en_ruta', 'anulado']
+    WHEN 'en_ruta' THEN ARRAY['completado', 'anulado']
+    ELSE ARRAY[]::TEXT[]
+  END;
+
+  IF NOT (p_nuevo_estado = ANY(v_transiciones_validas)) THEN
+    RAISE EXCEPTION 'No se puede pasar el despacho de "%" a "%".', v_estado_actual, p_nuevo_estado;
+  END IF;
+
+  UPDATE despachos
+    SET estado = p_nuevo_estado, actualizado_en = NOW()
+    WHERE id = p_despacho_id;
+
+  IF p_nuevo_estado = 'completado' THEN
+    -- Todo pedido que seguía 'pendiente' de entrega en esta ruta se marca
+    -- como entregado. Los que ya se habían marcado 'rechazado' a mano
+    -- durante la ruta se respetan tal cual (no se pisan).
+    UPDATE despachos_pedidos
+      SET estado_entrega = 'entregado'
+      WHERE despacho_id = p_despacho_id
+        AND estado_entrega = 'pendiente';
+
+    UPDATE pedidos_cabecera pc
+      SET estado = 'entregado', actualizado = NOW()
+      FROM despachos_pedidos dp
+      WHERE dp.despacho_id = p_despacho_id
+        AND dp.pedido_id = pc.id
+        AND dp.estado_entrega = 'entregado'
+        AND pc.eliminado IS NULL;
+
+  ELSIF p_nuevo_estado = 'anulado' THEN
+    -- Los pedidos que aún no se habían entregado ni rechazado quedan
+    -- libres otra vez para asignarse a un despacho nuevo.
+    UPDATE pedidos_cabecera pc
+      SET estado = 'pendiente', actualizado = NOW()
+      FROM despachos_pedidos dp
+      WHERE dp.despacho_id = p_despacho_id
+        AND dp.pedido_id = pc.id
+        AND dp.estado_entrega = 'pendiente'
+        AND pc.eliminado IS NULL;
+  END IF;
+
+  RETURN jsonb_build_object('id', p_despacho_id, 'estado', p_nuevo_estado);
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."actualizar_estado_despacho_transaccional"("p_despacho_id" "uuid", "p_nuevo_estado" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."actualizar_estado_entrega_pedido_transaccional"("p_despacho_pedido_id" "uuid", "p_nuevo_estado_entrega" "text", "p_notas_entrega" "text" DEFAULT NULL::"text") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_pedido_id UUID;
+  v_estado_despacho TEXT;
+  v_estado_cabecera TEXT;
+BEGIN
+  IF obtener_rol_actual() NOT IN ('despachador', 'repartidor', 'gerencia', 'soporte') THEN
+    RAISE EXCEPTION 'No tienes permiso para actualizar la entrega de un pedido.';
+  END IF;
+
+  IF p_nuevo_estado_entrega NOT IN ('pendiente', 'entregado', 'rechazado') THEN
+    RAISE EXCEPTION 'Estado de entrega inválido: %', p_nuevo_estado_entrega;
+  END IF;
+
+  SELECT dp.pedido_id, d.estado
+    INTO v_pedido_id, v_estado_despacho
+    FROM despachos_pedidos dp
+    JOIN despachos d ON d.id = dp.despacho_id
+    WHERE dp.id = p_despacho_pedido_id
+    FOR UPDATE OF dp;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'El pedido no está asignado a ningún despacho.';
+  END IF;
+
+  IF v_estado_despacho = 'anulado' THEN
+    RAISE EXCEPTION 'No se puede modificar la entrega de un despacho anulado.';
+  END IF;
+
+  UPDATE despachos_pedidos
+    SET estado_entrega = p_nuevo_estado_entrega,
+        notas_entrega = COALESCE(p_notas_entrega, notas_entrega)
+    WHERE id = p_despacho_pedido_id;
+
+  v_estado_cabecera := CASE p_nuevo_estado_entrega
+    WHEN 'entregado' THEN 'entregado'
+    WHEN 'rechazado' THEN 'devuelto'
+    ELSE 'despachado'
+  END;
+
+  UPDATE pedidos_cabecera
+    SET estado = v_estado_cabecera, actualizado = NOW()
+    WHERE id = v_pedido_id
+      AND eliminado IS NULL;
+
+  RETURN jsonb_build_object(
+    'despacho_pedido_id', p_despacho_pedido_id,
+    'pedido_id', v_pedido_id,
+    'estado_entrega', p_nuevo_estado_entrega,
+    'estado_pedido', v_estado_cabecera
+  );
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."actualizar_estado_entrega_pedido_transaccional"("p_despacho_pedido_id" "uuid", "p_nuevo_estado_entrega" "text", "p_notas_entrega" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."actualizar_timestamp"() RETURNS "trigger"
@@ -57,6 +228,69 @@ $$;
 ALTER FUNCTION "public"."bloquear_autoescalada_privilegios"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."bloquear_edicion_directa_despacho"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  IF current_setting('app.rpc_autorizado', true) = 'true' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.estado IS DISTINCT FROM OLD.estado THEN
+    RAISE EXCEPTION 'El estado de un despacho solo se puede cambiar a través de las funciones transaccionales del sistema.';
+  END IF;
+  IF NEW.vehiculo_id IS DISTINCT FROM OLD.vehiculo_id THEN
+    RAISE EXCEPTION 'El vehículo de un despacho no se puede reasignar directamente.';
+  END IF;
+  IF NEW.repartidor_id IS DISTINCT FROM OLD.repartidor_id THEN
+    RAISE EXCEPTION 'El repartidor de un despacho no se puede reasignar directamente.';
+  END IF;
+  IF NEW.fecha_despacho IS DISTINCT FROM OLD.fecha_despacho THEN
+    RAISE EXCEPTION 'La fecha de un despacho no se puede modificar directamente.';
+  END IF;
+  IF NEW.codigo_despacho IS DISTINCT FROM OLD.codigo_despacho THEN
+    RAISE EXCEPTION 'El código de despacho no se puede modificar.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."bloquear_edicion_directa_despacho"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."bloquear_edicion_directa_pedido"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  IF current_setting('app.rpc_autorizado', true) = 'true' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.total IS DISTINCT FROM OLD.total THEN
+    RAISE EXCEPTION 'El total de un pedido solo se puede modificar a través de las funciones transaccionales del sistema.';
+  END IF;
+  IF NEW.cliente_id IS DISTINCT FROM OLD.cliente_id THEN
+    RAISE EXCEPTION 'El cliente de un pedido no se puede reasignar directamente.';
+  END IF;
+  IF NEW.vendedor_id IS DISTINCT FROM OLD.vendedor_id THEN
+    RAISE EXCEPTION 'El vendedor de un pedido no se puede reasignar directamente.';
+  END IF;
+  IF NEW.numero_pedido IS DISTINCT FROM OLD.numero_pedido THEN
+    RAISE EXCEPTION 'El número de pedido no se puede modificar.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."bloquear_edicion_directa_pedido"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."crear_despacho_transaccional"("p_vehiculo_id" "uuid", "p_repartidor_id" "uuid", "p_fecha_despacho" timestamp with time zone, "p_notas" "text", "p_pedidos_ids" "uuid"[]) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -78,7 +312,21 @@ BEGIN
     RAISE EXCEPTION 'Debe asignar al menos un pedido a la ruta.';
   END IF;
 
-  -- 1. Bloquear y validar cada pedido (evita doble asignación concurrente
+  -- 1. Bloquear el vehículo y verificar que no tenga ya un despacho activo
+  --    (evita que quede "en dos rutas a la vez"; el FOR UPDATE evita que
+  --    dos despachadores se lo asignen al mismo tiempo)
+  PERFORM 1 FROM vehiculos WHERE id = p_vehiculo_id FOR UPDATE;
+
+  IF EXISTS (
+    SELECT 1 FROM despachos
+    WHERE vehiculo_id = p_vehiculo_id
+      AND estado IN ('creado', 'en_ruta')
+      AND eliminado IS NULL
+  ) THEN
+    RAISE EXCEPTION 'Este vehículo ya tiene un despacho activo. Debe completarse o anularse antes de asignarle una nueva ruta.';
+  END IF;
+
+  -- 2. Bloquear y validar cada pedido (evita doble asignación concurrente
   --    por dos despachadores trabajando al mismo tiempo)
   FOR v_pedido IN
     SELECT id, numero_pedido, estado
@@ -100,14 +348,14 @@ BEGIN
     RAISE EXCEPTION 'Uno o más pedidos seleccionados ya no existen o fueron eliminados.';
   END IF;
 
-  -- 2. Generar consecutivo del despacho (DSP-0001, DSP-0002, ...)
+  -- 3. Generar consecutivo del despacho (DSP-0001, DSP-0002, ...)
   SELECT COALESCE(MAX(NULLIF(regexp_replace(codigo_despacho, '\D', '', 'g'), '')::INTEGER), 0) + 1
     INTO v_siguiente_numero
     FROM despachos;
 
   v_codigo_despacho := 'DSP-' || LPAD(v_siguiente_numero::TEXT, 4, '0');
 
-  -- 3. Insertar cabecera del despacho
+  -- 4. Insertar cabecera del despacho
   INSERT INTO despachos (
     codigo_despacho, vehiculo_id, repartidor_id, fecha_despacho, notas, estado
   ) VALUES (
@@ -115,11 +363,11 @@ BEGIN
   )
   RETURNING id INTO v_despacho_id;
 
-  -- 4. Insertar el detalle (pedidos asignados a la ruta)
+  -- 5. Insertar el detalle (pedidos asignados a la ruta)
   INSERT INTO despachos_pedidos (despacho_id, pedido_id, estado_entrega)
   SELECT v_despacho_id, unnest(p_pedidos_ids), 'pendiente';
 
-  -- 5. Marcar los pedidos como despachados
+  -- 6. Marcar los pedidos como despachados
   UPDATE pedidos_cabecera
     SET estado = 'despachado', actualizado = NOW()
     WHERE id = ANY(p_pedidos_ids);
@@ -140,6 +388,7 @@ ALTER FUNCTION "public"."crear_despacho_transaccional"("p_vehiculo_id" "uuid", "
 
 CREATE OR REPLACE FUNCTION "public"."crear_pedido_transaccional"("p_cliente_id" "uuid", "p_vendedor_id" "uuid", "p_notas" "text", "p_detalles" "jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $_$
 DECLARE
   v_item JSONB;
@@ -152,12 +401,18 @@ DECLARE
   v_pedido_id UUID;
   v_detalles_insertar JSONB := '[]'::JSONB;
 BEGIN
+  IF obtener_rol_actual() NOT IN ('soporte', 'gerencia', 'vendedor', 'despachador') THEN
+    RAISE EXCEPTION 'No tienes permiso para crear pedidos.';
+  END IF;
+
+  IF obtener_rol_actual() IN ('vendedor', 'despachador') THEN
+    p_vendedor_id := auth.uid();
+  END IF;
+
   IF p_detalles IS NULL OR jsonb_array_length(p_detalles) = 0 THEN
     RAISE EXCEPTION 'El pedido debe contener al menos un producto.';
   END IF;
 
-  -- 1. Bloquear y validar cada producto (orden por id evita deadlocks entre
-  --    transacciones concurrentes que compran los mismos productos).
   FOR v_item IN
     SELECT * FROM jsonb_array_elements(p_detalles)
     ORDER BY (value->>'producto_id')
@@ -196,14 +451,12 @@ BEGIN
       'subtotal_linea', v_subtotal_linea
     );
 
-    -- Descontar stock inmediatamente (fila ya bloqueada con FOR UPDATE)
     UPDATE productos
       SET disponible = disponible - v_cantidad,
           actualizado = NOW()
       WHERE id = v_producto.id;
   END LOOP;
 
-  -- 2. Generar consecutivo de forma segura dentro de la transacción
   SELECT COALESCE(MAX(numero_pedido::INTEGER), 0) + 1
     INTO v_numero_pedido
     FROM pedidos_cabecera
@@ -213,12 +466,10 @@ BEGIN
     v_numero_pedido := '1';
   END IF;
 
-  -- 3. Insertar cabecera
   INSERT INTO pedidos_cabecera (cliente_id, vendedor_id, notas, total, numero_pedido, estado)
   VALUES (p_cliente_id, p_vendedor_id, p_notas, v_total, v_numero_pedido, 'pendiente')
   RETURNING id INTO v_pedido_id;
 
-  -- 4. Insertar detalles
   INSERT INTO pedidos_detalle (
     pedido_id, producto_id, cantidad, precio_unitario,
     iva_porcentaje, inc_porcentaje, subtotal_linea
@@ -240,13 +491,320 @@ BEGIN
   );
 EXCEPTION
   WHEN OTHERS THEN
-    -- Cualquier error revierte automáticamente toda la función (stock, cabecera, detalle)
     RAISE;
 END;
 $_$;
 
 
 ALTER FUNCTION "public"."crear_pedido_transaccional"("p_cliente_id" "uuid", "p_vendedor_id" "uuid", "p_notas" "text", "p_detalles" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."editar_pedido_transaccional"("p_pedido_id" "uuid", "p_notas" "text", "p_detalles" "jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+  v_pedido RECORD;
+  v_item JSONB;
+  v_producto RECORD;
+  v_cantidad INTEGER;
+  v_precio NUMERIC;
+  v_subtotal_linea NUMERIC;
+  v_total NUMERIC := 0;
+  v_detalles_insertar JSONB := '[]'::JSONB;
+  v_detalle_previo RECORD;
+BEGIN
+  IF obtener_rol_actual() NOT IN ('soporte', 'gerencia', 'vendedor') THEN
+    RAISE EXCEPTION 'No tienes permiso para editar pedidos.';
+  END IF;
+
+  -- Autoriza ante trg_bloquear_edicion_directa_pedido el UPDATE de total
+  -- que hace el paso 4 más abajo. is_local=true: se limpia sola al
+  -- terminar esta transacción, no persiste en la conexión pooleada.
+  PERFORM set_config('app.rpc_autorizado', 'true', true);
+
+  IF p_detalles IS NULL OR jsonb_array_length(p_detalles) = 0 THEN
+    RAISE EXCEPTION 'El pedido debe contener al menos un producto.';
+  END IF;
+
+  -- 1. Bloquear la cabecera y validar que siga editable. El lock FOR
+  --    UPDATE evita que un despachador arme una ruta con este pedido
+  --    mientras se está editando (crear_despacho_transaccional también
+  --    bloquea pedidos_cabecera al asignar).
+  SELECT id, estado INTO v_pedido
+    FROM pedidos_cabecera
+    WHERE id = p_pedido_id
+      AND eliminado IS NULL
+    FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'El pedido no existe o fue eliminado.';
+  END IF;
+
+  IF v_pedido.estado <> 'pendiente' THEN
+    RAISE EXCEPTION 'Solo se pueden editar pedidos en estado pendiente (actual: %).', v_pedido.estado;
+  END IF;
+
+  -- 2. Devolver al stock las cantidades de las líneas actuales antes de
+  --    reemplazarlas, bloqueando cada producto en orden por id (mismo
+  --    criterio anti-deadlock que crear_pedido_transaccional).
+  FOR v_detalle_previo IN
+    SELECT producto_id, cantidad FROM pedidos_detalle
+    WHERE pedido_id = p_pedido_id
+    ORDER BY producto_id
+  LOOP
+    UPDATE productos
+      SET disponible = disponible + v_detalle_previo.cantidad,
+          actualizado = NOW()
+      WHERE id = v_detalle_previo.producto_id;
+  END LOOP;
+
+  DELETE FROM pedidos_detalle WHERE pedido_id = p_pedido_id;
+
+  -- 3. Igual que crear_pedido_transaccional: bloquear y validar cada
+  --    producto de la lista nueva, calculando precio/IVA/INC desde
+  --    productos (nunca desde lo que mande el cliente).
+  FOR v_item IN
+    SELECT * FROM jsonb_array_elements(p_detalles)
+    ORDER BY (value->>'producto_id')
+  LOOP
+    v_cantidad := (v_item->>'cantidad')::INTEGER;
+
+    IF v_cantidad IS NULL OR v_cantidad <= 0 THEN
+      RAISE EXCEPTION 'Cantidad inválida para el producto %', v_item->>'producto_id';
+    END IF;
+
+    SELECT id, nombre, disponible, precio_venta, iva, inc
+      INTO v_producto
+      FROM productos
+      WHERE id = (v_item->>'producto_id')::UUID
+        AND eliminado IS NULL
+      FOR UPDATE;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'El producto % no existe o fue eliminado.', v_item->>'producto_id';
+    END IF;
+
+    IF v_producto.disponible < v_cantidad THEN
+      RAISE EXCEPTION 'Stock insuficiente para "%". Disponible: %', v_producto.nombre, v_producto.disponible;
+    END IF;
+
+    v_precio := v_producto.precio_venta;
+    v_subtotal_linea := v_precio * v_cantidad;
+    v_total := v_total + v_subtotal_linea;
+
+    v_detalles_insertar := v_detalles_insertar || jsonb_build_object(
+      'producto_id', v_producto.id,
+      'cantidad', v_cantidad,
+      'precio_unitario', v_precio,
+      'iva_porcentaje', COALESCE(v_producto.iva, 0),
+      'inc_porcentaje', COALESCE(v_producto.inc, 0),
+      'subtotal_linea', v_subtotal_linea
+    );
+
+    UPDATE productos
+      SET disponible = disponible - v_cantidad,
+          actualizado = NOW()
+      WHERE id = v_producto.id;
+  END LOOP;
+
+  INSERT INTO pedidos_detalle (
+    pedido_id, producto_id, cantidad, precio_unitario,
+    iva_porcentaje, inc_porcentaje, subtotal_linea
+  )
+  SELECT
+    p_pedido_id,
+    (d->>'producto_id')::UUID,
+    (d->>'cantidad')::INTEGER,
+    (d->>'precio_unitario')::NUMERIC,
+    (d->>'iva_porcentaje')::NUMERIC,
+    (d->>'inc_porcentaje')::NUMERIC,
+    (d->>'subtotal_linea')::NUMERIC
+  FROM jsonb_array_elements(v_detalles_insertar) AS d;
+
+  -- 4. Actualizar cabecera (total recalculado + notas)
+  UPDATE pedidos_cabecera
+    SET total = v_total,
+        notas = p_notas,
+        actualizado = NOW()
+    WHERE id = p_pedido_id;
+
+  RETURN jsonb_build_object(
+    'id', p_pedido_id,
+    'total', v_total
+  );
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Cualquier error revierte automáticamente todo (stock, detalle, cabecera)
+    RAISE;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."editar_pedido_transaccional"("p_pedido_id" "uuid", "p_notas" "text", "p_detalles" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."hook_password_verification_attempt"("event" "jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  v_user_id uuid := (event->>'user_id')::uuid;
+  v_valid boolean := (event->>'valid')::boolean;
+  v_intentos integer;
+  v_primer_intento timestamptz;
+  v_bloqueado_hasta timestamptz;
+  v_existe boolean;
+  v_max_intentos constant integer := 5;
+  v_ventana constant interval := interval '15 minutes';
+  v_bloqueo constant interval := interval '15 minutes';
+begin
+  select intentos, primer_intento_en, bloqueado_hasta
+    into v_intentos, v_primer_intento, v_bloqueado_hasta
+    from public.auth_intentos_fallidos
+    where user_id = v_user_id
+    for update;
+
+  v_existe := found;
+
+  -- Cuenta bloqueada vigente: rechaza incluso si la contraseña es correcta,
+  -- para que no sirva de nada probar credenciales durante el bloqueo.
+  if v_bloqueado_hasta is not null and v_bloqueado_hasta > now() then
+    return jsonb_build_object(
+      'decision', 'reject',
+      'message', 'Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta de nuevo en unos minutos.'
+    );
+  end if;
+
+  if v_valid then
+    delete from public.auth_intentos_fallidos where user_id = v_user_id;
+    return jsonb_build_object('decision', 'continue');
+  end if;
+
+  if not v_existe or now() - v_primer_intento > v_ventana then
+    insert into public.auth_intentos_fallidos (user_id, intentos, primer_intento_en, bloqueado_hasta)
+      values (v_user_id, 1, now(), null)
+      on conflict (user_id) do update
+        set intentos = 1, primer_intento_en = now(), bloqueado_hasta = null;
+  else
+    update public.auth_intentos_fallidos
+      set intentos = intentos + 1,
+          bloqueado_hasta = case
+            when intentos + 1 >= v_max_intentos then now() + v_bloqueo
+            else null
+          end
+      where user_id = v_user_id;
+  end if;
+
+  -- Deja que Supabase Auth aplique su comportamiento normal para el intento
+  -- fallido (mensaje genérico de "Invalid login credentials").
+  return jsonb_build_object('decision', 'continue');
+end;
+$$;
+
+
+ALTER FUNCTION "public"."hook_password_verification_attempt"("event" "jsonb") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."hook_password_verification_attempt"("event" "jsonb") IS 'Password Verification Hook (auditoría #11). Se activa manualmente en Authentication > Hooks del dashboard de Supabase; no queda activo solo con esta migración.';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."importar_productos_excel"("p_productos" "jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_item JSONB;
+  v_codigo TEXT;
+  v_nombre TEXT;
+  v_precio NUMERIC;
+  v_disponible INTEGER;
+  v_creados INTEGER := 0;
+  v_actualizados INTEGER := 0;
+BEGIN
+  IF obtener_rol_actual() <> 'soporte' THEN
+    RAISE EXCEPTION 'No tienes permiso para importar productos.';
+  END IF;
+
+  IF p_productos IS NULL OR jsonb_array_length(p_productos) = 0 THEN
+    RAISE EXCEPTION 'No se recibió ningún producto para importar.';
+  END IF;
+
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_productos)
+  LOOP
+    v_codigo := NULLIF(trim(v_item->>'codigo'), '');
+    v_nombre := NULLIF(trim(v_item->>'nombre'), '');
+    v_precio := (v_item->>'precio_venta')::NUMERIC;
+    v_disponible := (v_item->>'disponible')::INTEGER;
+
+    IF v_codigo IS NULL THEN
+      RAISE EXCEPTION 'Hay un producto sin código en el archivo.';
+    END IF;
+    IF v_precio IS NULL OR v_precio < 0 THEN
+      RAISE EXCEPTION 'Valor total inválido para el producto "%".', v_codigo;
+    END IF;
+    IF v_disponible IS NULL OR v_disponible < 0 THEN
+      RAISE EXCEPTION 'Existencia inválida para el producto "%".', v_codigo;
+    END IF;
+
+    UPDATE productos
+      SET disponible = v_disponible,
+          actualizado = NOW()
+      WHERE codigo = v_codigo;
+
+    IF FOUND THEN
+      v_actualizados := v_actualizados + 1;
+    ELSE
+      IF v_nombre IS NULL THEN
+        RAISE EXCEPTION 'El producto nuevo "%" no tiene nombre.', v_codigo;
+      END IF;
+
+      INSERT INTO productos (
+        codigo, nombre, precio_venta, disponible, clasificacion, iva, inc
+      )
+      VALUES (v_codigo, v_nombre, v_precio, v_disponible, 'gravado', 19, 0);
+
+      v_creados := v_creados + 1;
+    END IF;
+  END LOOP;
+
+  RETURN jsonb_build_object('creados', v_creados, 'actualizados', v_actualizados);
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Cualquier error revierte toda la importación: o queda completa o no
+    -- queda nada a medias.
+    RAISE;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."importar_productos_excel"("p_productos" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."obtener_resumen_dashboard"() RETURNS "jsonb"
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT jsonb_build_object(
+    'total_pedidos', (
+      SELECT COUNT(*) FROM pedidos_cabecera WHERE eliminado IS NULL
+    ),
+    'pedidos_pendientes', (
+      SELECT COUNT(*) FROM pedidos_cabecera
+      WHERE eliminado IS NULL AND estado = 'pendiente'
+    ),
+    'ventas_totales', (
+      SELECT COALESCE(SUM(total), 0) FROM pedidos_cabecera
+      WHERE eliminado IS NULL AND estado <> 'anulado'
+    ),
+    'despachos_activos', (
+      SELECT COUNT(*) FROM despachos
+      WHERE eliminado IS NULL AND estado = 'en_ruta'
+    )
+  );
+$$;
+
+
+ALTER FUNCTION "public"."obtener_resumen_dashboard"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."obtener_rol_actual"() RETURNS "text"
@@ -264,6 +822,24 @@ $$;
 
 
 ALTER FUNCTION "public"."obtener_rol_actual"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."obtener_ventas_diarias"() RETURNS TABLE("fecha" "date", "total" numeric)
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT dia::date AS fecha, COALESCE(SUM(pc.total), 0) AS total
+  FROM generate_series(CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day') AS dia
+  LEFT JOIN pedidos_cabecera pc
+    ON pc.fecha_pedido::date = dia::date
+    AND pc.eliminado IS NULL
+    AND pc.estado <> 'anulado'
+  GROUP BY dia
+  ORDER BY dia;
+$$;
+
+
+ALTER FUNCTION "public"."obtener_ventas_diarias"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."registrar_auditoria"() RETURNS "trigger"
@@ -297,6 +873,23 @@ $$;
 
 
 ALTER FUNCTION "public"."registrar_auditoria"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."tiene_correo_recuperacion"("p_nombre_usuario" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM perfiles
+    WHERE nombre_usuario = lower(trim(p_nombre_usuario))
+      AND correo IS NOT NULL
+      AND estado = true
+      AND eliminado IS NULL
+  );
+$$;
+
+
+ALTER FUNCTION "public"."tiene_correo_recuperacion"("p_nombre_usuario" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."toggle_user_status"("p_user_id" "uuid", "p_new_status" boolean) RETURNS json
@@ -375,6 +968,21 @@ ALTER SEQUENCE "public"."auditoria_id_seq" OWNER TO "postgres";
 
 
 ALTER SEQUENCE "public"."auditoria_id_seq" OWNED BY "public"."auditoria"."id";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."auth_intentos_fallidos" (
+    "user_id" "uuid" NOT NULL,
+    "intentos" integer DEFAULT 0 NOT NULL,
+    "primer_intento_en" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "bloqueado_hasta" timestamp with time zone
+);
+
+
+ALTER TABLE "public"."auth_intentos_fallidos" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."auth_intentos_fallidos" IS 'Estado efímero de intentos fallidos de login por usuario, leído y escrito por el Password Verification Hook. No es una tabla de dominio: no sigue el patrón estado/creado/actualizado/eliminado.';
 
 
 
@@ -515,7 +1123,8 @@ CREATE TABLE IF NOT EXISTS "public"."perfiles" (
     "estado" boolean DEFAULT true NOT NULL,
     "creado" timestamp with time zone DEFAULT "now"() NOT NULL,
     "actualizado" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "eliminado" timestamp with time zone
+    "eliminado" timestamp with time zone,
+    "correo" character varying(255)
 );
 
 
@@ -652,6 +1261,11 @@ ALTER TABLE ONLY "public"."auditoria"
 
 
 
+ALTER TABLE ONLY "public"."auth_intentos_fallidos"
+    ADD CONSTRAINT "auth_intentos_fallidos_pkey" PRIMARY KEY ("user_id");
+
+
+
 ALTER TABLE ONLY "public"."clientes"
     ADD CONSTRAINT "clientes_numero_identificacion_key" UNIQUE ("numero_identificacion");
 
@@ -784,6 +1398,14 @@ CREATE OR REPLACE TRIGGER "trg_bloquear_autoescalada" BEFORE UPDATE ON "public".
 
 
 
+CREATE OR REPLACE TRIGGER "trg_bloquear_edicion_directa_despacho" BEFORE UPDATE ON "public"."despachos" FOR EACH ROW EXECUTE FUNCTION "public"."bloquear_edicion_directa_despacho"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_bloquear_edicion_directa_pedido" BEFORE UPDATE ON "public"."pedidos_cabecera" FOR EACH ROW EXECUTE FUNCTION "public"."bloquear_edicion_directa_pedido"();
+
+
+
 CREATE OR REPLACE TRIGGER "update_vehiculos_timestamp" BEFORE UPDATE ON "public"."vehiculos" FOR EACH ROW EXECUTE FUNCTION "public"."update_vehiculos_modtime"();
 
 
@@ -866,7 +1488,7 @@ ALTER TABLE "public"."auditoria" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."clientes" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "clientes_insert_comercial" ON "public"."clientes" FOR INSERT TO "authenticated" WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text"])));
+CREATE POLICY "clientes_insert_comercial" ON "public"."clientes" FOR INSERT TO "authenticated" WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text", 'despachador'::"text"])));
 
 
 
@@ -908,18 +1530,18 @@ ALTER TABLE "public"."municipios" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."pedidos_cabecera" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "pedidos_cabecera_insert_comercial" ON "public"."pedidos_cabecera" FOR INSERT TO "authenticated" WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text"])));
+CREATE POLICY "pedidos_cabecera_insert_comercial" ON "public"."pedidos_cabecera" FOR INSERT TO "authenticated" WITH CHECK (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text", 'despachador'::"text"])));
 
 
 
-CREATE POLICY "pedidos_cabecera_select_operativo" ON "public"."pedidos_cabecera" FOR SELECT TO "authenticated" USING ((("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text", 'despachador'::"text"])) OR (EXISTS ( SELECT 1
+CREATE POLICY "pedidos_cabecera_select_operativo" ON "public"."pedidos_cabecera" FOR SELECT TO "authenticated" USING ((("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'despachador'::"text"])) OR (("public"."obtener_rol_actual"() = 'vendedor'::"text") AND ("vendedor_id" = "auth"."uid"())) OR (EXISTS ( SELECT 1
    FROM ("public"."despachos_pedidos" "dp"
      JOIN "public"."despachos" "d" ON (("d"."id" = "dp"."despacho_id")))
   WHERE (("dp"."pedido_id" = "pedidos_cabecera"."id") AND ("d"."repartidor_id" = "auth"."uid"()))))));
 
 
 
-CREATE POLICY "pedidos_cabecera_update_comercial" ON "public"."pedidos_cabecera" FOR UPDATE TO "authenticated" USING ((("public"."obtener_rol_actual"() = ANY (ARRAY['gerencia'::"text", 'soporte'::"text"])) OR (("public"."obtener_rol_actual"() = 'vendedor'::"text") AND (("estado")::"text" = 'pendiente'::"text")))) WITH CHECK ((("public"."obtener_rol_actual"() = ANY (ARRAY['gerencia'::"text", 'soporte'::"text"])) OR (("public"."obtener_rol_actual"() = 'vendedor'::"text") AND (("estado")::"text" = 'pendiente'::"text"))));
+CREATE POLICY "pedidos_cabecera_update_comercial" ON "public"."pedidos_cabecera" FOR UPDATE TO "authenticated" USING ((("public"."obtener_rol_actual"() = ANY (ARRAY['gerencia'::"text", 'soporte'::"text"])) OR (("public"."obtener_rol_actual"() = 'vendedor'::"text") AND (("estado")::"text" = 'pendiente'::"text") AND ("vendedor_id" = "auth"."uid"())))) WITH CHECK ((("public"."obtener_rol_actual"() = ANY (ARRAY['gerencia'::"text", 'soporte'::"text"])) OR (("public"."obtener_rol_actual"() = 'vendedor'::"text") AND (("estado")::"text" = 'pendiente'::"text") AND ("vendedor_id" = "auth"."uid"()))));
 
 
 
@@ -928,7 +1550,7 @@ ALTER TABLE "public"."pedidos_detalle" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "pedidos_detalle_select_operativo" ON "public"."pedidos_detalle" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."pedidos_cabecera" "pc"
-  WHERE (("pc"."id" = "pedidos_detalle"."pedido_id") AND (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'vendedor'::"text", 'despachador'::"text"])) OR (EXISTS ( SELECT 1
+  WHERE (("pc"."id" = "pedidos_detalle"."pedido_id") AND (("public"."obtener_rol_actual"() = ANY (ARRAY['soporte'::"text", 'gerencia'::"text", 'despachador'::"text"])) OR (("public"."obtener_rol_actual"() = 'vendedor'::"text") AND ("pc"."vendedor_id" = "auth"."uid"())) OR (EXISTS ( SELECT 1
            FROM ("public"."despachos_pedidos" "dp"
              JOIN "public"."despachos" "d" ON (("d"."id" = "dp"."despacho_id")))
           WHERE (("dp"."pedido_id" = "pc"."id") AND ("d"."repartidor_id" = "auth"."uid"())))))))));
@@ -986,6 +1608,27 @@ CREATE POLICY "vehiculos_write_logistica" ON "public"."vehiculos" TO "authentica
 
 
 
+
+
+ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
+
+
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."despachos";
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."despachos_pedidos";
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."pedidos_cabecera";
+
+
+
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
@@ -993,15 +1636,180 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."actualizar_timestamp"() TO "anon";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+GRANT ALL ON FUNCTION "public"."actualizar_estado_despacho_transaccional"("p_despacho_id" "uuid", "p_nuevo_estado" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."actualizar_estado_despacho_transaccional"("p_despacho_id" "uuid", "p_nuevo_estado" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."actualizar_estado_entrega_pedido_transaccional"("p_despacho_pedido_id" "uuid", "p_nuevo_estado_entrega" "text", "p_notas_entrega" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."actualizar_estado_entrega_pedido_transaccional"("p_despacho_pedido_id" "uuid", "p_nuevo_estado_entrega" "text", "p_notas_entrega" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."actualizar_timestamp"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."actualizar_timestamp"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."bloquear_autoescalada_privilegios"() TO "anon";
 GRANT ALL ON FUNCTION "public"."bloquear_autoescalada_privilegios"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."bloquear_autoescalada_privilegios"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."bloquear_edicion_directa_despacho"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."bloquear_edicion_directa_despacho"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."bloquear_edicion_directa_pedido"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."bloquear_edicion_directa_pedido"() TO "service_role";
 
 
 
@@ -1015,15 +1823,45 @@ GRANT ALL ON FUNCTION "public"."crear_pedido_transaccional"("p_cliente_id" "uuid
 
 
 
-GRANT ALL ON FUNCTION "public"."obtener_rol_actual"() TO "anon";
+GRANT ALL ON FUNCTION "public"."editar_pedido_transaccional"("p_pedido_id" "uuid", "p_notas" "text", "p_detalles" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."editar_pedido_transaccional"("p_pedido_id" "uuid", "p_notas" "text", "p_detalles" "jsonb") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."hook_password_verification_attempt"("event" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."hook_password_verification_attempt"("event" "jsonb") TO "service_role";
+GRANT ALL ON FUNCTION "public"."hook_password_verification_attempt"("event" "jsonb") TO "supabase_auth_admin";
+
+
+
+GRANT ALL ON FUNCTION "public"."importar_productos_excel"("p_productos" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."importar_productos_excel"("p_productos" "jsonb") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."obtener_resumen_dashboard"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."obtener_resumen_dashboard"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."obtener_rol_actual"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."obtener_rol_actual"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."registrar_auditoria"() TO "anon";
+GRANT ALL ON FUNCTION "public"."obtener_ventas_diarias"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."obtener_ventas_diarias"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."registrar_auditoria"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."registrar_auditoria"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."tiene_correo_recuperacion"("p_nombre_usuario" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."tiene_correo_recuperacion"("p_nombre_usuario" "text") TO "service_role";
+GRANT ALL ON FUNCTION "public"."tiene_correo_recuperacion"("p_nombre_usuario" "text") TO "anon";
 
 
 
@@ -1032,9 +1870,23 @@ GRANT ALL ON FUNCTION "public"."toggle_user_status"("p_user_id" "uuid", "p_new_s
 
 
 
-GRANT ALL ON FUNCTION "public"."update_vehiculos_modtime"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_vehiculos_modtime"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_vehiculos_modtime"() TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1046,6 +1898,11 @@ GRANT ALL ON TABLE "public"."auditoria" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."auditoria_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."auditoria_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."auditoria_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."auth_intentos_fallidos" TO "service_role";
+GRANT ALL ON TABLE "public"."auth_intentos_fallidos" TO "supabase_auth_admin";
 
 
 
@@ -1122,8 +1979,13 @@ GRANT ALL ON TABLE "public"."vehiculos" TO "service_role";
 
 
 
+
+
+
+
+
+
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "service_role";
 
@@ -1133,7 +1995,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQ
 
 
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "service_role";
 
@@ -1143,9 +2004,32 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUN
 
 
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
