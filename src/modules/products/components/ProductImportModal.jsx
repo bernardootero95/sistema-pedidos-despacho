@@ -102,7 +102,8 @@ export const ProductImportModal = ({ onSuccess, onCancel }) => {
                 <p className="font-bold">Importación completada.</p>
                 <p className="mt-1">
                   {resultado.creados} producto(s) nuevo(s) creados,{" "}
-                  {resultado.actualizados} con existencia actualizada.
+                  {resultado.actualizados} con precio y existencia
+                  actualizados.
                 </p>
               </div>
             </div>
@@ -115,9 +116,9 @@ export const ProductImportModal = ({ onSuccess, onCancel }) => {
                   traer otras, se ignoran).
                 </p>
                 <p>
-                  Si el código ya existe en el catálogo, se actualiza solo la
-                  cantidad disponible. Si no existe, se crea como producto{" "}
-                  <strong>gravado con IVA 19%</strong>.
+                  Si el código ya existe en el catálogo, se actualiza el
+                  precio y la cantidad disponible. Si no existe, se crea
+                  como producto <strong>gravado con IVA 19%</strong>.
                 </p>
               </div>
 
