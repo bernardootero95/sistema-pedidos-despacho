@@ -159,10 +159,22 @@ export const VehiclesPage = () => {
                       {v.placa}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="font-medium text-slate-800">
-                        {v.marca}
-                      </span>{" "}
-                      <span className="text-slate-400">({v.modelo})</span>
+                      {v.marca || v.modelo ? (
+                        <>
+                          <span className="font-medium text-slate-800">
+                            {v.marca || "Sin marca"}
+                          </span>{" "}
+                          {v.modelo && (
+                            <span className="text-slate-400">
+                              ({v.modelo})
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-slate-400 italic text-xs">
+                          Sin marca/modelo
+                        </span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
                       {v.conductor ? (
@@ -271,7 +283,9 @@ export const VehiclesPage = () => {
                     <span className="font-semibold text-slate-700">
                       Marca / Modelo:
                     </span>{" "}
-                    {v.marca} ({v.modelo})
+                    {v.marca || v.modelo
+                      ? `${v.marca || "Sin marca"}${v.modelo ? ` (${v.modelo})` : ""}`
+                      : "Sin marca/modelo"}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold text-slate-700">

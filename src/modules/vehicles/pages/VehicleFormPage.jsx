@@ -113,6 +113,8 @@ export const VehicleFormPage = () => {
 
       const payload = {
         ...formData,
+        marca: formData.marca.trim() || null,
+        modelo: formData.modelo !== "" ? Number(formData.modelo) : null,
         conductor_id: formData.conductor_id || null,
         capacidad_peso:
           formData.capacidad_peso !== "" ? Number(formData.capacidad_peso) : 0,
@@ -246,7 +248,8 @@ export const VehicleFormPage = () => {
           {/* Marca */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Marca *
+              Marca{" "}
+              <span className="text-slate-400 font-normal">(Opcional)</span>
             </label>
             <input
               type="text"
@@ -271,7 +274,8 @@ export const VehicleFormPage = () => {
           {/* Modelo (Año) */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Modelo (Año) *
+              Modelo (Año){" "}
+              <span className="text-slate-400 font-normal">(Opcional)</span>
             </label>
             <input
               type="number"

@@ -1,6 +1,7 @@
 /**
  * Diccionario de reglas de validación para el módulo de Vehículos.
- * Las capacidades de peso y volumen son opcionales y no restrictivas.
+ * La placa es el único campo obligatorio; el resto (marca, modelo,
+ * capacidades) es opcional y no restrictivo salvo que traigan un valor.
  */
 const currentYear = new Date().getFullYear();
 
@@ -12,12 +13,9 @@ const validators = {
       return "La placa debe tener al menos 5 caracteres.";
     return "";
   },
-  marca: (value) => {
-    if (!value || !value.trim()) return "La marca es obligatoria.";
-    return "";
-  },
+  marca: () => "", // Opcional
   modelo: (value) => {
-    if (!value) return "El modelo (año) es obligatorio.";
+    if (value === "" || value === null || value === undefined) return ""; // Opcional
     const yearNum = Number(value);
     if (isNaN(yearNum) || yearNum < 1970 || yearNum > currentYear + 1) {
       return `Ingrese un año válido entre 1970 y ${currentYear + 1}.`;
