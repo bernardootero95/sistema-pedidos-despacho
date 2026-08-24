@@ -247,13 +247,6 @@ export const OrderCreatePage = () => {
           )}
         </div>
 
-        {isClientFormOpen && (
-          <ClientForm
-            onSuccess={handleClienteCreado}
-            onCancel={() => setIsClientFormOpen(false)}
-          />
-        )}
-
         {/* BUSCADOR DE PRODUCTOS CON STOCK VISIBLE */}
         <ProductSearchBar
           productos={productos}
@@ -311,6 +304,13 @@ export const OrderCreatePage = () => {
           </button>
         </div>
       </form>
+
+      {isClientFormOpen && (
+        <ClientForm
+          onSuccess={handleClienteCreado}
+          onCancel={() => setIsClientFormOpen(false)}
+        />
+      )}
     </div>
   );
 };
