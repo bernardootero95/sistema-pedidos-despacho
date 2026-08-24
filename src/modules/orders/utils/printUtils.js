@@ -55,10 +55,10 @@ export const construirComprobantePedidoHtml = (pedidoCompleto) => {
         <h3 style="font-weight: bold; font-size: 14px; text-transform: uppercase; margin: 0;">${companyName}</h3>
         <p style="font-weight: bold; font-size: 11px; text-transform: uppercase; margin: 2px 0;">COMPROBANTE DE DESPACHO</p>
         <p style="font-weight: bold; font-size: 13px; margin: 4px 0;">Pedido N°: ${pedidoCompleto.numero_pedido}</p>
-        <p style="font-size: 10px; color: #333333; margin: 0;">Fecha: ${formatDatePdf(pedidoCompleto.fecha_pedido)}</p>
+        <p style="font-size: 10px; font-weight: 600; color: #000000; margin: 0;">Fecha: ${formatDatePdf(pedidoCompleto.fecha_pedido)}</p>
       </div>
 
-      <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; font-size: 10px; display: flex; flex-direction: column; gap: 2px;">
+      <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; font-size: 10px; font-weight: 600; color: #000000; display: flex; flex-direction: column; gap: 2px;">
         <p style="margin: 0;"><strong>Cliente:</strong> ${clienteNombre}</p>
         <p style="margin: 0;"><strong>Tipo ID:</strong> ${pedidoCompleto.clientes?.tipo_identificacion || "NIT / CC"}</p>
         <p style="margin: 0;"><strong>N° Identificación:</strong> ${pedidoCompleto.clientes?.numero_identificacion}</p>
@@ -77,12 +77,12 @@ export const construirComprobantePedidoHtml = (pedidoCompleto) => {
             ?.map(
               (item) => `
             <div style="display: flex; flex-direction: column; border-bottom: 1px solid #eeeeee; padding-bottom: 4px;">
-              <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); font-size: 10px;">
+              <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); font-size: 10px; font-weight: 600; color: #000000;">
                 <span style="grid-column: span 2 / span 2; text-align: center; font-weight: bold;">${item.cantidad}</span>
-                <span style="grid-column: span 6 / span 6; font-weight: 500;">${item.producto?.nombre}</span>
+                <span style="grid-column: span 6 / span 6; font-weight: bold;">${item.producto?.nombre}</span>
                 <span style="grid-column: span 4 / span 4; text-align: right;">${formatCurrencyPdf(item.subtotal_linea)}</span>
               </div>
-              <div style="font-size: 9px; padding-left: 8px; color: #555555;">V. Unit: ${formatCurrencyPdf(item.precio_unitario)}</div>
+              <div style="font-size: 9px; font-weight: 600; padding-left: 8px; color: #000000;">V. Unit: ${formatCurrencyPdf(item.precio_unitario)}</div>
             </div>
           `,
             )
@@ -103,17 +103,17 @@ export const construirComprobantePedidoHtml = (pedidoCompleto) => {
       ${
         pedidoCompleto.notas
           ? `
-        <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; font-size: 10px;">
+        <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; font-size: 10px; color: #000000;">
           <strong style="display: block;">Notas:</strong>
-          <p style="margin: 0; font-style: italic;">${pedidoCompleto.notas}</p>
+          <p style="margin: 0; font-weight: 600; font-style: italic;">${pedidoCompleto.notas}</p>
         </div>
       `
           : ""
       }
 
-      <div style="text-align: center; font-size: 9px; color: #333333; display: flex; flex-direction: column; gap: 2px;">
+      <div style="text-align: center; font-size: 9px; font-weight: 600; color: #000000; display: flex; flex-direction: column; gap: 2px;">
         <p style="font-weight: bold; color: #000000; margin: 0;">¡Gracias por su compra!</p>
-        <p style="font-size: 8px; margin: 0;">Sistema de pedidos y despacho desarrollado por TecnoIngenieria B.O.</p>
+        <p style="font-size: 9px; font-weight: 600; margin: 0;">Sistema de pedidos y despacho desarrollado por TecnoIngenieria B.O.</p>
       </div>
     </div>
   `;
@@ -142,7 +142,7 @@ export const generarPdfBlobUrl = async (html, filename) => {
     margin: 0,
     filename,
     image: { type: "jpeg", quality: 1 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
+    html2canvas: { scale: 3, useCORS: true, logging: false },
     jsPDF: { unit: "mm", format: [80, 200], orientation: "portrait" },
   };
 

@@ -52,10 +52,10 @@ export const construirTiqueteDespachoHtml = (despacho, pedidosCompletos) => {
         <h3 style="font-weight: bold; font-size: 14px; text-transform: uppercase; margin: 0;">${companyName}</h3>
         <p style="font-weight: bold; font-size: 11px; text-transform: uppercase; margin: 2px 0;">TIQUETE DE DESPACHO</p>
         <p style="font-weight: bold; font-size: 13px; margin: 4px 0;">${despacho.codigo_despacho}</p>
-        <p style="font-size: 10px; color: #333333; margin: 0;">Fecha: ${formatDatePdf(despacho.fecha_despacho)}</p>
+        <p style="font-size: 10px; font-weight: 600; color: #000000; margin: 0;">Fecha: ${formatDatePdf(despacho.fecha_despacho)}</p>
       </div>
 
-      <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; font-size: 10px; display: flex; flex-direction: column; gap: 2px;">
+      <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; font-size: 10px; font-weight: 600; color: #000000; display: flex; flex-direction: column; gap: 2px;">
         <p style="margin: 0;"><strong>Vehículo:</strong> ${despacho.vehiculo?.placa || "N/D"} ${despacho.vehiculo?.marca || ""}</p>
         <p style="margin: 0;"><strong>Repartidor:</strong> ${despacho.repartidor?.nombre_completo || "No asignado"}</p>
         <p style="margin: 0;"><strong>Pedidos incluidos:</strong> ${pedidosCompletos.length}</p>
@@ -71,9 +71,9 @@ export const construirTiqueteDespachoHtml = (despacho, pedidosCompletos) => {
           ${filasResumen
             .map(
               (fila) => `
-            <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); font-size: 10px;">
+            <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); font-size: 10px; font-weight: 600; color: #000000;">
               <span style="grid-column: span 2 / span 2; text-align: center; font-weight: bold;">${fila.cantidad}</span>
-              <span style="grid-column: span 10 / span 10;">${fila.nombre}</span>
+              <span style="grid-column: span 10 / span 10; font-weight: bold;">${fila.nombre}</span>
             </div>
           `,
             )
@@ -88,13 +88,13 @@ export const construirTiqueteDespachoHtml = (despacho, pedidosCompletos) => {
             .map(
               (pedido) => `
             <div style="border-bottom: 1px solid #eeeeee; padding-bottom: 6px;">
-              <p style="margin: 0; font-weight: bold; font-size: 10px;">Pedido N° ${pedido.numero_pedido} — ${getNombreCliente(pedido.clientes)}</p>
-              <p style="margin: 0; font-size: 9px; color: #555555;">${pedido.clientes?.direccion || "Dirección no registrada"}</p>
+              <p style="margin: 0; font-weight: bold; font-size: 10px; color: #000000;">Pedido N° ${pedido.numero_pedido} — ${getNombreCliente(pedido.clientes)}</p>
+              <p style="margin: 0; font-size: 9px; font-weight: 600; color: #000000;">${pedido.clientes?.direccion || "Dirección no registrada"}</p>
               <div style="margin-top: 3px; display: flex; flex-direction: column; gap: 1px;">
                 ${(pedido.detalles || [])
                   .map(
                     (item) => `
-                  <div style="display: flex; justify-content: space-between; font-size: 9px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9px; font-weight: 600; color: #000000;">
                     <span>${item.cantidad} x ${item.producto?.nombre}</span>
                     <span>${formatCurrencyPdf(item.subtotal_linea)}</span>
                   </div>
@@ -113,8 +113,8 @@ export const construirTiqueteDespachoHtml = (despacho, pedidosCompletos) => {
         <span>TOTAL DESPACHO:</span><span>${formatCurrencyPdf(totalDespacho)}</span>
       </div>
 
-      <div style="text-align: center; font-size: 9px; color: #333333;">
-        <p style="font-size: 8px; margin: 0;">Sistema de pedidos y despacho desarrollado por TecnoIngenieria B.O.</p>
+      <div style="text-align: center; font-size: 9px; font-weight: 600; color: #000000;">
+        <p style="font-size: 9px; font-weight: 600; margin: 0;">Sistema de pedidos y despacho desarrollado por TecnoIngenieria B.O.</p>
       </div>
     </div>
   `;
