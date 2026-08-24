@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { clientService } from "../services/clientService";
 import {
   validateClientField,
   validateClientForm,
 } from "../utils/clientValidations";
 import { calculateDV } from "../utils/calculateDV";
+import { SearchableSelect } from "../../../components/ui/SearchableSelect";
 import { X, Save, ShieldAlert, Building2, User, Loader2 } from "lucide-react";
 
 export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
@@ -166,6 +167,15 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
 
   const documentosPermitidos = tiposDoc.filter((doc) =>
     isNatural ? doc.aplica_natural : doc.aplica_juridica,
+  );
+
+  const opcionesMunicipios = useMemo(
+    () =>
+      municipios.map((m) => ({
+        value: `${m.nombre} - ${m.departamento}`,
+        label: `${m.nombre} - ${m.departamento}`,
+      })),
+    [municipios],
   );
 
   return (
@@ -436,20 +446,26 @@ export const ClientForm = ({ onSuccess, onCancel, clientToEdit = null }) => {
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Ciudad / Municipio *
                   </label>
-                  <select
-                    name="ciudad_municipio"
+                  <SearchableSelect
+                    options={opcionesMunicipios}
                     value={formData.ciudad_municipio}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.ciudad_municipio ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-                  >
-                    <option value="">Selecciona...</option>
-                    {municipios.map((m) => (
-                      <option key={m.id} value={`${m.nombre} - ${m.departamento}`}>
-                        {m.nombre} - {m.departamento}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) =>
+                      handleChange({
+                        target: { name: "ciudad_municipio", value },
+                      })
+                    }
+                    onBlur={() =>
+                      handleBlur({
+                        target: {
+                          name: "ciudad_municipio",
+                          value: formData.ciudad_municipio,
+                        },
+                      })
+                    }
+                    placeholder="Buscar ciudad o municipio..."
+                    error={Boolean(errors.ciudad_municipio)}
+                    noOptionsMessage="Ninguna ciudad coincide con la búsqueda."
+                  />
                   {errors.ciudad_municipio && (
                     <p className="mt-1 text-xs text-red-500 font-bold">
                       {errors.ciudad_municipio}

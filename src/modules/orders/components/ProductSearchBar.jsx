@@ -1,4 +1,6 @@
-import { Search, Plus } from "lucide-react";
+import { useMemo } from "react";
+import { Plus } from "lucide-react";
+import { SearchableSelect } from "../../../components/ui/SearchableSelect";
 
 /**
  * Buscador de productos con stock visible y botón de agregar al carrito.
@@ -13,27 +15,30 @@ export const ProductSearchBar = ({
   error,
   formatCurrency,
 }) => {
+  const opciones = useMemo(
+    () =>
+      productos.map((p) => ({
+        value: p.id,
+        label: `${p.codigo} - ${p.nombre} (${formatCurrency(p.precio_venta)}) [Stock: ${p.disponible}]${p.disponible <= 0 ? " (AGOTADO)" : ""}`,
+        disabled: p.disponible <= 0,
+      })),
+    [productos, formatCurrency],
+  );
+
   return (
     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
       <label className="block text-sm font-semibold text-slate-700 mb-1.5">
         Agregar Productos
       </label>
       <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-          <select
+        <div className="flex-1">
+          <SearchableSelect
+            options={opciones}
             value={productoSeleccionado}
-            onChange={(e) => onSelectChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl outline-none bg-white text-base focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
-          >
-            <option value="">-- Seleccionar producto --</option>
-            {productos.map((p) => (
-              <option key={p.id} value={p.id} disabled={p.disponible <= 0}>
-                {p.codigo} - {p.nombre} ({formatCurrency(p.precio_venta)})
-                [Stock: {p.disponible}] {p.disponible <= 0 ? "(AGOTADO)" : ""}
-              </option>
-            ))}
-          </select>
+            onChange={onSelectChange}
+            placeholder="Buscar por código o nombre..."
+            noOptionsMessage="Ningún producto coincide con la búsqueda."
+          />
         </div>
         <button
           type="button"

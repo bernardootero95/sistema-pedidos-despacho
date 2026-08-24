@@ -45,7 +45,7 @@ export const productService = {
       .from("productos")
       .select("id, nombre, codigo, precio_venta, iva, inc, disponible")
       .is("eliminado", null)
-      .order("nombre", { ascending: true });
+      .order("codigo", { ascending: true });
 
     if (error)
       throw new Error(
