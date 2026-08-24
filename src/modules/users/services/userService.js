@@ -97,6 +97,23 @@ export const userService = {
   },
 
   /**
+   * Cambia el rol de un usuario ya existente vía RPC transaccional. La
+   * función en el servidor bloquea que un admin se cambie su propio rol
+   * y valida que el rol destino exista y esté activo.
+   */
+  async actualizarRol(userId, rolId) {
+    const { data, error } = await supabase.rpc("actualizar_rol_usuario", {
+      p_user_id: userId,
+      p_rol_id: rolId,
+    });
+
+    if (error)
+      throw new Error("Error al actualizar el rol: " + error.message);
+
+    return data;
+  },
+
+  /**
    * Restablece la contraseña de cualquier usuario (tenga o no correo real)
    * vía la Edge Function reset-user-password, que verifica del lado del
    * servidor que quien llama sea gerencia/soporte.

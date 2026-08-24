@@ -38,12 +38,12 @@ export const validateUserField = (name, value) => {
 };
 
 /**
- * En modo edición (userToEdit presente) solo el correo es editable —
- * usuario, contraseña y rol no se tocan desde este formulario.
+ * En modo edición (userToEdit presente) se puede modificar el correo y
+ * el rol — usuario y contraseña no se tocan desde este formulario.
  */
 export const validateUserForm = (formData, { editMode = false } = {}) => {
   const camposAValidar = editMode
-    ? ["correo"]
+    ? ["correo", "rol_id"]
     : ["nombre_completo", "nombre_usuario", "password", "rol_id", "correo"];
 
   const errors = {};

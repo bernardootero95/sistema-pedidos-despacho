@@ -6,6 +6,7 @@ vi.mock("../../../config/supabase", () => ({
   supabase: {
     from: vi.fn(),
     functions: { invoke: vi.fn() },
+    rpc: vi.fn(),
   },
 }));
 
@@ -40,6 +41,34 @@ describe("userService.actualizarCorreo", () => {
     await expect(
       userService.actualizarCorreo("user-1", "maria@gmail.com"),
     ).rejects.toThrow("Error al actualizar el correo: RLS violation");
+  });
+});
+
+describe("userService.actualizarRol", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("invoca la RPC actualizar_rol_usuario con el id y el rol destino", async () => {
+    supabase.rpc.mockResolvedValue({ data: { id: "user-1" }, error: null });
+
+    await userService.actualizarRol("user-1", 2);
+
+    expect(supabase.rpc).toHaveBeenCalledWith("actualizar_rol_usuario", {
+      p_user_id: "user-1",
+      p_rol_id: 2,
+    });
+  });
+
+  it("propaga el mensaje de error de la RPC (ej. auto-modificación bloqueada)", async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: { message: "No puedes cambiar tu propio rol." },
+    });
+
+    await expect(userService.actualizarRol("user-1", 2)).rejects.toThrow(
+      "Error al actualizar el rol: No puedes cambiar tu propio rol.",
+    );
   });
 });
 

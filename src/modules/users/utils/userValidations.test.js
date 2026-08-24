@@ -71,7 +71,7 @@ describe("validateUserForm", () => {
     );
   });
 
-  it("en modo edición solo valida correo, ignorando los demás campos vacíos", () => {
+  it("en modo edición valida correo y rol_id, ignorando nombre/usuario/password", () => {
     const errores = validateUserForm(
       {
         nombre_completo: "",
@@ -82,6 +82,23 @@ describe("validateUserForm", () => {
       },
       { editMode: true },
     );
-    expect(errores).toEqual({ correo: "Formato de correo inválido." });
+    expect(errores).toEqual({
+      correo: "Formato de correo inválido.",
+      rol_id: "Debes asignar un rol al usuario.",
+    });
+  });
+
+  it("en modo edición no reporta error si correo y rol_id son válidos", () => {
+    const errores = validateUserForm(
+      {
+        nombre_completo: "",
+        nombre_usuario: "",
+        password: "",
+        rol_id: "2",
+        correo: "",
+      },
+      { editMode: true },
+    );
+    expect(errores).toEqual({});
   });
 });

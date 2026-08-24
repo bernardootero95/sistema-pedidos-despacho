@@ -1,22 +1,26 @@
 import { useState } from "react";
 import { userService } from "../services/userService";
 import { validateUserField, validateUserForm } from "../utils/userValidations";
+import { useAuth } from "../../../context/useAuth";
 import { X, Save, ShieldAlert } from "lucide-react";
 
 /**
- * Alta y edición de usuarios. En modo edición (userToEdit presente) solo
- * el correo de recuperación es editable desde aquí: usuario, contraseña y
- * rol no tienen flujo de edición todavía (fuera de alcance de este form).
+ * Alta y edición de usuarios. En modo edición (userToEdit presente) se
+ * pueden modificar el correo de recuperación y el rol; usuario y
+ * contraseña no tienen flujo de edición todavía (fuera de alcance de
+ * este form).
  */
 export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
   const domain = import.meta.env.VITE_COMPANY_DOMAIN || "empresa.com";
+  const { user: usuarioActual } = useAuth();
   const editMode = Boolean(userToEdit);
+  const editandoPropioUsuario = editMode && userToEdit.id === usuarioActual?.id;
 
   const [formData, setFormData] = useState({
     nombre_completo: userToEdit?.nombre_completo || "",
     nombre_usuario: userToEdit?.nombre_usuario || "",
     password: "",
-    rol_id: "",
+    rol_id: userToEdit?.roles?.id ? String(userToEdit.roles.id) : "",
     correo: userToEdit?.correo || "",
   });
 
@@ -45,17 +49,13 @@ export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
     setServerError("");
 
     const newErrors = validateUserForm(formData, { editMode });
-    setTouched(
-      Object.keys(newErrors).length || !editMode
-        ? {
-            nombre_completo: true,
-            nombre_usuario: true,
-            password: true,
-            rol_id: true,
-            correo: true,
-          }
-        : { correo: true },
-    );
+    setTouched({
+      nombre_completo: true,
+      nombre_usuario: true,
+      password: true,
+      rol_id: true,
+      correo: true,
+    });
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) return;
@@ -64,6 +64,14 @@ export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
     try {
       if (editMode) {
         await userService.actualizarCorreo(userToEdit.id, formData.correo.trim());
+
+        const rolOriginal = userToEdit.roles?.id ? String(userToEdit.roles.id) : "";
+        if (formData.rol_id !== rolOriginal) {
+          await userService.actualizarRol(
+            userToEdit.id,
+            parseInt(formData.rol_id),
+          );
+        }
       } else {
         const email = `${formData.nombre_usuario.trim().toLowerCase()}@${domain}`;
         const payload = {
@@ -89,7 +97,7 @@ export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100">
           <h2 className="text-lg font-bold text-slate-900">
-            {editMode ? "Editar Correo de Recuperación" : "Crear Nuevo Usuario"}
+            {editMode ? "Editar Usuario" : "Crear Nuevo Usuario"}
           </h2>
           <button
             onClick={onCancel}
@@ -185,33 +193,40 @@ export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
                     </p>
                   )}
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                    Rol de Sistema
-                  </label>
-                  <select
-                    name="rol_id"
-                    value={formData.rol_id}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${errors.rol_id ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-                  >
-                    <option value="">-- Selecciona un rol --</option>
-                    {roles.map((rol) => (
-                      <option key={rol.id} value={rol.id} className="capitalize">
-                        {rol.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.rol_id && (
-                    <p className="mt-1 text-xs text-red-500 font-bold">
-                      {errors.rol_id}
-                    </p>
-                  )}
-                </div>
               </>
             )}
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Rol de Sistema
+              </label>
+              <select
+                name="rol_id"
+                value={formData.rol_id}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                disabled={editandoPropioUsuario}
+                className={`w-full p-3 bg-slate-50 border rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${errors.rol_id ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+              >
+                <option value="">-- Selecciona un rol --</option>
+                {roles.map((rol) => (
+                  <option key={rol.id} value={rol.id} className="capitalize">
+                    {rol.nombre}
+                  </option>
+                ))}
+              </select>
+              {editandoPropioUsuario ? (
+                <p className="mt-1 text-xs text-slate-400">
+                  No puedes cambiar tu propio rol.
+                </p>
+              ) : (
+                errors.rol_id && (
+                  <p className="mt-1 text-xs text-red-500 font-bold">
+                    {errors.rol_id}
+                  </p>
+                )
+              )}
+            </div>
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
@@ -258,7 +273,7 @@ export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
             {isSubmitting
               ? "Guardando..."
               : editMode
-                ? "Guardar Correo"
+                ? "Guardar Cambios"
                 : "Guardar Usuario"}
           </button>
         </div>
