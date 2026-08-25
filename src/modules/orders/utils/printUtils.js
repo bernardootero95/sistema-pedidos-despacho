@@ -90,7 +90,7 @@ export const construirComprobantePedidoHtml = (pedidoCompleto) => {
         </div>
       </div>
 
-      <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; display: flex; flex-direction: column; gap: 4px; font-size: 10px;">
+      <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; display: flex; flex-direction: column; gap: 4px; font-size: 10px; font-weight: 600; color: #000000;">
         <div style="display: flex; justify-content: space-between;"><span>SUBTOTAL:</span><span>${formatCurrencyPdf(subtotalGeneral)}</span></div>
         <div style="display: flex; justify-content: space-between;"><span>IVA 19%:</span><span>${formatCurrencyPdf(acumIva19)}</span></div>
         <div style="display: flex; justify-content: space-between;"><span>IVA 5%:</span><span>${formatCurrencyPdf(acumIva5)}</span></div>
