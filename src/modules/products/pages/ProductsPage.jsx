@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { productService } from "../services/productService";
 import { ProductForm } from "../components/ProductForm";
 import { ProductImportModal } from "../components/ProductImportModal";
@@ -20,7 +20,39 @@ import {
   Tag,
   AlertTriangle,
   FileSpreadsheet,
+  Layers,
+  Snowflake,
 } from "lucide-react";
+
+/**
+ * Íconos que marcan si el producto tiene precios especiales configurados
+ * (franjas al por mayor y/o precio frío) — solo indicador visual, la
+ * gestión real de esos precios vive en el propio ProductForm.
+ */
+const BadgesPreciosEspeciales = ({ tieneMayorista, tieneFrio }) => {
+  if (!tieneMayorista && !tieneFrio) return null;
+
+  return (
+    <span className="inline-flex items-center gap-1 ml-1.5">
+      {tieneMayorista && (
+        <span
+          title="Tiene precios al por mayor configurados"
+          className="inline-flex items-center justify-center w-5 h-5 bg-purple-50 text-purple-600 rounded"
+        >
+          <Layers className="w-3 h-3" />
+        </span>
+      )}
+      {tieneFrio && (
+        <span
+          title="Tiene precio frío configurado"
+          className="inline-flex items-center justify-center w-5 h-5 bg-cyan-50 text-cyan-600 rounded"
+        >
+          <Snowflake className="w-3 h-3" />
+        </span>
+      )}
+    </span>
+  );
+};
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat("es-CO", {
@@ -132,6 +164,16 @@ const ProductDetailsModal = ({ product, onClose }) => {
                   </p>
                 </div>
               </div>
+              {product.precio_frio != null && (
+                <div className="pt-2 border-t border-emerald-200/50 mt-2">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 flex items-center gap-1">
+                    <Snowflake className="w-3 h-3" /> Precio Frío
+                  </p>
+                  <p className="font-bold text-cyan-700">
+                    {formatCurrency(product.precio_frio)}
+                  </p>
+                </div>
+              )}
               <div className="pt-2 border-t border-emerald-200/50 mt-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">
                   Stock Disponible
@@ -178,6 +220,24 @@ export const ProductsPage = () => {
   const [productToView, setProductToView] = useState(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
+  // Set de producto_id con al menos una franja de mayorista activa, solo
+  // para pintar el indicador en la lista — independiente de la paginación
+  // de productos porque son todas las franjas del catálogo, no por página.
+  const [productosConMayorista, setProductosConMayorista] = useState(
+    new Set(),
+  );
+
+  const cargarProductosConMayorista = () => {
+    productService
+      .getTodosPreciosMayoristas()
+      .then((tiers) =>
+        setProductosConMayorista(new Set(tiers.map((t) => t.producto_id))),
+      )
+      .catch(() => {}); // Indicador secundario: si falla, simplemente no se muestra.
+  };
+
+  useEffect(cargarProductosConMayorista, []);
+
   const handleImportSuccess = () => {
     setIsImportOpen(false);
     showSuccess("Productos importados correctamente.");
@@ -193,6 +253,7 @@ export const ProductsPage = () => {
     setIsFormOpen(false);
     setProductToEdit(null);
     cargarProductos();
+    cargarProductosConMayorista();
   };
 
   const handleToggleEstado = async (id, estadoActual) => {
@@ -295,8 +356,12 @@ export const ProductsPage = () => {
                   <span className="text-[10px] font-black text-slate-400 tracking-wider mb-1 block">
                     {product.codigo}
                   </span>
-                  <h4 className="font-bold text-slate-900 text-sm leading-snug">
+                  <h4 className="font-bold text-slate-900 text-sm leading-snug flex items-center flex-wrap">
                     {product.nombre}
+                    <BadgesPreciosEspeciales
+                      tieneMayorista={productosConMayorista.has(product.id)}
+                      tieneFrio={product.precio_frio != null}
+                    />
                   </h4>
                 </div>
                 <span
@@ -384,7 +449,13 @@ export const ProductsPage = () => {
                     <p className="text-[10px] font-black text-slate-400 tracking-wider mb-0.5">
                       {product.codigo}
                     </p>
-                    <p className="font-bold text-slate-900">{product.nombre}</p>
+                    <p className="font-bold text-slate-900 flex items-center flex-wrap">
+                      {product.nombre}
+                      <BadgesPreciosEspeciales
+                        tieneMayorista={productosConMayorista.has(product.id)}
+                        tieneFrio={product.precio_frio != null}
+                      />
+                    </p>
                   </td>
                   <td className="py-4 px-6">
                     <p className="font-semibold text-slate-700">
