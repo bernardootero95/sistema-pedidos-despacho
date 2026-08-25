@@ -18,28 +18,54 @@ const resolverPrecioMayoristaPreview = (tiersMayoristas, cantidad) => {
     (t) => t.cantidad_minima <= cantidad,
   );
 
-  // Si alguna franja califica por cantidad, se usa la de mayor umbral; si
-  // ninguna califica (se está forzando mayorista igual), se usa la más
-  // económica disponible — mismo criterio que resolver_precio_pedido.
+  // Si alguna franja califica por cantidad, se usa la de mayor umbral (el
+  // mejor descuento que se alcanza). Si ninguna califica y aun así se
+  // fuerza mayorista, se usa la franja de entrada (menor cantidad_minima)
+  // — el descuento más conservador, no el más profundo — mismo criterio
+  // que resolver_precio_pedido en el servidor.
   if (calificantes.length > 0) {
     return calificantes.reduce((mayor, t) =>
       t.cantidad_minima > mayor.cantidad_minima ? t : mayor,
     ).precio;
   }
-  return tiersMayoristas.reduce((menor, t) =>
-    t.cantidad_minima < menor.cantidad_minima ? t : menor,
+  return tiersMayoristas.reduce((entrada, t) =>
+    t.cantidad_minima < entrada.cantidad_minima ? t : entrada,
   ).precio;
 };
 
-/** Precio unitario vigente de una línea al cambiar su cantidad: si está en
- * modo mayorista, se re-resuelve la franja para la nueva cantidad; en
- * cualquier otro modo el precio no depende de la cantidad. */
-const precioParaCantidad = (item, cantidad) => {
-  if (item.tipo_precio !== "mayorista") return item.precio_unitario;
-  return (
-    resolverPrecioMayoristaPreview(item.tiersMayoristas, cantidad) ??
-    item.precio_unitario
+/**
+ * Recalcula tipo_precio + precio_unitario de una línea al cambiar su
+ * cantidad. El precio frío nunca depende de la cantidad, así que una vez
+ * activado se mantiene tal cual. El mayorista sí: se activa SOLO por
+ * cantidad — "se calcula según la cantidad" — sin que quien arma el
+ * pedido tenga que activarlo a mano; si ya estaba forzado manualmente
+ * (cambiarTipoPrecio) y la cantidad baja del umbral, se mantiene forzado
+ * en la franja más económica en vez de perder el forzado silenciosamente.
+ */
+const resolverLineaParaCantidad = (item, cantidad) => {
+  if (item.tipo_precio === "frio") {
+    return { tipo_precio: "frio", precio_unitario: item.precio_unitario };
+  }
+
+  const yaEstabaEnMayorista = item.tipo_precio === "mayorista";
+  const calificaPorCantidad = (item.tiersMayoristas || []).some(
+    (t) => t.cantidad_minima <= cantidad,
   );
+
+  if (
+    (calificaPorCantidad || yaEstabaEnMayorista) &&
+    item.tiersMayoristas?.length > 0
+  ) {
+    return {
+      tipo_precio: "mayorista",
+      precio_unitario: resolverPrecioMayoristaPreview(
+        item.tiersMayoristas,
+        cantidad,
+      ),
+    };
+  }
+
+  return { tipo_precio: "normal", precio_unitario: item.precio_venta };
 };
 
 /**
@@ -81,32 +107,46 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
         const nuevo = [...prev];
         const item = nuevo[existeIndex];
         const cantidad = item.cantidad + 1;
-        const precio_unitario = precioParaCantidad(item, cantidad);
+        const { tipo_precio, precio_unitario } = resolverLineaParaCantidad(
+          item,
+          cantidad,
+        );
         nuevo[existeIndex] = {
           ...item,
           cantidad,
+          tipo_precio,
           precio_unitario,
           subtotal_linea: cantidad * precio_unitario,
         };
         return nuevo;
       });
     } else {
+      const itemNuevo = {
+        producto_id: producto.id,
+        nombre: producto.nombre,
+        codigo: producto.codigo,
+        cantidad: 1,
+        precio_unitario: producto.precio_venta,
+        iva_porcentaje: producto.iva || 0,
+        inc_porcentaje: producto.inc || 0,
+        subtotal_linea: producto.precio_venta * 1,
+        disponible: producto.disponible,
+        tipo_precio: "normal",
+        precio_venta: producto.precio_venta,
+        precio_frio: producto.precio_frio ?? null,
+        tiersMayoristas: producto.tiersMayoristas || [],
+      };
+      const { tipo_precio, precio_unitario } = resolverLineaParaCantidad(
+        itemNuevo,
+        1,
+      );
       setCarrito((prev) => [
         ...prev,
         {
-          producto_id: producto.id,
-          nombre: producto.nombre,
-          codigo: producto.codigo,
-          cantidad: 1,
-          precio_unitario: producto.precio_venta,
-          iva_porcentaje: producto.iva || 0,
-          inc_porcentaje: producto.inc || 0,
-          subtotal_linea: producto.precio_venta * 1,
-          disponible: producto.disponible,
-          tipo_precio: "normal",
-          precio_venta: producto.precio_venta,
-          precio_frio: producto.precio_frio ?? null,
-          tiersMayoristas: producto.tiersMayoristas || [],
+          ...itemNuevo,
+          tipo_precio,
+          precio_unitario,
+          subtotal_linea: precio_unitario,
         },
       ]);
     }
@@ -135,10 +175,14 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
 
     setCarrito((prev) => {
       const nuevo = [...prev];
-      const precio_unitario = precioParaCantidad(item, nuevaCantidad);
+      const { tipo_precio, precio_unitario } = resolverLineaParaCantidad(
+        item,
+        nuevaCantidad,
+      );
       nuevo[index] = {
         ...item,
         cantidad: nuevaCantidad,
+        tipo_precio,
         precio_unitario,
         subtotal_linea: nuevaCantidad * precio_unitario,
       };
@@ -162,10 +206,14 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
 
     setCarrito((prev) => {
       const nuevo = [...prev];
-      const precio_unitario = precioParaCantidad(item, cantidadFinal);
+      const { tipo_precio, precio_unitario } = resolverLineaParaCantidad(
+        item,
+        cantidadFinal,
+      );
       nuevo[index] = {
         ...item,
         cantidad: cantidadFinal,
+        tipo_precio,
         precio_unitario,
         subtotal_linea: cantidadFinal * precio_unitario,
       };

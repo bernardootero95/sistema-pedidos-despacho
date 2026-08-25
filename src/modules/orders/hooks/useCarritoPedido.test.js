@@ -157,3 +157,86 @@ describe("useCarritoPedido", () => {
     expect(result.current.totalPedido).toBe(2000);
   });
 });
+
+describe("useCarritoPedido: precio al por mayor automático por cantidad", () => {
+  const productoConMayorista = {
+    id: "p3",
+    nombre: "Producto Mayorista",
+    codigo: "P003",
+    precio_venta: 1000,
+    iva: 19,
+    inc: 0,
+    disponible: 100,
+    precio_frio: null,
+    tiersMayoristas: [
+      { producto_id: "p3", cantidad_minima: 10, precio: 900 },
+      { producto_id: "p3", cantidad_minima: 50, precio: 800 },
+    ],
+  };
+
+  it("no aplica mayorista si la cantidad no alcanza ninguna franja", () => {
+    const { result } = renderHook(() =>
+      useCarritoPedido([productoConMayorista]),
+    );
+    act(() => result.current.agregarAlCarrito("p3"));
+
+    expect(result.current.carrito[0].tipo_precio).toBe("normal");
+    expect(result.current.carrito[0].precio_unitario).toBe(1000);
+  });
+
+  it("aplica la franja automáticamente al alcanzar la cantidad mínima, sin activarla a mano", () => {
+    const { result } = renderHook(() =>
+      useCarritoPedido([productoConMayorista]),
+    );
+    act(() => result.current.agregarAlCarrito("p3"));
+
+    act(() => result.current.actualizarCantidadInput(0, "10"));
+    expect(result.current.carrito[0].tipo_precio).toBe("mayorista");
+    expect(result.current.carrito[0].precio_unitario).toBe(900);
+    expect(result.current.carrito[0].subtotal_linea).toBe(9000);
+  });
+
+  it("sube a la siguiente franja (más barata) al seguir subiendo la cantidad", () => {
+    const { result } = renderHook(() =>
+      useCarritoPedido([productoConMayorista]),
+    );
+    act(() => result.current.agregarAlCarrito("p3"));
+    act(() => result.current.actualizarCantidadInput(0, "10"));
+
+    act(() => result.current.actualizarCantidadInput(0, "50"));
+    expect(result.current.carrito[0].tipo_precio).toBe("mayorista");
+    expect(result.current.carrito[0].precio_unitario).toBe(800);
+  });
+
+  it("si ya estaba en mayorista y la cantidad baja del umbral, se mantiene forzado en la franja de entrada", () => {
+    const { result } = renderHook(() =>
+      useCarritoPedido([productoConMayorista]),
+    );
+    act(() => result.current.agregarAlCarrito("p3"));
+    act(() => result.current.actualizarCantidadInput(0, "10")); // franja 10 -> 900
+
+    act(() => result.current.actualizarCantidadInput(0, "5")); // ya no califica para ninguna
+    expect(result.current.carrito[0].tipo_precio).toBe("mayorista");
+    expect(result.current.carrito[0].precio_unitario).toBe(900); // franja de entrada (menor cantidad_minima)
+  });
+
+  it("cambiarTipoPrecio fuerza mayorista aunque la cantidad no alcance ninguna franja (usa la de entrada, no la más profunda)", () => {
+    const { result } = renderHook(() =>
+      useCarritoPedido([productoConMayorista]),
+    );
+    act(() => result.current.agregarAlCarrito("p3")); // cantidad 1, normal
+
+    act(() => result.current.cambiarTipoPrecio(0, "mayorista"));
+    expect(result.current.carrito[0].tipo_precio).toBe("mayorista");
+    expect(result.current.carrito[0].precio_unitario).toBe(900);
+  });
+
+  it("un producto sin franjas configuradas nunca activa mayorista aunque suba la cantidad", () => {
+    const { result } = renderHook(() => useCarritoPedido(productos)); // p1 sin tiersMayoristas
+    act(() => result.current.agregarAlCarrito("p1"));
+
+    act(() => result.current.actualizarCantidadInput(0, "3"));
+    expect(result.current.carrito[0].tipo_precio).toBe("normal");
+    expect(result.current.carrito[0].precio_unitario).toBe(1000);
+  });
+});
