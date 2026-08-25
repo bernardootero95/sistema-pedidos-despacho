@@ -240,3 +240,53 @@ describe("useCarritoPedido: precio al por mayor automático por cantidad", () =>
     expect(result.current.carrito[0].precio_unitario).toBe(1000);
   });
 });
+
+describe("useCarritoPedido: precio a crédito (manual, no depende de la cantidad)", () => {
+  const productoConCredito = {
+    id: "p4",
+    nombre: "Producto Crédito",
+    codigo: "P004",
+    precio_venta: 1000,
+    iva: 19,
+    inc: 0,
+    disponible: 100,
+    precio_frio: null,
+    precio_credito: 1300,
+    tiersMayoristas: [],
+  };
+
+  it("no se activa solo, hay que forzarlo con cambiarTipoPrecio", () => {
+    const { result } = renderHook(() =>
+      useCarritoPedido([productoConCredito]),
+    );
+    act(() => result.current.agregarAlCarrito("p4"));
+    act(() => result.current.actualizarCantidadInput(0, "20"));
+
+    expect(result.current.carrito[0].tipo_precio).toBe("normal");
+    expect(result.current.carrito[0].precio_unitario).toBe(1000);
+  });
+
+  it("cambiarTipoPrecio aplica el precio a crédito configurado", () => {
+    const { result } = renderHook(() =>
+      useCarritoPedido([productoConCredito]),
+    );
+    act(() => result.current.agregarAlCarrito("p4"));
+
+    act(() => result.current.cambiarTipoPrecio(0, "credito"));
+    expect(result.current.carrito[0].tipo_precio).toBe("credito");
+    expect(result.current.carrito[0].precio_unitario).toBe(1300);
+  });
+
+  it("una vez en crédito, el precio no cambia al modificar la cantidad", () => {
+    const { result } = renderHook(() =>
+      useCarritoPedido([productoConCredito]),
+    );
+    act(() => result.current.agregarAlCarrito("p4"));
+    act(() => result.current.cambiarTipoPrecio(0, "credito"));
+
+    act(() => result.current.modificarCantidad(0, 1));
+    expect(result.current.carrito[0].tipo_precio).toBe("credito");
+    expect(result.current.carrito[0].precio_unitario).toBe(1300);
+    expect(result.current.carrito[0].subtotal_linea).toBe(2600); // 2 * 1300
+  });
+});

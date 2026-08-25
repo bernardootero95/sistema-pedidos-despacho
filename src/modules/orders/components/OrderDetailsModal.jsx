@@ -251,6 +251,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                         V. Unit: {formatCurrency(item.precio_unitario)}
                         {item.tipo_precio === "mayorista" && " (Mayorista)"}
                         {item.tipo_precio === "frio" && " (Frío)"}
+                        {item.tipo_precio === "credito" && " (Crédito)"}
                       </div>
                     </div>
                   ))}

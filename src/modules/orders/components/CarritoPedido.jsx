@@ -1,9 +1,10 @@
-import { Plus, Minus, Trash2, Layers, Snowflake } from "lucide-react";
+import { Plus, Minus, Trash2, Layers, Snowflake, CreditCard } from "lucide-react";
 
 const OPCIONES_TIPO_PRECIO = [
   { value: "normal", label: "Normal" },
   { value: "mayorista", label: "Mayorista", icon: Layers },
   { value: "frio", label: "Frío", icon: Snowflake },
+  { value: "credito", label: "Crédito", icon: CreditCard },
 ];
 
 /**
@@ -12,10 +13,10 @@ const OPCIONES_TIPO_PRECIO = [
  * validación de stock vive en orderValidations.js y se resuelve en el
  * padre (OrderCreatePage) antes de llegar aquí.
  *
- * El selector de tipo de precio por línea (Normal/Mayorista/Frío) solo se
- * muestra si el rol de quien arma el pedido puede usar esa opción
- * (puedeMayorista/puedeFrio, resueltos por el padre desde el rol
- * autenticado) Y el producto de esa línea la tiene configurada — el
+ * El selector de tipo de precio por línea (Normal/Mayorista/Frío/Crédito)
+ * solo se muestra si el rol de quien arma el pedido puede usar esa opción
+ * (puedeMayorista/puedeFrio/puedeCredito, resueltos por el padre desde el
+ * rol autenticado) Y el producto de esa línea la tiene configurada — el
  * servidor vuelve a validar todo esto igual, esto es solo para no
  * mostrar un control que de todas formas el backend va a rechazar.
  */
@@ -29,6 +30,7 @@ export const CarritoPedido = ({
   error,
   puedeMayorista = false,
   puedeFrio = false,
+  puedeCredito = false,
 }) => {
   return (
     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
@@ -53,6 +55,8 @@ export const CarritoPedido = ({
                 return puedeMayorista && item.tiersMayoristas?.length > 0;
               if (op.value === "frio")
                 return puedeFrio && item.precio_frio != null;
+              if (op.value === "credito")
+                return puedeCredito && item.precio_credito != null;
               return false;
             });
             const mostrarSelectorPrecio = opcionesLinea.length > 1;

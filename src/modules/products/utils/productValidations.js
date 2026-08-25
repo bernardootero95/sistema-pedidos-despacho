@@ -45,6 +45,12 @@ const validators = {
     if (Number(value) < 0) return "El precio no puede ser negativo.";
     return "";
   },
+
+  precio_credito: (value) => {
+    if (value === "" || value === null || value === undefined) return ""; // Opcional
+    if (Number(value) < 0) return "El precio no puede ser negativo.";
+    return "";
+  },
 };
 
 /**

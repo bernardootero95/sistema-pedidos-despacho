@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Layers,
   Snowflake,
+  CreditCard,
 } from "lucide-react";
 
 export const OrderDetailsPage = () => {
@@ -300,6 +301,11 @@ export const OrderDetailsPage = () => {
                   {item.tipo_precio === "frio" && (
                     <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
                       <Snowflake className="h-3 w-3" /> Precio frío
+                    </span>
+                  )}
+                  {item.tipo_precio === "credito" && (
+                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                      <CreditCard className="h-3 w-3" /> Precio crédito
                     </span>
                   )}
                 </div>

@@ -44,7 +44,7 @@ export const productService = {
     const { data, error } = await supabase
       .from("productos")
       .select(
-        "id, nombre, codigo, precio_venta, iva, inc, disponible, precio_frio",
+        "id, nombre, codigo, precio_venta, iva, inc, disponible, precio_frio, precio_credito",
       )
       .is("eliminado", null)
       .order("codigo", { ascending: true });

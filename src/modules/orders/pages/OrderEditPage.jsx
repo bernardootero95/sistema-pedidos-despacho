@@ -21,6 +21,7 @@ import { useAuth } from "../../../context/useAuth";
 // Mismos roles que resolver_precio_pedido valida en el servidor.
 const ROLES_MAYORISTA = ["soporte", "gerencia"];
 const ROLES_FRIO = ["soporte", "gerencia", "despachador"];
+const ROLES_CREDITO = ["soporte", "gerencia", "despachador"];
 
 /**
  * Edita un pedido pendiente: mismo carrito/buscador de productos que
@@ -34,6 +35,7 @@ export const OrderEditPage = () => {
   const { user } = useAuth();
   const puedeMayorista = ROLES_MAYORISTA.includes(user?.rol);
   const puedeFrio = ROLES_FRIO.includes(user?.rol);
+  const puedeCredito = ROLES_CREDITO.includes(user?.rol);
 
   const [pedido, setPedido] = useState(null);
   const [productos, setProductos] = useState([]);
@@ -70,7 +72,7 @@ export const OrderEditPage = () => {
             supabase
               .from("productos")
               .select(
-                "id, nombre, codigo, precio_venta, iva, inc, disponible, precio_frio",
+                "id, nombre, codigo, precio_venta, iva, inc, disponible, precio_frio, precio_credito",
               )
               .is("eliminado", null),
             ROLES_MAYORISTA.includes(user?.rol)
@@ -123,6 +125,7 @@ export const OrderEditPage = () => {
             tipo_precio: d.tipo_precio || "normal",
             precio_venta: productoAjustado?.precio_venta ?? Number(d.precio_unitario),
             precio_frio: productoAjustado?.precio_frio ?? null,
+            precio_credito: productoAjustado?.precio_credito ?? null,
             tiersMayoristas: productoAjustado?.tiersMayoristas || [],
           };
         });
@@ -281,6 +284,7 @@ export const OrderEditPage = () => {
           error={errorStock || carritoError}
           puedeMayorista={puedeMayorista}
           puedeFrio={puedeFrio}
+          puedeCredito={puedeCredito}
         />
 
         {/* NOTAS Y TOTAL */}

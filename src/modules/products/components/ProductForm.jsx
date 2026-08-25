@@ -12,6 +12,7 @@ import {
   Package,
   Snowflake,
   Layers,
+  CreditCard,
   Plus,
   Trash2,
   Loader2,
@@ -35,6 +36,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
     clasificacion: productToEdit?.clasificacion || "",
     disponible: productToEdit?.disponible ?? "0",
     precio_frio: productToEdit?.precio_frio ?? "",
+    precio_credito: productToEdit?.precio_credito ?? "",
   });
 
   // Franjas de precio al por mayor: array independiente de formData porque
@@ -156,6 +158,10 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
         disponible: parseInt(formData.disponible, 10) || 0,
         precio_frio:
           formData.precio_frio !== "" ? parseFloat(formData.precio_frio) : null,
+        precio_credito:
+          formData.precio_credito !== ""
+            ? parseFloat(formData.precio_credito)
+            : null,
       };
 
       const productoGuardado = isEditing
@@ -487,6 +493,42 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
                 {errors.precio_frio && (
                   <p className="mt-1 text-xs text-red-500 font-bold">
                     {errors.precio_frio}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5" />
+                  Precio a Crédito (Opcional)
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Solo lo pueden aplicar gerencia, soporte y despachador al
+                  armar un pedido.
+                </p>
+              </div>
+              <div className="max-w-xs">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="precio_credito"
+                    value={formData.precio_credito}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Ej: 6000"
+                    className={`w-full pl-8 p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.precio_credito ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                  />
+                </div>
+                {errors.precio_credito && (
+                  <p className="mt-1 text-xs text-red-500 font-bold">
+                    {errors.precio_credito}
                   </p>
                 )}
               </div>

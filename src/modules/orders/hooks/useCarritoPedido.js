@@ -35,16 +35,16 @@ const resolverPrecioMayoristaPreview = (tiersMayoristas, cantidad) => {
 
 /**
  * Recalcula tipo_precio + precio_unitario de una línea al cambiar su
- * cantidad. El precio frío nunca depende de la cantidad, así que una vez
- * activado se mantiene tal cual. El mayorista sí: se activa SOLO por
+ * cantidad. Frío y crédito nunca dependen de la cantidad, así que una vez
+ * activados se mantienen tal cual. El mayorista sí: se activa SOLO por
  * cantidad — "se calcula según la cantidad" — sin que quien arma el
  * pedido tenga que activarlo a mano; si ya estaba forzado manualmente
  * (cambiarTipoPrecio) y la cantidad baja del umbral, se mantiene forzado
  * en la franja más económica en vez de perder el forzado silenciosamente.
  */
 const resolverLineaParaCantidad = (item, cantidad) => {
-  if (item.tipo_precio === "frio") {
-    return { tipo_precio: "frio", precio_unitario: item.precio_unitario };
+  if (item.tipo_precio === "frio" || item.tipo_precio === "credito") {
+    return { tipo_precio: item.tipo_precio, precio_unitario: item.precio_unitario };
   }
 
   const yaEstabaEnMayorista = item.tipo_precio === "mayorista";
@@ -134,6 +134,7 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
         tipo_precio: "normal",
         precio_venta: producto.precio_venta,
         precio_frio: producto.precio_frio ?? null,
+        precio_credito: producto.precio_credito ?? null,
         tiersMayoristas: producto.tiersMayoristas || [],
       };
       const { tipo_precio, precio_unitario } = resolverLineaParaCantidad(
@@ -222,9 +223,10 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
   };
 
   /**
-   * Cambia el tipo de precio (normal/mayorista/frio) de una línea ya
-   * agregada. El precio mostrado es solo un preview local — el servidor
-   * lo recalcula de todas formas al guardar (ver resolver_precio_pedido).
+   * Cambia el tipo de precio (normal/mayorista/frio/credito) de una línea
+   * ya agregada. El precio mostrado es solo un preview local — el
+   * servidor lo recalcula de todas formas al guardar (ver
+   * resolver_precio_pedido).
    */
   const cambiarTipoPrecio = (index, tipoPrecio) => {
     setCarrito((prev) => {
@@ -234,6 +236,8 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
 
       if (tipoPrecio === "frio" && item.precio_frio != null) {
         precio_unitario = item.precio_frio;
+      } else if (tipoPrecio === "credito" && item.precio_credito != null) {
+        precio_unitario = item.precio_credito;
       } else if (tipoPrecio === "mayorista") {
         precio_unitario =
           resolverPrecioMayoristaPreview(item.tiersMayoristas, item.cantidad) ??

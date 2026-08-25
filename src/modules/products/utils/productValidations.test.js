@@ -21,6 +21,23 @@ describe("validateProductField: precio_frio", () => {
   });
 });
 
+describe("validateProductField: precio_credito", () => {
+  it("es opcional", () => {
+    expect(validateProductField("precio_credito", "")).toBe("");
+    expect(validateProductField("precio_credito", null)).toBe("");
+  });
+
+  it("rechaza valores negativos", () => {
+    expect(validateProductField("precio_credito", "-100")).toBe(
+      "El precio no puede ser negativo.",
+    );
+  });
+
+  it("acepta un precio válido", () => {
+    expect(validateProductField("precio_credito", "6000")).toBe("");
+  });
+});
+
 describe("validateTierMayorista", () => {
   it("exige cantidad_minima mayor a 0", () => {
     const errores = validateTierMayorista({ cantidad_minima: "0", precio: "100" });

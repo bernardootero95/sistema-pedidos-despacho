@@ -22,15 +22,17 @@ import {
   FileSpreadsheet,
   Layers,
   Snowflake,
+  CreditCard,
 } from "lucide-react";
 
 /**
  * Íconos que marcan si el producto tiene precios especiales configurados
- * (franjas al por mayor y/o precio frío) — solo indicador visual, la
- * gestión real de esos precios vive en el propio ProductForm.
+ * (franjas al por mayor, precio frío y/o precio a crédito) — solo
+ * indicador visual, la gestión real de esos precios vive en el propio
+ * ProductForm.
  */
-const BadgesPreciosEspeciales = ({ tieneMayorista, tieneFrio }) => {
-  if (!tieneMayorista && !tieneFrio) return null;
+const BadgesPreciosEspeciales = ({ tieneMayorista, tieneFrio, tieneCredito }) => {
+  if (!tieneMayorista && !tieneFrio && !tieneCredito) return null;
 
   return (
     <span className="inline-flex items-center gap-1 ml-1.5">
@@ -48,6 +50,14 @@ const BadgesPreciosEspeciales = ({ tieneMayorista, tieneFrio }) => {
           className="inline-flex items-center justify-center w-5 h-5 bg-cyan-50 text-cyan-600 rounded"
         >
           <Snowflake className="w-3 h-3" />
+        </span>
+      )}
+      {tieneCredito && (
+        <span
+          title="Tiene precio a crédito configurado"
+          className="inline-flex items-center justify-center w-5 h-5 bg-amber-50 text-amber-600 rounded"
+        >
+          <CreditCard className="w-3 h-3" />
         </span>
       )}
     </span>
@@ -171,6 +181,16 @@ const ProductDetailsModal = ({ product, onClose }) => {
                   </p>
                   <p className="font-bold text-cyan-700">
                     {formatCurrency(product.precio_frio)}
+                  </p>
+                </div>
+              )}
+              {product.precio_credito != null && (
+                <div className="pt-2 border-t border-emerald-200/50 mt-2">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 flex items-center gap-1">
+                    <CreditCard className="w-3 h-3" /> Precio a Crédito
+                  </p>
+                  <p className="font-bold text-amber-700">
+                    {formatCurrency(product.precio_credito)}
                   </p>
                 </div>
               )}
@@ -361,6 +381,7 @@ export const ProductsPage = () => {
                     <BadgesPreciosEspeciales
                       tieneMayorista={productosConMayorista.has(product.id)}
                       tieneFrio={product.precio_frio != null}
+                      tieneCredito={product.precio_credito != null}
                     />
                   </h4>
                 </div>
