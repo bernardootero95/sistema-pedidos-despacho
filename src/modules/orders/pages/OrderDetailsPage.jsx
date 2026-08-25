@@ -15,6 +15,8 @@ import {
   Loader2,
   AlertCircle,
   ShieldCheck,
+  Layers,
+  Snowflake,
 } from "lucide-react";
 
 export const OrderDetailsPage = () => {
@@ -290,6 +292,16 @@ export const OrderDetailsPage = () => {
                     </span>{" "}
                     • V. Unit: {formatCurrency(item.precio_unitario)}
                   </p>
+                  {item.tipo_precio === "mayorista" && (
+                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                      <Layers className="h-3 w-3" /> Precio mayorista
+                    </span>
+                  )}
+                  {item.tipo_precio === "frio" && (
+                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                      <Snowflake className="h-3 w-3" /> Precio frío
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="text-left sm:text-right pl-11 sm:pl-0">

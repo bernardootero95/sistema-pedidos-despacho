@@ -43,7 +43,9 @@ export const productService = {
   async getProductosActivos() {
     const { data, error } = await supabase
       .from("productos")
-      .select("id, nombre, codigo, precio_venta, iva, inc, disponible")
+      .select(
+        "id, nombre, codigo, precio_venta, iva, inc, disponible, precio_frio",
+      )
       .is("eliminado", null)
       .order("codigo", { ascending: true });
 
@@ -52,6 +54,84 @@ export const productService = {
         "Error al cargar la lista de productos: " + error.message,
       );
     return data || [];
+  },
+
+  /**
+   * Franjas de precio al por mayor activas de TODOS los productos, para
+   * armar un pedido (Nuevo Pedido/Editar Pedido). Sin filtrar por
+   * producto_id porque el buscador ya trae el catálogo completo en
+   * memoria; agrupar acá sería una vuelta extra por cada producto.
+   */
+  async getTodosPreciosMayoristas() {
+    const { data, error } = await supabase
+      .from("productos_precios_mayoristas")
+      .select("producto_id, cantidad_minima, precio")
+      .eq("estado", true)
+      .is("eliminado", null)
+      .order("cantidad_minima", { ascending: true });
+
+    if (error)
+      throw new Error(
+        "Error al cargar los precios al por mayor: " + error.message,
+      );
+    return data || [];
+  },
+
+  /**
+   * Franjas de precio al por mayor de un producto puntual, para precargar
+   * el formulario de edición.
+   */
+  async getPreciosMayoristas(productoId) {
+    const { data, error } = await supabase
+      .from("productos_precios_mayoristas")
+      .select("id, cantidad_minima, precio")
+      .eq("producto_id", productoId)
+      .eq("estado", true)
+      .is("eliminado", null)
+      .order("cantidad_minima", { ascending: true });
+
+    if (error)
+      throw new Error(
+        "Error al cargar los precios al por mayor: " + error.message,
+      );
+    return data || [];
+  },
+
+  /**
+   * Reemplaza el set completo de franjas de precio al por mayor de un
+   * producto: borra las que ya no vienen en `tiers` e inserta el resto.
+   * No es una operación crítica (rule 6 de CLAUDE.md aplica a dinero en
+   * vuelo de un pedido, no a la configuración del catálogo — igual que
+   * crearProducto/actualizarProducto, es un CRUD directo bajo RLS).
+   */
+  async reemplazarPreciosMayoristas(productoId, tiers) {
+    const { error: deleteError } = await supabase
+      .from("productos_precios_mayoristas")
+      .delete()
+      .eq("producto_id", productoId);
+
+    if (deleteError)
+      throw new Error(
+        "Error al actualizar los precios al por mayor: " +
+          deleteError.message,
+      );
+
+    if (tiers.length === 0) return;
+
+    const { error: insertError } = await supabase
+      .from("productos_precios_mayoristas")
+      .insert(
+        tiers.map((t) => ({
+          producto_id: productoId,
+          cantidad_minima: t.cantidad_minima,
+          precio: t.precio,
+        })),
+      );
+
+    if (insertError)
+      throw new Error(
+        "Error al guardar los precios al por mayor: " + insertError.message,
+      );
   },
 
   /**

@@ -246,9 +246,11 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                       </div>
                       <div
                         className="text-[9px] pl-2"
-                        style={{ color: "#555555" }}
+                        style={{ color: "#000000" }}
                       >
                         V. Unit: {formatCurrency(item.precio_unitario)}
+                        {item.tipo_precio === "mayorista" && " (Mayorista)"}
+                        {item.tipo_precio === "frio" && " (Frío)"}
                       </div>
                     </div>
                   ))}

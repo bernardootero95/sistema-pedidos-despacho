@@ -10,11 +10,17 @@ import {
 } from "lucide-react";
 import { supabase } from "../../../config/supabase";
 import { orderService } from "../services/orderService";
+import { productService } from "../../products/services/productService";
 import { validateOrderField } from "../utils/orderValidations";
 import { useCarritoPedido } from "../hooks/useCarritoPedido";
 import { ProductSearchBar } from "../components/ProductSearchBar";
 import { CarritoPedido } from "../components/CarritoPedido";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
+import { useAuth } from "../../../context/useAuth";
+
+// Mismos roles que resolver_precio_pedido valida en el servidor.
+const ROLES_MAYORISTA = ["soporte", "gerencia"];
+const ROLES_FRIO = ["soporte", "gerencia", "despachador"];
 
 /**
  * Edita un pedido pendiente: mismo carrito/buscador de productos que
@@ -25,6 +31,9 @@ import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 export const OrderEditPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const puedeMayorista = ROLES_MAYORISTA.includes(user?.rol);
+  const puedeFrio = ROLES_FRIO.includes(user?.rol);
 
   const [pedido, setPedido] = useState(null);
   const [productos, setProductos] = useState([]);
@@ -44,6 +53,7 @@ export const OrderEditPage = () => {
     agregarAlCarrito: agregarProductoAlCarrito,
     modificarCantidad,
     actualizarCantidadInput,
+    cambiarTipoPrecio,
     eliminarDelCarrito,
     totalPedido,
   } = useCarritoPedido(productos);
@@ -54,13 +64,19 @@ export const OrderEditPage = () => {
         setLoadingData(true);
         setLoadError("");
 
-        const [pedidoData, { data: productosData }] = await Promise.all([
-          orderService.getPedidoCompleto(id),
-          supabase
-            .from("productos")
-            .select("id, nombre, codigo, precio_venta, iva, inc, disponible")
-            .is("eliminado", null),
-        ]);
+        const [pedidoData, { data: productosData }, preciosMayoristas] =
+          await Promise.all([
+            orderService.getPedidoCompleto(id),
+            supabase
+              .from("productos")
+              .select(
+                "id, nombre, codigo, precio_venta, iva, inc, disponible, precio_frio",
+              )
+              .is("eliminado", null),
+            ROLES_MAYORISTA.includes(user?.rol)
+              ? productService.getTodosPreciosMayoristas()
+              : Promise.resolve([]),
+          ]);
 
         setPedido(pedidoData);
 
@@ -79,9 +95,15 @@ export const OrderEditPage = () => {
         // subir hasta ahí, no solo hasta el disponible crudo del catálogo.
         const productosAjustados = (productosData || []).map((p) => {
           const detallePrevio = detalles.find((d) => d.producto_id === p.id);
-          return detallePrevio
-            ? { ...p, disponible: p.disponible + detallePrevio.cantidad }
-            : p;
+          return {
+            ...p,
+            disponible: detallePrevio
+              ? p.disponible + detallePrevio.cantidad
+              : p.disponible,
+            tiersMayoristas: preciosMayoristas.filter(
+              (t) => t.producto_id === p.id,
+            ),
+          };
         });
 
         const itemsIniciales = detalles.map((d) => {
@@ -98,6 +120,10 @@ export const OrderEditPage = () => {
             inc_porcentaje: Number(d.inc_porcentaje),
             subtotal_linea: Number(d.subtotal_linea),
             disponible: productoAjustado?.disponible ?? 0,
+            tipo_precio: d.tipo_precio || "normal",
+            precio_venta: productoAjustado?.precio_venta ?? Number(d.precio_unitario),
+            precio_frio: productoAjustado?.precio_frio ?? null,
+            tiersMayoristas: productoAjustado?.tiersMayoristas || [],
           };
         });
 
@@ -135,6 +161,7 @@ export const OrderEditPage = () => {
     const detallesParaGuardar = carrito.map((item) => ({
       producto_id: item.producto_id,
       cantidad: item.cantidad,
+      tipo_precio: item.tipo_precio,
     }));
 
     try {
@@ -248,9 +275,12 @@ export const OrderEditPage = () => {
           carrito={carrito}
           onModificarCantidad={modificarCantidad}
           onActualizarCantidadInput={actualizarCantidadInput}
+          onCambiarTipoPrecio={cambiarTipoPrecio}
           onEliminar={eliminarDelCarrito}
           formatCurrency={formatCurrency}
           error={errorStock || carritoError}
+          puedeMayorista={puedeMayorista}
+          puedeFrio={puedeFrio}
         />
 
         {/* NOTAS Y TOTAL */}

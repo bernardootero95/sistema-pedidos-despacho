@@ -1,10 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { productService } from "../services/productService";
 import {
   validateProductField,
   validateProductForm,
+  validateTierMayorista,
 } from "../utils/productValidations";
-import { X, Save, ShieldAlert, Package } from "lucide-react";
+import {
+  X,
+  Save,
+  ShieldAlert,
+  Package,
+  Snowflake,
+  Layers,
+  Plus,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 
 export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
   const isEditing = !!productToEdit;
@@ -23,12 +34,63 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
     inc: productToEdit?.inc ?? "0",
     clasificacion: productToEdit?.clasificacion || "",
     disponible: productToEdit?.disponible ?? "0",
+    precio_frio: productToEdit?.precio_frio ?? "",
   });
+
+  // Franjas de precio al por mayor: array independiente de formData porque
+  // no es un campo plano de `productos`, sino filas de una tabla aparte
+  // (productos_precios_mayoristas) que se reemplazan completas al guardar.
+  const [tiers, setTiers] = useState([]);
+  const [tiersErrors, setTiersErrors] = useState([]);
+  const [loadingTiers, setLoadingTiers] = useState(isEditing);
 
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
+
+  useEffect(() => {
+    if (!isEditing) return;
+    productService
+      .getPreciosMayoristas(productToEdit.id)
+      .then((data) =>
+        setTiers(
+          data.map((t) => ({
+            cantidad_minima: String(t.cantidad_minima),
+            precio: String(t.precio),
+          })),
+        ),
+      )
+      .catch((error) => setServerError(error.message))
+      .finally(() => setLoadingTiers(false));
+  }, [isEditing, productToEdit]);
+
+  const agregarTier = () => {
+    setTiers((prev) => [...prev, { cantidad_minima: "", precio: "" }]);
+    setTiersErrors((prev) => [...prev, {}]);
+  };
+
+  const eliminarTier = (index) => {
+    setTiers((prev) => prev.filter((_, i) => i !== index));
+    setTiersErrors((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleTierChange = (index, field, value) => {
+    setTiers((prev) => {
+      const nuevo = [...prev];
+      nuevo[index] = { ...nuevo[index], [field]: value };
+      return nuevo;
+    });
+  };
+
+  const handleTierBlur = (index) => {
+    setTiersErrors((prev) => {
+      const nuevo = [...prev];
+      const otras = tiers.filter((_, i) => i !== index);
+      nuevo[index] = validateTierMayorista(tiers[index], otras);
+      return nuevo;
+    });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,11 +122,21 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
     const newErrors = validateProductForm(formData);
     const allTouched = {};
     Object.keys(formData).forEach((key) => (allTouched[key] = true));
-
     setTouched(allTouched);
     setErrors(newErrors);
 
-    if (Object.keys(newErrors).length > 0) return;
+    const newTiersErrors = tiers.map((tier, index) =>
+      validateTierMayorista(
+        tier,
+        tiers.filter((_, i) => i !== index),
+      ),
+    );
+    setTiersErrors(newTiersErrors);
+
+    const hayErroresTiers = newTiersErrors.some(
+      (e) => Object.keys(e).length > 0,
+    );
+    if (Object.keys(newErrors).length > 0 || hayErroresTiers) return;
 
     setIsSubmitting(true);
     try {
@@ -82,13 +154,21 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
         inc: parseFloat(formData.inc) || 0,
         clasificacion: formData.clasificacion,
         disponible: parseInt(formData.disponible, 10) || 0,
+        precio_frio:
+          formData.precio_frio !== "" ? parseFloat(formData.precio_frio) : null,
       };
 
-      if (isEditing) {
-        await productService.actualizarProducto(productToEdit.id, payload);
-      } else {
-        await productService.crearProducto(payload);
-      }
+      const productoGuardado = isEditing
+        ? await productService.actualizarProducto(productToEdit.id, payload)
+        : await productService.crearProducto(payload);
+
+      await productService.reemplazarPreciosMayoristas(
+        productoGuardado.id,
+        tiers.map((t) => ({
+          cantidad_minima: parseInt(t.cantidad_minima, 10),
+          precio: parseFloat(t.precio),
+        })),
+      );
 
       onSuccess();
     } catch (error) {
@@ -375,6 +455,137 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
                 </div>
               </div>
             </div>
+
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Snowflake className="w-3.5 h-3.5" />
+                  Precio Frío (Opcional)
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Solo lo pueden aplicar gerencia, soporte y despachador al
+                  armar un pedido.
+                </p>
+              </div>
+              <div className="max-w-xs">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="precio_frio"
+                    value={formData.precio_frio}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Ej: 4500"
+                    className={`w-full pl-8 p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.precio_frio ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                  />
+                </div>
+                {errors.precio_frio && (
+                  <p className="mt-1 text-xs text-red-500 font-bold">
+                    {errors.precio_frio}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5" />
+                    Precios al Por Mayor (Opcional)
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Franjas por cantidad mínima. Solo las aplican gerencia y
+                    soporte al armar un pedido.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={agregarTier}
+                  className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary-hover shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Agregar franja
+                </button>
+              </div>
+
+              {loadingTiers ? (
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Cargando franjas...
+                </div>
+              ) : tiers.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">
+                  Sin franjas configuradas.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {tiers.map((tier, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <input
+                          type="number"
+                          step="1"
+                          min="1"
+                          placeholder="Cantidad mínima"
+                          value={tier.cantidad_minima}
+                          onChange={(e) =>
+                            handleTierChange(
+                              index,
+                              "cantidad_minima",
+                              e.target.value,
+                            )
+                          }
+                          onBlur={() => handleTierBlur(index)}
+                          className={`w-full p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${tiersErrors[index]?.cantidad_minima ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                        />
+                        {tiersErrors[index]?.cantidad_minima && (
+                          <p className="mt-1 text-xs text-red-500 font-bold">
+                            {tiersErrors[index].cantidad_minima}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                            $
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="Precio"
+                            value={tier.precio}
+                            onChange={(e) =>
+                              handleTierChange(index, "precio", e.target.value)
+                            }
+                            onBlur={() => handleTierBlur(index)}
+                            className={`w-full pl-8 p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${tiersErrors[index]?.precio ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                          />
+                        </div>
+                        {tiersErrors[index]?.precio && (
+                          <p className="mt-1 text-xs text-red-500 font-bold">
+                            {tiersErrors[index].precio}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => eliminarTier(index)}
+                        className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </form>
         </div>
 
@@ -390,7 +601,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
           <button
             type="submit"
             form="product-form"
-            disabled={isSubmitting}
+            disabled={isSubmitting || loadingTiers}
             className="px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-bold rounded-lg shadow-sm flex items-center gap-2 transition-all"
           >
             <Save className="w-4 h-4" />

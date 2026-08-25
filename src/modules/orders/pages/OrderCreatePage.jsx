@@ -19,9 +19,20 @@ import { ProductSearchBar } from "../components/ProductSearchBar";
 import { CarritoPedido } from "../components/CarritoPedido";
 import { ClientForm } from "../../clients/components/ClientForm";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
+import { useAuth } from "../../../context/useAuth";
+
+// Precio al por mayor: solo soporte/gerencia. Precio frío: además despachador
+// (sí lo ve al facturar), nunca vendedor. Mismos roles que valida
+// resolver_precio_pedido en el servidor — esto es solo para no mostrar un
+// control que el backend rechazaría.
+const ROLES_MAYORISTA = ["soporte", "gerencia"];
+const ROLES_FRIO = ["soporte", "gerencia", "despachador"];
 
 export const OrderCreatePage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const puedeMayorista = ROLES_MAYORISTA.includes(user?.rol);
+  const puedeFrio = ROLES_FRIO.includes(user?.rol);
 
   // --- ESTADOS DE DATOS EXTERNOS ---
   const [clientes, setClientes] = useState([]);
@@ -42,6 +53,7 @@ export const OrderCreatePage = () => {
     agregarAlCarrito: agregarProductoAlCarrito,
     modificarCantidad,
     actualizarCantidadInput,
+    cambiarTipoPrecio,
     eliminarDelCarrito,
     totalPedido,
   } = useCarritoPedido(productos);
@@ -71,13 +83,26 @@ export const OrderCreatePage = () => {
           console.error("Error obteniendo sesión:", authError);
         }
 
-        const [clientesData, productosData] = await Promise.all([
-          clientService.getClientesActivos(),
-          productService.getProductosActivos(),
-        ]);
+        const [clientesData, productosData, preciosMayoristas] =
+          await Promise.all([
+            clientService.getClientesActivos(),
+            productService.getProductosActivos(),
+            // Solo soporte/gerencia las aplican; el resto ni las ve (RLS
+            // igual las filtraría, pero así se evita la consulta de más).
+            ROLES_MAYORISTA.includes(user?.rol)
+              ? productService.getTodosPreciosMayoristas()
+              : Promise.resolve([]),
+          ]);
 
         setClientes(clientesData);
-        setProductos(productosData);
+        setProductos(
+          productosData.map((p) => ({
+            ...p,
+            tiersMayoristas: preciosMayoristas.filter(
+              (t) => t.producto_id === p.id,
+            ),
+          })),
+        );
       } catch (error) {
         console.error("Error cargando datos base:", error);
       } finally {
@@ -85,7 +110,7 @@ export const OrderCreatePage = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [user?.rol]);
 
   // Refresca el selector de clientes tras crear uno nuevo desde el
   // quick-add y lo deja preseleccionado, sin recargar toda la página.
@@ -262,9 +287,12 @@ export const OrderCreatePage = () => {
           carrito={carrito}
           onModificarCantidad={modificarCantidad}
           onActualizarCantidadInput={actualizarCantidadInput}
+          onCambiarTipoPrecio={cambiarTipoPrecio}
           onEliminar={eliminarDelCarrito}
           formatCurrency={formatCurrency}
           error={errorStock || errors.carrito}
+          puedeMayorista={puedeMayorista}
+          puedeFrio={puedeFrio}
         />
 
         {/* NOTAS Y TOTAL */}

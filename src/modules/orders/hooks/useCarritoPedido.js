@@ -5,6 +5,44 @@ import {
 } from "../utils/orderValidations";
 
 /**
+ * Resuelve, en el cliente, qué precio de una franja mayorista aplicaría
+ * para una cantidad dada — solo para mostrar un preview inmediato en el
+ * carrito. La fuente de verdad real vive en resolver_precio_pedido en el
+ * servidor (crear/editar_pedido_transaccional), que recalcula todo desde
+ * cero sin confiar en este valor.
+ */
+const resolverPrecioMayoristaPreview = (tiersMayoristas, cantidad) => {
+  if (!tiersMayoristas || tiersMayoristas.length === 0) return null;
+
+  const calificantes = tiersMayoristas.filter(
+    (t) => t.cantidad_minima <= cantidad,
+  );
+
+  // Si alguna franja califica por cantidad, se usa la de mayor umbral; si
+  // ninguna califica (se está forzando mayorista igual), se usa la más
+  // económica disponible — mismo criterio que resolver_precio_pedido.
+  if (calificantes.length > 0) {
+    return calificantes.reduce((mayor, t) =>
+      t.cantidad_minima > mayor.cantidad_minima ? t : mayor,
+    ).precio;
+  }
+  return tiersMayoristas.reduce((menor, t) =>
+    t.cantidad_minima < menor.cantidad_minima ? t : menor,
+  ).precio;
+};
+
+/** Precio unitario vigente de una línea al cambiar su cantidad: si está en
+ * modo mayorista, se re-resuelve la franja para la nueva cantidad; en
+ * cualquier otro modo el precio no depende de la cantidad. */
+const precioParaCantidad = (item, cantidad) => {
+  if (item.tipo_precio !== "mayorista") return item.precio_unitario;
+  return (
+    resolverPrecioMayoristaPreview(item.tiersMayoristas, cantidad) ??
+    item.precio_unitario
+  );
+};
+
+/**
  * Estado y lógica del carrito de un pedido (agregar/quitar/ajustar
  * cantidad con validación de stock inline). Compartido entre
  * OrderCreatePage y OrderEditPage para no duplicar esta lógica dos veces.
@@ -43,10 +81,12 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
         const nuevo = [...prev];
         const item = nuevo[existeIndex];
         const cantidad = item.cantidad + 1;
+        const precio_unitario = precioParaCantidad(item, cantidad);
         nuevo[existeIndex] = {
           ...item,
           cantidad,
-          subtotal_linea: cantidad * item.precio_unitario,
+          precio_unitario,
+          subtotal_linea: cantidad * precio_unitario,
         };
         return nuevo;
       });
@@ -63,6 +103,10 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
           inc_porcentaje: producto.inc || 0,
           subtotal_linea: producto.precio_venta * 1,
           disponible: producto.disponible,
+          tipo_precio: "normal",
+          precio_venta: producto.precio_venta,
+          precio_frio: producto.precio_frio ?? null,
+          tiersMayoristas: producto.tiersMayoristas || [],
         },
       ]);
     }
@@ -91,10 +135,12 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
 
     setCarrito((prev) => {
       const nuevo = [...prev];
+      const precio_unitario = precioParaCantidad(item, nuevaCantidad);
       nuevo[index] = {
         ...item,
         cantidad: nuevaCantidad,
-        subtotal_linea: nuevaCantidad * item.precio_unitario,
+        precio_unitario,
+        subtotal_linea: nuevaCantidad * precio_unitario,
       };
       return nuevo;
     });
@@ -116,10 +162,41 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
 
     setCarrito((prev) => {
       const nuevo = [...prev];
+      const precio_unitario = precioParaCantidad(item, cantidadFinal);
       nuevo[index] = {
         ...item,
         cantidad: cantidadFinal,
-        subtotal_linea: cantidadFinal * item.precio_unitario,
+        precio_unitario,
+        subtotal_linea: cantidadFinal * precio_unitario,
+      };
+      return nuevo;
+    });
+  };
+
+  /**
+   * Cambia el tipo de precio (normal/mayorista/frio) de una línea ya
+   * agregada. El precio mostrado es solo un preview local — el servidor
+   * lo recalcula de todas formas al guardar (ver resolver_precio_pedido).
+   */
+  const cambiarTipoPrecio = (index, tipoPrecio) => {
+    setCarrito((prev) => {
+      const nuevo = [...prev];
+      const item = nuevo[index];
+      let precio_unitario = item.precio_venta;
+
+      if (tipoPrecio === "frio" && item.precio_frio != null) {
+        precio_unitario = item.precio_frio;
+      } else if (tipoPrecio === "mayorista") {
+        precio_unitario =
+          resolverPrecioMayoristaPreview(item.tiersMayoristas, item.cantidad) ??
+          item.precio_venta;
+      }
+
+      nuevo[index] = {
+        ...item,
+        tipo_precio: tipoPrecio,
+        precio_unitario,
+        subtotal_linea: item.cantidad * precio_unitario,
       };
       return nuevo;
     });
@@ -142,6 +219,7 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
     agregarAlCarrito,
     modificarCantidad,
     actualizarCantidadInput,
+    cambiarTipoPrecio,
     eliminarDelCarrito,
     totalPedido,
   };

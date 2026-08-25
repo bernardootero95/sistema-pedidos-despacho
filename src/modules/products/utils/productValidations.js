@@ -39,6 +39,38 @@ const validators = {
     if (Number(value) < 0) return "La cantidad no puede ser negativa.";
     return "";
   },
+
+  precio_frio: (value) => {
+    if (value === "" || value === null || value === undefined) return ""; // Opcional
+    if (Number(value) < 0) return "El precio no puede ser negativo.";
+    return "";
+  },
+};
+
+/**
+ * Valida una franja de precio al por mayor (cantidad_minima, precio),
+ * ambos como strings de un <input>. Se usa por fila en el repeatable de
+ * ProductForm, no por el diccionario `validators` genérico porque no
+ * corresponde a un campo plano de `formData`.
+ */
+export const validateTierMayorista = (tier, otrasTiers = []) => {
+  const errors = {};
+
+  const cantidad = Number(tier.cantidad_minima);
+  if (tier.cantidad_minima === "" || isNaN(cantidad) || cantidad <= 0) {
+    errors.cantidad_minima = "Ingresa una cantidad mayor a 0.";
+  } else if (
+    otrasTiers.some((t) => Number(t.cantidad_minima) === cantidad)
+  ) {
+    errors.cantidad_minima = "Ya existe una franja con esa cantidad.";
+  }
+
+  const precio = Number(tier.precio);
+  if (tier.precio === "" || isNaN(precio) || precio < 0) {
+    errors.precio = "Ingresa un precio válido (0 o mayor).";
+  }
+
+  return errors;
 };
 
 /**

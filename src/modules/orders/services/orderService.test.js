@@ -31,10 +31,23 @@ describe("orderService.crearPedido", () => {
       p_vendedor_id: "vendedor-1",
       p_notas: "Entregar en la mañana",
       p_detalles: [
-        { producto_id: "prod-1", cantidad: 3 },
-        { producto_id: "prod-2", cantidad: 5 },
+        { producto_id: "prod-1", cantidad: 3, tipo_precio: "normal" },
+        { producto_id: "prod-2", cantidad: 5, tipo_precio: "normal" },
       ],
     });
+  });
+
+  it("propaga el tipo_precio de cada línea (mayorista/frio) a la RPC", async () => {
+    supabase.rpc.mockResolvedValue({ data: {}, error: null });
+
+    await orderService.crearPedido({ cliente_id: "c1", vendedor_id: "v1" }, [
+      { producto_id: "p1", cantidad: 20, tipo_precio: "mayorista" },
+      { producto_id: "p2", cantidad: 1, tipo_precio: "frio" },
+    ]);
+
+    const [, params] = supabase.rpc.mock.calls[0];
+    expect(params.p_detalles[0].tipo_precio).toBe("mayorista");
+    expect(params.p_detalles[1].tipo_precio).toBe("frio");
   });
 
   it("convierte cantidad a Number aunque venga como string desde el formulario", async () => {
@@ -116,8 +129,8 @@ describe("orderService.editarPedido", () => {
       p_pedido_id: "pedido-1",
       p_notas: "Cambio de cantidad",
       p_detalles: [
-        { producto_id: "prod-1", cantidad: 4 },
-        { producto_id: "prod-2", cantidad: 2 },
+        { producto_id: "prod-1", cantidad: 4, tipo_precio: "normal" },
+        { producto_id: "prod-2", cantidad: 2, tipo_precio: "normal" },
       ],
     });
   });
