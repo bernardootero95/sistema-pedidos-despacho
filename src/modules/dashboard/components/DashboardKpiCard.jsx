@@ -3,6 +3,9 @@ const COLOR_CLASSES = {
   blue: "bg-blue-100 text-blue-600",
   amber: "bg-amber-100 text-amber-600",
   purple: "bg-purple-100 text-purple-600",
+  sky: "bg-sky-100 text-sky-600",
+  red: "bg-red-100 text-red-600",
+  slate: "bg-slate-200 text-slate-600",
 };
 
 export const DashboardKpiCard = ({

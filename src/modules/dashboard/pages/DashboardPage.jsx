@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/useAuth";
 import { tenantConfig } from "../../../config/tenant";
 import { dashboardService } from "../services/dashboardService";
+import { userService } from "../../users/services/userService";
 import { DashboardKpiCard } from "../components/DashboardKpiCard";
 import { DailySalesChart } from "../components/DailySalesChart";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
@@ -10,39 +11,65 @@ import {
   ShoppingCart,
   Truck,
   DollarSign,
+  Wallet,
+  CalendarDays,
+  CalendarClock,
   CheckCircle2,
   Clock,
   AlertCircle,
   Loader2,
   PackageX,
   PlusCircle,
+  Users,
 } from "lucide-react";
+
+const RESUMEN_INICIAL = {
+  totalPedidos: 0,
+  pedidosPendientes: 0,
+  pedidosDespachados: 0,
+  pedidosEntregados: 0,
+  pedidosDevueltos: 0,
+  ventaRealDia: 0,
+  ventaRealMes: 0,
+  preventaDia: 0,
+  preventaMes: 0,
+  despachosActivos: 0,
+};
 
 export const DashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const esVendedor = user?.rol === "vendedor";
+  // soporte/gerencia ven la bodega completa y pueden acotar por vendedor;
+  // despachador/repartidor ven la bodega completa pero solo el valor
+  // global (sin filtro); vendedor ve solo lo suyo vía RLS.
+  const puedeFiltrarPorVendedor = ["gerencia", "soporte"].includes(user?.rol);
 
-  const [resumen, setResumen] = useState({
-    ventasTotales: 0,
-    totalPedidos: 0,
-    pedidosPendientes: 0,
-    despachosActivos: 0,
-  });
+  const [resumen, setResumen] = useState(RESUMEN_INICIAL);
   const [ultimosPedidos, setUltimosPedidos] = useState([]);
   const [ventasDiarias, setVentasDiarias] = useState([]);
+  const [vendedores, setVendedores] = useState([]);
+  const [vendedorFiltro, setVendedorFiltro] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Solo para poblar el select del filtro; no depende de la recarga del panel.
   useEffect(() => {
+    if (!puedeFiltrarPorVendedor) return;
+    userService.getVendedores().then(setVendedores).catch(() => {});
+  }, [puedeFiltrarPorVendedor]);
+
+  useEffect(() => {
+    const filtroActivo = puedeFiltrarPorVendedor ? vendedorFiltro : undefined;
+
     const cargarDashboard = async () => {
       try {
         setLoading(true);
         setError("");
         const [resumenData, pedidosData, ventasDiariasData] = await Promise.all([
-          dashboardService.obtenerResumen(),
-          dashboardService.obtenerUltimosPedidos(),
-          dashboardService.obtenerVentasDiarias(),
+          dashboardService.obtenerResumen(filtroActivo),
+          dashboardService.obtenerUltimosPedidos(3, filtroActivo),
+          dashboardService.obtenerVentasDiarias(filtroActivo),
         ]);
         setResumen(resumenData);
         setUltimosPedidos(pedidosData);
@@ -55,7 +82,7 @@ export const DashboardPage = () => {
     };
 
     cargarDashboard();
-  }, []);
+  }, [puedeFiltrarPorVendedor, vendedorFiltro]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("es-CO", {
@@ -154,42 +181,115 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* TARJETAS DE INDICADORES (KPIs) - Adaptables a móvil */}
-      {/* Un vendedor no despacha ni tiene rutas: solo ve sus propias
-          ventas/pedidos (ya acotados por RLS), no despachos ni pendientes
-          de toda la empresa. */}
-      <div
-        className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 ${esVendedor ? "" : "lg:grid-cols-4"}`}
-      >
-        <DashboardKpiCard
-          label="Ventas Totales"
-          value={formatCurrency(resumen.ventasTotales)}
-          icon={DollarSign}
-          color="emerald"
-        />
-        <DashboardKpiCard
-          label="Total Pedidos"
-          value={resumen.totalPedidos}
-          icon={ShoppingCart}
-          color="blue"
-        />
-        {!esVendedor && (
-          <>
-            <DashboardKpiCard
-              label="Por Despachar"
-              value={resumen.pedidosPendientes}
-              icon={Clock}
-              color="amber"
-              valueClassName="text-amber-600"
-            />
+      {/* FILTRO POR VENDEDOR (solo gerencia/soporte) */}
+      {puedeFiltrarPorVendedor && (
+        <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+          <Users className="w-4 h-4 text-slate-400 shrink-0" />
+          <label htmlFor="filtro-vendedor" className="text-sm font-medium text-slate-600 shrink-0">
+            Ver estadísticas de:
+          </label>
+          <select
+            id="filtro-vendedor"
+            value={vendedorFiltro}
+            onChange={(e) => setVendedorFiltro(e.target.value)}
+            className="w-full sm:w-auto px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-700 bg-white"
+          >
+            <option value="">Toda la bodega</option>
+            {vendedores.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.nombre_completo}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* TARJETAS DE VENTAS: real (entregado, ingresa dinero) vs preventa
+          (pendiente/despachado, aún no genera ingreso), día y mes. */}
+      <div>
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">
+          Ventas
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <DashboardKpiCard
+            label="Venta Real Hoy"
+            value={formatCurrency(resumen.ventaRealDia)}
+            icon={DollarSign}
+            color="emerald"
+          />
+          <DashboardKpiCard
+            label="Venta Real del Mes"
+            value={formatCurrency(resumen.ventaRealMes)}
+            icon={Wallet}
+            color="emerald"
+          />
+          <DashboardKpiCard
+            label="Preventa Hoy"
+            value={formatCurrency(resumen.preventaDia)}
+            icon={CalendarDays}
+            color="sky"
+          />
+          <DashboardKpiCard
+            label="Preventa del Mes"
+            value={formatCurrency(resumen.preventaMes)}
+            icon={CalendarClock}
+            color="sky"
+          />
+        </div>
+      </div>
+
+      {/* TARJETAS DE PEDIDOS POR ESTADO */}
+      {/* Un vendedor no despacha ni tiene rutas: solo ve sus propios
+          pedidos (ya acotados por RLS), no rutas activas de toda la
+          empresa. */}
+      <div>
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">
+          Pedidos
+        </h2>
+        <div
+          className={`grid grid-cols-2 gap-3 sm:gap-4 ${esVendedor ? "lg:grid-cols-5" : "lg:grid-cols-3 xl:grid-cols-6"}`}
+        >
+          <DashboardKpiCard
+            label="Total Pedidos"
+            value={resumen.totalPedidos}
+            icon={ShoppingCart}
+            color="blue"
+          />
+          <DashboardKpiCard
+            label="Pendientes"
+            value={resumen.pedidosPendientes}
+            icon={Clock}
+            color="amber"
+            valueClassName="text-amber-600"
+          />
+          <DashboardKpiCard
+            label="En Ruta"
+            value={resumen.pedidosDespachados}
+            icon={Truck}
+            color="purple"
+          />
+          <DashboardKpiCard
+            label="Entregados"
+            value={resumen.pedidosEntregados}
+            icon={CheckCircle2}
+            color="emerald"
+          />
+          <DashboardKpiCard
+            label="Devueltos"
+            value={resumen.pedidosDevueltos}
+            icon={PackageX}
+            color="red"
+            valueClassName="text-red-600"
+          />
+          {!esVendedor && (
             <DashboardKpiCard
               label="Rutas Activas"
               value={resumen.despachosActivos}
               icon={Truck}
-              color="purple"
+              color="slate"
             />
-          </>
-        )}
+          )}
+        </div>
       </div>
 
       {/* VENTAS DIARIAS (últimos 30 días) */}
