@@ -198,6 +198,66 @@ export const orderService = {
   },
 
   /**
+   * Corrige la fecha de entrega de un pedido ya entregado, vía RPC
+   * `actualizar_fecha_entrega_pedido`. Solo gerencia/soporte pueden
+   * llamarla (el RPC lo valida en el servidor); el trigger de auditoría
+   * de pedidos_cabecera deja registrado el antes/después en `auditoria`,
+   * visible en el historial del pedido.
+   *
+   * @param {string} pedidoId
+   * @param {Date|string} fechaEntrega
+   */
+  async actualizarFechaEntrega(pedidoId, fechaEntrega) {
+    const { data, error } = await supabase.rpc("actualizar_fecha_entrega_pedido", {
+      p_pedido_id: pedidoId,
+      p_fecha_entrega: fechaEntrega instanceof Date ? fechaEntrega.toISOString() : fechaEntrega,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Error al corregir la fecha de entrega.");
+    }
+
+    return data;
+  },
+
+  /**
+   * Historial de cambios de un pedido (quién y cuándo lo actualizó),
+   * leído de la tabla genérica `auditoria` que ya usa el trigger
+   * `registrar_auditoria` (mismo mecanismo que perfiles/roles). Se acota
+   * al pedido puntual porque la RLS de `auditoria` ya filtra por lo que
+   * el usuario puede ver, no hace falta filtrar más acá.
+   *
+   * @param {string} pedidoId
+   */
+  async obtenerHistorialPedido(pedidoId) {
+    const { data, error } = await supabase
+      .from("auditoria")
+      .select("id, operacion, datos_anteriores, datos_nuevos, usuario_id, creado")
+      .eq("tabla", "pedidos_cabecera")
+      .eq("registro_id", pedidoId)
+      .order("creado", { ascending: false });
+
+    if (error) {
+      throw new Error(`Error al obtener el historial del pedido: ${error.message}`);
+    }
+
+    const usuarioIds = [...new Set((data || []).map((r) => r.usuario_id).filter(Boolean))];
+    let perfilesPorId = {};
+    if (usuarioIds.length > 0) {
+      const { data: perfiles } = await supabase
+        .from("perfiles")
+        .select("id, nombre_completo")
+        .in("id", usuarioIds);
+      perfilesPorId = Object.fromEntries((perfiles || []).map((p) => [p.id, p.nombre_completo]));
+    }
+
+    return (data || []).map((registro) => ({
+      ...registro,
+      usuarioNombre: perfilesPorId[registro.usuario_id] || null,
+    }));
+  },
+
+  /**
    * Anula un pedido mediante la función RPC `anular_pedido_transaccional`.
    * A diferencia del update directo que reemplazó, esta función devuelve al
    * stock las cantidades del pedido cuando corresponde (pedidos

@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
 import { useToast } from "../../../context/useToast";
+import { useAuth } from "../../../context/useAuth";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
+import { OrderDeliveryDate } from "../components/OrderDeliveryDate";
+import { OrderHistoryTimeline } from "../components/OrderHistoryTimeline";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -27,6 +30,8 @@ export const OrderDetailsPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { showError } = useToast();
+  const { user } = useAuth();
+  const puedeEditarEntrega = ["gerencia", "soporte"].includes(user?.rol);
 
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +39,19 @@ export const OrderDetailsPage = () => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [anteriorId, setAnteriorId] = useState(null);
   const [siguienteId, setSiguienteId] = useState(null);
+  // Fuerza el remount (y por lo tanto el refetch) del historial cuando se
+  // corrige la fecha de entrega, ya que el pedidoId no cambia.
+  const [historialVersion, setHistorialVersion] = useState(0);
+
+  const recargarPedido = useCallback(async () => {
+    try {
+      const data = await orderService.getPedidoCompleto(id);
+      setPedido(data);
+      setHistorialVersion((v) => v + 1);
+    } catch (err) {
+      showError(err.message);
+    }
+  }, [id, showError]);
 
   // Filtros/búsqueda que el usuario tenía activos en el listado, propagados
   // por la URL para que "siguiente/anterior" recorra el mismo subconjunto
@@ -306,6 +324,11 @@ export const OrderDetailsPage = () => {
               {pedido.vendedor?.nombre_completo || "No asignado"}
             </p>
           </div>
+          <OrderDeliveryDate
+            pedido={pedido}
+            puedeEditar={puedeEditarEntrega}
+            onUpdated={recargarPedido}
+          />
           {pedido.notas && (
             <div className="pt-2 border-t border-slate-100">
               <p className="text-xs text-slate-500 font-semibold">
@@ -410,6 +433,9 @@ export const OrderDetailsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* HISTORIAL DE ESTADOS */}
+      <OrderHistoryTimeline key={historialVersion} pedidoId={pedido.id} />
     </div>
   );
 };
