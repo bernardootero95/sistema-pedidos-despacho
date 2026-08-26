@@ -29,6 +29,26 @@ export const userService = {
   },
 
   /**
+   * Obtiene los vendedores activos, para poblar el filtro por vendedor del
+   * listado de pedidos. La política RLS "Lectura de perfiles activos"
+   * permite esta lectura a cualquier usuario autenticado, no solo a
+   * soporte/gerencia.
+   */
+  async getVendedores() {
+    const { data, error } = await supabase
+      .from("perfiles")
+      .select("id, nombre_completo, roles!inner(nombre)")
+      .eq("roles.nombre", "vendedor")
+      .eq("estado", true)
+      .is("eliminado", null)
+      .order("nombre_completo", { ascending: true });
+
+    if (error)
+      throw new Error("Error al cargar la lista de vendedores: " + error.message);
+    return data;
+  },
+
+  /**
    * Obtiene los roles disponibles para futuros formularios de creación/edición
    */
   async getRoles() {

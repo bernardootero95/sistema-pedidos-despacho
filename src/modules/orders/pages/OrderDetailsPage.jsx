@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
 import { useToast } from "../../../context/useToast";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import {
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   Printer,
   Edit,
   Package,
@@ -23,12 +25,26 @@ import {
 export const OrderDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { showError } = useToast();
 
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
+  const [anteriorId, setAnteriorId] = useState(null);
+  const [siguienteId, setSiguienteId] = useState(null);
+
+  // Filtros/búsqueda que el usuario tenía activos en el listado, propagados
+  // por la URL para que "siguiente/anterior" recorra el mismo subconjunto
+  // de pedidos que la tabla, no todo el universo de pedidos.
+  const searchTermActivo = searchParams.get("q") || "";
+  const filtrosActivos = {
+    estado: searchParams.get("estado") || "",
+    fechaDesde: searchParams.get("desde") || "",
+    fechaHasta: searchParams.get("hasta") || "",
+    vendedorId: searchParams.get("vendedor") || "",
+  };
 
   useEffect(() => {
     const fetchPedido = async () => {
@@ -36,6 +52,23 @@ export const OrderDetailsPage = () => {
         setLoading(true);
         const data = await orderService.getPedidoCompleto(id);
         setPedido(data);
+
+        const [anterior, siguiente] = await Promise.all([
+          orderService.getPedidoAdyacente({
+            creadoActual: data.creado,
+            direccion: "anterior",
+            searchTerm: searchTermActivo,
+            filtros: filtrosActivos,
+          }),
+          orderService.getPedidoAdyacente({
+            creadoActual: data.creado,
+            direccion: "siguiente",
+            searchTerm: searchTermActivo,
+            filtros: filtrosActivos,
+          }),
+        ]);
+        setAnteriorId(anterior?.id ?? null);
+        setSiguienteId(siguiente?.id ?? null);
       } catch (err) {
         console.error(err);
         setError("No se pudo cargar la información completa del pedido.");
@@ -47,7 +80,14 @@ export const OrderDetailsPage = () => {
     if (id) {
       fetchPedido();
     }
-  }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, searchParams.toString()]);
+
+  const irAAdyacente = (adyacenteId) => {
+    if (!adyacenteId) return;
+    const qs = searchParams.toString();
+    navigate(`/orders/${adyacenteId}${qs ? `?${qs}` : ""}`);
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("es-CO", {
@@ -62,8 +102,6 @@ export const OrderDetailsPage = () => {
       year: "numeric",
       month: "long",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
@@ -175,6 +213,24 @@ export const OrderDetailsPage = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => irAAdyacente(anteriorId)}
+              disabled={!anteriorId}
+              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-100"
+              title="Pedido anterior"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => irAAdyacente(siguienteId)}
+              disabled={!siguienteId}
+              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-100"
+              title="Pedido siguiente"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900">

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
+import { userService } from "../../users/services/userService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
 import { useToast } from "../../../context/useToast";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
@@ -19,7 +20,10 @@ import {
   ChevronRight,
   User,
   Calendar,
+  X,
 } from "lucide-react";
+
+const ESTADOS_PEDIDO = ["pendiente", "en_ruta", "entregado", "anulado"];
 
 export const OrdersPage = () => {
   const navigate = useNavigate();
@@ -36,15 +40,49 @@ export const OrdersPage = () => {
     setCurrentPage,
     totalPages,
     totalItems,
+    filters: filtros,
+    setFilters: setFiltros,
     reload: cargarPedidos,
-  } = usePaginatedList((page, pageSize, search) =>
-    orderService.getPedidosPaginados(page, pageSize, search),
+  } = usePaginatedList((page, pageSize, search, filtrosActivos) =>
+    orderService.getPedidosPaginados(page, pageSize, search, filtrosActivos),
   );
   const [printingId, setPrintingId] = useState(null);
+  const [vendedores, setVendedores] = useState([]);
 
   // Si un vendedor crea un pedido o cambia de estado desde otra sesión,
   // esta lista se refresca sola en vez de esperar a que alguien recargue.
   useRealtimeSubscription("pedidos_cabecera", () => cargarPedidos());
+
+  // Solo para poblar el select del filtro; no depende de la paginación.
+  useEffect(() => {
+    userService.getVendedores().then(setVendedores).catch(() => {});
+  }, []);
+
+  const handleFilterChange = (campo, valor) => {
+    setFiltros({ ...filtros, [campo]: valor });
+  };
+
+  const limpiarFiltros = () => setFiltros({});
+
+  const hayFiltrosActivos = Object.values(filtros).some(Boolean);
+
+  // Query string con los filtros/búsqueda activos, para que el detalle del
+  // pedido pueda navegar "siguiente/anterior" sobre el mismo subconjunto
+  // que el usuario ve en la tabla.
+  const buildFiltrosQueryString = () => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set("q", searchTerm);
+    if (filtros.estado) params.set("estado", filtros.estado);
+    if (filtros.fechaDesde) params.set("desde", filtros.fechaDesde);
+    if (filtros.fechaHasta) params.set("hasta", filtros.fechaHasta);
+    if (filtros.vendedorId) params.set("vendedor", filtros.vendedorId);
+    return params.toString();
+  };
+
+  const irADetalle = (pedidoId) => {
+    const qs = buildFiltrosQueryString();
+    navigate(`/orders/${pedidoId}${qs ? `?${qs}` : ""}`);
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("es-CO", {
@@ -59,8 +97,6 @@ export const OrdersPage = () => {
       year: "numeric",
       month: "short",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
@@ -133,7 +169,7 @@ export const OrdersPage = () => {
       </button>
 
       <button
-        onClick={() => navigate(`/orders/${pedido.id}`)}
+        onClick={() => irADetalle(pedido.id)}
         className="p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
         title="Ver Ficha Completa"
       >
@@ -186,20 +222,85 @@ export const OrdersPage = () => {
 
       {/* ÁREA DE CONTENIDO */}
       <div className="p-4 sm:p-6 flex-1 flex flex-col min-h-0">
-        <div className="bg-white p-4 rounded-t-xl border border-slate-200 border-b-0 flex items-center justify-between">
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar por número de pedido..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-            />
-          </div>
-          <div className="text-sm text-slate-500 hidden sm:block">
-            Total:{" "}
-            <span className="font-semibold text-slate-700">{totalItems}</span>
+        <div className="bg-white p-4 rounded-t-xl border border-slate-200 border-b-0 flex flex-col gap-3">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+            <div className="relative w-full lg:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Buscar por número de pedido..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              />
+            </div>
+
+            <select
+              value={filtros.estado || ""}
+              onChange={(e) => handleFilterChange("estado", e.target.value)}
+              className="w-full lg:w-auto px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-700 bg-white"
+            >
+              <option value="">Todos los estados</option>
+              {ESTADOS_PEDIDO.map((estado) => (
+                <option key={estado} value={estado}>
+                  {estado.charAt(0).toUpperCase() +
+                    estado.slice(1).replace("_", " ")}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex items-center gap-2 w-full lg:w-auto">
+              <input
+                type="date"
+                aria-label="Fecha desde"
+                value={filtros.fechaDesde || ""}
+                onChange={(e) =>
+                  handleFilterChange("fechaDesde", e.target.value)
+                }
+                className="w-full lg:w-auto px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-700"
+              />
+              <span className="text-slate-400 text-sm">–</span>
+              <input
+                type="date"
+                aria-label="Fecha hasta"
+                value={filtros.fechaHasta || ""}
+                onChange={(e) =>
+                  handleFilterChange("fechaHasta", e.target.value)
+                }
+                className="w-full lg:w-auto px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-700"
+              />
+            </div>
+
+            <select
+              value={filtros.vendedorId || ""}
+              onChange={(e) =>
+                handleFilterChange("vendedorId", e.target.value)
+              }
+              className="w-full lg:w-auto px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-700 bg-white"
+            >
+              <option value="">Todos los vendedores</option>
+              {vendedores.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nombre_completo}
+                </option>
+              ))}
+            </select>
+
+            {hayFiltrosActivos && (
+              <button
+                onClick={limpiarFiltros}
+                className="flex items-center gap-1 text-sm text-slate-500 hover:text-red-600 transition-colors shrink-0"
+              >
+                <X className="h-4 w-4" /> Limpiar filtros
+              </button>
+            )}
+
+            <div className="text-sm text-slate-500 lg:ml-auto hidden sm:block whitespace-nowrap">
+              Total:{" "}
+              <span className="font-semibold text-slate-700">
+                {totalItems}
+              </span>
+            </div>
           </div>
         </div>
 

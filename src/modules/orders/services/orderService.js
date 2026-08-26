@@ -1,8 +1,25 @@
 // src/modules/orders/services/orderService.js
 import { supabase } from "../../../config/supabase";
 
+/**
+ * Aplica al query los filtros de estado, rango de fechas y vendedor
+ * compartidos entre el listado paginado y la búsqueda de pedido adyacente
+ * (siguiente/anterior), para que ambos recorran exactamente el mismo
+ * subconjunto de pedidos.
+ */
+function aplicarFiltrosPedidos(query, filtros = {}) {
+  const { estado, fechaDesde, fechaHasta, vendedorId } = filtros;
+
+  if (estado) query = query.eq("estado", estado);
+  if (vendedorId) query = query.eq("vendedor_id", vendedorId);
+  if (fechaDesde) query = query.gte("fecha_pedido", `${fechaDesde}T00:00:00`);
+  if (fechaHasta) query = query.lte("fecha_pedido", `${fechaHasta}T23:59:59.999`);
+
+  return query;
+}
+
 export const orderService = {
-  async getPedidosPaginados(page = 1, limit = 10, searchTerm = "") {
+  async getPedidosPaginados(page = 1, limit = 10, searchTerm = "", filtros = {}) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
@@ -22,6 +39,8 @@ export const orderService = {
     if (searchTerm) {
       query = query.ilike("numero_pedido", `%${searchTerm}%`);
     }
+
+    query = aplicarFiltrosPedidos(query, filtros);
 
     const { data, error, count } = await query.range(from, to);
     if (error) throw error;
@@ -137,6 +156,44 @@ export const orderService = {
       .single();
 
     if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Busca el pedido inmediatamente anterior o siguiente a `creadoActual`
+   * respetando el mismo orden (`creado` descendente) y los mismos filtros
+   * de búsqueda/estado/fecha/vendedor que el listado, para que la
+   * navegación siguiente/anterior desde el detalle de un pedido recorra
+   * exactamente el mismo conjunto que el usuario tenía filtrado en la
+   * tabla. "anterior" = fila de arriba (más reciente), "siguiente" = fila
+   * de abajo (más antigua).
+   *
+   * @param {{ creadoActual: string, direccion: "anterior"|"siguiente", searchTerm?: string, filtros?: Object }} params
+   */
+  async getPedidoAdyacente({
+    creadoActual,
+    direccion,
+    searchTerm = "",
+    filtros = {},
+  }) {
+    let query = supabase
+      .from("pedidos_cabecera")
+      .select("id")
+      .is("eliminado", null);
+
+    if (searchTerm) {
+      query = query.ilike("numero_pedido", `%${searchTerm}%`);
+    }
+    query = aplicarFiltrosPedidos(query, filtros);
+
+    if (direccion === "anterior") {
+      query = query.gt("creado", creadoActual).order("creado", { ascending: true });
+    } else {
+      query = query.lt("creado", creadoActual).order("creado", { ascending: false });
+    }
+
+    const { data, error } = await query.limit(1).maybeSingle();
+    if (error) throw new Error("Error al buscar el pedido adyacente: " + error.message);
     return data;
   },
 

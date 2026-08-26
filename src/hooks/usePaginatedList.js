@@ -15,7 +15,13 @@ import { useState, useEffect } from "react";
  * setState sincrónico dentro de useEffect (mismo fix ya aplicado en los
  * listados existentes).
  *
- * @param {(page: number, pageSize: number, search: string) => Promise<{data: unknown[], total: number, totalPages: number}>} fetchPage
+ * `filters` es un objeto opcional de filtros adicionales (estado, rango de
+ * fechas, etc.) controlado por quien use el hook. A diferencia de la
+ * búsqueda de texto no lleva debounce propio (son selects/date pickers, no
+ * tecleo), pero sí resetea a la página 1 igual que la búsqueda para no
+ * dejar al usuario en una página fuera de rango.
+ *
+ * @param {(page: number, pageSize: number, search: string, filters: Object) => Promise<{data: unknown[], total: number, totalPages: number}>} fetchPage
  * @param {{ pageSize?: number, debounceMs?: number }} [options]
  */
 export function usePaginatedList(fetchPage, options = {}) {
@@ -30,6 +36,7 @@ export function usePaginatedList(fetchPage, options = {}) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [filters, setFiltersState] = useState({});
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -39,6 +46,11 @@ export function usePaginatedList(fetchPage, options = {}) {
     return () => clearTimeout(handler);
   }, [searchTerm, debounceMs]);
 
+  const setFilters = (newFilters) => {
+    setFiltersState(newFilters);
+    setCurrentPage(1);
+  };
+
   const reload = async () => {
     try {
       setLoading(true);
@@ -47,7 +59,7 @@ export function usePaginatedList(fetchPage, options = {}) {
         data,
         total,
         totalPages: pages,
-      } = await fetchPage(currentPage, pageSize, debouncedSearch);
+      } = await fetchPage(currentPage, pageSize, debouncedSearch, filters);
       setItems(data);
       setTotalItems(total);
       setTotalPages(pages);
@@ -61,7 +73,7 @@ export function usePaginatedList(fetchPage, options = {}) {
   useEffect(() => {
     queueMicrotask(reload);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearch]);
+  }, [currentPage, debouncedSearch, JSON.stringify(filters)]);
 
   return {
     items,
@@ -75,6 +87,8 @@ export function usePaginatedList(fetchPage, options = {}) {
     setCurrentPage,
     totalPages,
     totalItems,
+    filters,
+    setFilters,
     reload,
   };
 }
