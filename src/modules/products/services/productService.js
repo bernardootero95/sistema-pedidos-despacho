@@ -1,5 +1,15 @@
 import { supabase } from "../../../config/supabase";
 
+/**
+ * productos.disponible es NUMERIC: PostgREST lo serializa como string para
+ * no perder precisión, igual que ya pasa con precio_venta/total. Se
+ * normaliza acá (frontera con Supabase) para que el resto de la app pueda
+ * sumar/restar sobre `disponible` con seguridad, sin que cada consumidor
+ * tenga que acordarse de envolverlo en Number().
+ */
+const normalizarProducto = (producto) =>
+  producto ? { ...producto, disponible: Number(producto.disponible) } : producto;
+
 export const productService = {
   /**
    * Obtiene la lista de productos con paginación y búsqueda (Server-Side)
@@ -29,7 +39,7 @@ export const productService = {
       );
 
     return {
-      data,
+      data: (data || []).map(normalizarProducto),
       total: count,
       totalPages: Math.ceil(count / limit),
     };
@@ -53,7 +63,7 @@ export const productService = {
       throw new Error(
         "Error al cargar la lista de productos: " + error.message,
       );
-    return data || [];
+    return (data || []).map(normalizarProducto);
   },
 
   /**
@@ -151,7 +161,7 @@ export const productService = {
       throw new Error("Error al crear el producto: " + error.message);
     }
 
-    return data;
+    return normalizarProducto(data);
   },
 
   /**
@@ -179,7 +189,7 @@ export const productService = {
       throw new Error("Error al actualizar el producto: " + error.message);
     }
 
-    return data;
+    return normalizarProducto(data);
   },
 
   /**
@@ -197,7 +207,7 @@ export const productService = {
       throw new Error(
         "Error al cambiar el estado del producto: " + error.message,
       );
-    return data;
+    return normalizarProducto(data);
   },
 
   /**
@@ -213,7 +223,7 @@ export const productService = {
 
     if (error)
       throw new Error("Error al eliminar el producto: " + error.message);
-    return data;
+    return normalizarProducto(data);
   },
 
   /**

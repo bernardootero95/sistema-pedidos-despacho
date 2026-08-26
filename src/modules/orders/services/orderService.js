@@ -156,7 +156,19 @@ export const orderService = {
       .single();
 
     if (error) throw error;
-    return data;
+
+    // pedidos_detalle.cantidad es NUMERIC: PostgREST lo serializa como
+    // string para no perder precisión, igual que ya pasa con
+    // precio_unitario/subtotal_linea. Se normaliza acá (no en cada
+    // consumidor) para que cantidad + delta, etc. no termine concatenando
+    // texto en vez de sumar.
+    return {
+      ...data,
+      detalles: (data.detalles || []).map((d) => ({
+        ...d,
+        cantidad: Number(d.cantidad),
+      })),
+    };
   },
 
   /**

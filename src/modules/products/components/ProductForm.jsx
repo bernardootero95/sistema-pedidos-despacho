@@ -155,7 +155,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
         iva: parseFloat(formData.iva) || 0,
         inc: parseFloat(formData.inc) || 0,
         clasificacion: formData.clasificacion,
-        disponible: parseInt(formData.disponible, 10) || 0,
+        disponible: parseFloat(formData.disponible) || 0,
         precio_frio:
           formData.precio_frio !== "" ? parseFloat(formData.precio_frio) : null,
         precio_credito:
@@ -422,7 +422,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
                   </label>
                   <input
                     type="number"
-                    step="1"
+                    step="0.01"
                     name="disponible"
                     value={formData.disponible}
                     onChange={handleChange}

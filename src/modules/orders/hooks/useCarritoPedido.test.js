@@ -125,7 +125,7 @@ describe("useCarritoPedido", () => {
     expect(result.current.carrito).toHaveLength(0);
   });
 
-  it("actualizarCantidadInput acepta solo dígitos y limita al stock disponible", () => {
+  it("actualizarCantidadInput acepta números y limita al stock disponible", () => {
     const { result } = renderHook(() => useCarritoPedido(productos));
     act(() => result.current.agregarAlCarrito("p1"));
 
@@ -137,6 +137,27 @@ describe("useCarritoPedido", () => {
     act(() => result.current.actualizarCantidadInput(0, "10"));
     expect(result.current.carrito[0].cantidad).toBe(3);
     expect(result.current.errorStock).toMatch(/stock máximo/i);
+  });
+
+  it("actualizarCantidadInput acepta decimales (media caja, etc.)", () => {
+    const { result } = renderHook(() => useCarritoPedido(productos));
+    act(() => result.current.agregarAlCarrito("p1"));
+
+    act(() => result.current.actualizarCantidadInput(0, "1.5"));
+    expect(result.current.carrito[0].cantidad).toBe(1.5);
+    expect(result.current.carrito[0].subtotal_linea).toBe(1500);
+
+    // También acepta coma como separador decimal
+    act(() => result.current.actualizarCantidadInput(0, "2,5"));
+    expect(result.current.carrito[0].cantidad).toBe(2.5);
+  });
+
+  it("actualizarCantidadInput ignora un valor no numérico", () => {
+    const { result } = renderHook(() => useCarritoPedido(productos));
+    act(() => result.current.agregarAlCarrito("p1"));
+
+    act(() => result.current.actualizarCantidadInput(0, "abc"));
+    expect(result.current.carrito[0].cantidad).toBe(1);
   });
 
   it("eliminarDelCarrito quita la línea indicada", () => {

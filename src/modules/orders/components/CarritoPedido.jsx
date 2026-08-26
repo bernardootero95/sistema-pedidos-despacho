@@ -115,12 +115,15 @@ export const CarritoPedido = ({
                       <Minus className="h-4 w-4" />
                     </button>
                     <input
-                      type="text"
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0"
                       value={item.cantidad}
                       onChange={(e) =>
                         onActualizarCantidadInput(index, e.target.value)
                       }
-                      className="w-12 text-center font-bold text-slate-800 outline-none text-sm bg-transparent"
+                      className="w-16 text-center font-bold text-slate-800 outline-none text-sm bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                     <button
                       type="button"

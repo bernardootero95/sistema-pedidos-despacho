@@ -193,8 +193,12 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
   };
 
   const actualizarCantidadInput = (index, valorTexto) => {
-    const cantidadStr = valorTexto.toString().replace(/\D/g, "");
-    const cantidad = cantidadStr === "" ? 1 : Number(cantidadStr);
+    // Acepta decimales (media caja, etc.): se admite "," como separador
+    // además de "." porque el input es type="number" con locale variable.
+    const texto = valorTexto.toString().trim().replace(",", ".");
+    const cantidad = texto === "" ? 1 : Number(texto);
+    if (Number.isNaN(cantidad)) return;
+
     const item = carrito[index];
 
     const stockError = validarStockParaCantidad(

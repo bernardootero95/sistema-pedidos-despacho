@@ -78,7 +78,7 @@ export const parseProductosExcel = async (file) => {
       codigo,
       nombre,
       precio_venta,
-      disponible: Math.round(disponible),
+      disponible,
     });
   });
 

@@ -8,7 +8,6 @@ import {
   ShoppingCart,
   Lock,
 } from "lucide-react";
-import { supabase } from "../../../config/supabase";
 import { orderService } from "../services/orderService";
 import { productService } from "../../products/services/productService";
 import { validateOrderField } from "../utils/orderValidations";
@@ -66,15 +65,10 @@ export const OrderEditPage = () => {
         setLoadingData(true);
         setLoadError("");
 
-        const [pedidoData, { data: productosData }, preciosMayoristas] =
+        const [pedidoData, productosData, preciosMayoristas] =
           await Promise.all([
             orderService.getPedidoCompleto(id),
-            supabase
-              .from("productos")
-              .select(
-                "id, nombre, codigo, precio_venta, iva, inc, disponible, precio_frio, precio_credito",
-              )
-              .is("eliminado", null),
+            productService.getProductosActivos(),
             ROLES_MAYORISTA.includes(user?.rol)
               ? productService.getTodosPreciosMayoristas()
               : Promise.resolve([]),
