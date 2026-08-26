@@ -48,13 +48,18 @@ const resolverLineaParaCantidad = (item, cantidad) => {
     return { tipo_precio: item.tipo_precio, precio_unitario: item.precio_unitario };
   }
 
-  const yaEstabaEnMayorista = item.tipo_precio === "mayorista";
+  // `mayoristaForzado` (marcado solo por cambiarTipoPrecio) es lo único
+  // que mantiene el precio mayorista pegado por debajo del umbral: eso es
+  // un descuento discrecional (solo soporte/gerencia pueden forzarlo,
+  // ver resolver_precio_pedido). Si nunca se forzó a mano, el precio se
+  // recalcula 100% desde la cantidad actual — es un dato parametrizado,
+  // no depende de un estado previo ni del rol de quien factura.
   const calificaPorCantidad = (item.tiersMayoristas || []).some(
     (t) => t.cantidad_minima <= cantidad,
   );
 
   if (
-    (calificaPorCantidad || yaEstabaEnMayorista) &&
+    (calificaPorCantidad || item.mayoristaForzado) &&
     item.tiersMayoristas?.length > 0
   ) {
     return {
@@ -137,6 +142,7 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
         precio_frio: producto.precio_frio ?? null,
         precio_credito: producto.precio_credito ?? null,
         tiersMayoristas: producto.tiersMayoristas || [],
+        mayoristaForzado: false,
       };
       const { tipo_precio, precio_unitario } = resolverLineaParaCantidad(
         itemNuevo,
@@ -257,6 +263,10 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
         tipo_precio: tipoPrecio,
         precio_unitario,
         subtotal_linea: item.cantidad * precio_unitario,
+        // Solo esta elección explícita puede mantener "mayorista" pegado
+        // por debajo del umbral (ver resolverLineaParaCantidad); un
+        // cambio de cantidad nunca la activa por su cuenta.
+        mayoristaForzado: tipoPrecio === "mayorista",
       };
       return nuevo;
     });

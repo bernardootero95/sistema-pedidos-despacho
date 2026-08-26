@@ -240,16 +240,29 @@ describe("useCarritoPedido: precio al por mayor automático por cantidad", () =>
     expect(result.current.carrito[0].precio_unitario).toBe(800);
   });
 
-  it("si ya estaba en mayorista y la cantidad baja del umbral, se mantiene forzado en la franja de entrada", () => {
+  it("si se forzó a mano y la cantidad baja del umbral, se mantiene forzado en la franja de entrada", () => {
     const { result } = renderHook(() =>
       useCarritoPedido([productoConMayorista]),
     );
     act(() => result.current.agregarAlCarrito("p3"));
-    act(() => result.current.actualizarCantidadInput(0, "10")); // franja 10 -> 900
+    act(() => result.current.actualizarCantidadInput(0, "10")); // franja 10 -> 900, automático
+    act(() => result.current.cambiarTipoPrecio(0, "mayorista")); // ahora sí forzado a mano
 
     act(() => result.current.actualizarCantidadInput(0, "5")); // ya no califica para ninguna
     expect(result.current.carrito[0].tipo_precio).toBe("mayorista");
     expect(result.current.carrito[0].precio_unitario).toBe(900); // franja de entrada (menor cantidad_minima)
+  });
+
+  it("si NO se forzó a mano y la cantidad baja del umbral, vuelve a normal (nunca quedó forzado por accidente)", () => {
+    const { result } = renderHook(() =>
+      useCarritoPedido([productoConMayorista]),
+    );
+    act(() => result.current.agregarAlCarrito("p3"));
+    act(() => result.current.actualizarCantidadInput(0, "10")); // franja 10 -> 900, automático
+
+    act(() => result.current.actualizarCantidadInput(0, "5")); // ya no califica para ninguna
+    expect(result.current.carrito[0].tipo_precio).toBe("normal");
+    expect(result.current.carrito[0].precio_unitario).toBe(1000);
   });
 
   it("cambiarTipoPrecio fuerza mayorista aunque la cantidad no alcance ninguna franja (usa la de entrada, no la más profunda)", () => {
