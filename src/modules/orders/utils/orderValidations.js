@@ -1,5 +1,31 @@
 // src/modules/orders/utils/orderValidations.js
 
+// El negocio solo maneja cuartos de unidad (media caja, cuarto de caja,
+// etc.), no cualquier decimal — mismo límite que aplica
+// crear/editar_pedido_transaccional en el servidor (fuente de verdad).
+const INCREMENTO_CANTIDAD = 0.25;
+
+/**
+ * true si `cantidad` es un múltiplo exacto de INCREMENTO_CANTIDAD (.25,
+ * .5, .75 o entero). Se compara en centavos (enteros) en vez de dividir
+ * decimales para no toparse con errores de precisión de punto flotante
+ * (ej. 0.1 + 0.2 !== 0.3).
+ */
+export const esFraccionValida = (cantidad) => {
+  const centavos = Math.round(Number(cantidad) * 100);
+  return centavos % (INCREMENTO_CANTIDAD * 100) === 0;
+};
+
+/**
+ * Redondea `cantidad` al múltiplo de INCREMENTO_CANTIDAD más cercano, para
+ * corregir en el input lo que el usuario haya escrito (ej. "1.3" -> 1.25).
+ */
+export const redondearACantidadValida = (cantidad) => {
+  const centavos = Math.round(Number(cantidad) * 100);
+  const paso = INCREMENTO_CANTIDAD * 100;
+  return (Math.round(centavos / paso) * paso) / 100;
+};
+
 /**
  * Diccionario de reglas de validación para la Cabecera y el Detalle del Pedido.
  */
@@ -29,6 +55,9 @@ export const validators = {
       }
       if (Number(item.cantidad) <= 0) {
         return `El producto "${item.nombre || "Desconocido"}" debe tener una cantidad mayor a 0.`;
+      }
+      if (!esFraccionValida(item.cantidad)) {
+        return `La cantidad de "${item.nombre || "Desconocido"}" debe ser un número entero o con fracción .25, .5 o .75.`;
       }
       if (Number(item.precio_unitario) < 0) {
         return `El precio del producto "${item.nombre || "Desconocido"}" es inválido.`;

@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   validarStockParaAgregar,
   validarStockParaCantidad,
+  redondearACantidadValida,
 } from "../utils/orderValidations";
 
 /**
@@ -196,9 +197,12 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
     // Acepta decimales (media caja, etc.): se admite "," como separador
     // además de "." porque el input es type="number" con locale variable.
     const texto = valorTexto.toString().trim().replace(",", ".");
-    const cantidad = texto === "" ? 1 : Number(texto);
-    if (Number.isNaN(cantidad)) return;
+    const cantidadEscrita = texto === "" ? 1 : Number(texto);
+    if (Number.isNaN(cantidadEscrita)) return;
 
+    // Solo se manejan cuartos de unidad: lo que se escriba se ajusta al
+    // múltiplo de .25 más cercano (ej. "1.3" -> 1.25).
+    const cantidad = redondearACantidadValida(cantidadEscrita);
     const item = carrito[index];
 
     const stockError = validarStockParaCantidad(

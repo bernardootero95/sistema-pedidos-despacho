@@ -117,7 +117,7 @@ export const CarritoPedido = ({
                     <input
                       type="number"
                       inputMode="decimal"
-                      step="0.01"
+                      step="0.25"
                       min="0"
                       value={item.cantidad}
                       onChange={(e) =>

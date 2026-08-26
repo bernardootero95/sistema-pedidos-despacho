@@ -152,6 +152,17 @@ describe("useCarritoPedido", () => {
     expect(result.current.carrito[0].cantidad).toBe(2.5);
   });
 
+  it("actualizarCantidadInput redondea al cuarto de unidad más cercano", () => {
+    const { result } = renderHook(() => useCarritoPedido(productos));
+    act(() => result.current.agregarAlCarrito("p1"));
+
+    act(() => result.current.actualizarCantidadInput(0, "1.3"));
+    expect(result.current.carrito[0].cantidad).toBe(1.25);
+
+    act(() => result.current.actualizarCantidadInput(0, "1.4"));
+    expect(result.current.carrito[0].cantidad).toBe(1.5);
+  });
+
   it("actualizarCantidadInput ignora un valor no numérico", () => {
     const { result } = renderHook(() => useCarritoPedido(productos));
     act(() => result.current.agregarAlCarrito("p1"));
