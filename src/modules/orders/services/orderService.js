@@ -197,19 +197,23 @@ export const orderService = {
     return data;
   },
 
+  /**
+   * Anula un pedido mediante la función RPC `anular_pedido_transaccional`.
+   * A diferencia del update directo que reemplazó, esta función devuelve al
+   * stock las cantidades del pedido cuando corresponde (pedidos
+   * 'pendiente'/'despachado' aún no entregados), evitando que quede
+   * descontado para siempre en `productos.disponible`.
+   */
   async anularPedido(id, motivoAnulacion) {
-    const { data, error } = await supabase
-      .from("pedidos_cabecera")
-      .update({
-        estado: "anulado",
-        notas: motivoAnulacion,
-        actualizado: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc("anular_pedido_transaccional", {
+      p_pedido_id: id,
+      p_motivo: motivoAnulacion,
+    });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(error.message || "Error al anular el pedido.");
+    }
+
     return data;
   },
 };
