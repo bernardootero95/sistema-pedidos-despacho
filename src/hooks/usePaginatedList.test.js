@@ -18,7 +18,7 @@ describe("usePaginatedList", () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(fetchPage).toHaveBeenCalledWith(1, 10, "");
+    expect(fetchPage).toHaveBeenCalledWith(1, 10, "", {});
     expect(result.current.items).toEqual([{ id: 1 }]);
     expect(result.current.totalItems).toBe(1);
   });
@@ -28,7 +28,7 @@ describe("usePaginatedList", () => {
 
     renderHook(() => usePaginatedList(fetchPage, { pageSize: 25 }));
 
-    await waitFor(() => expect(fetchPage).toHaveBeenCalledWith(1, 25, ""));
+    await waitFor(() => expect(fetchPage).toHaveBeenCalledWith(1, 25, "", {}));
   });
 
   it("hace debounce de la búsqueda y resetea a la página 1 en un solo fetch (no dos)", async () => {
@@ -55,7 +55,29 @@ describe("usePaginatedList", () => {
     // aquí se verían 2 llamadas más (una con la página vieja, otra con la
     // reseteada) en vez de 1 sola. Es justo el bug que este hook evita.
     await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(3));
-    expect(fetchPage).toHaveBeenLastCalledWith(1, 10, "acme");
+    expect(fetchPage).toHaveBeenLastCalledWith(1, 10, "acme", {});
+    expect(result.current.currentPage).toBe(1);
+  });
+
+  it("al cambiar los filtros resetea a la página 1 y los pasa al fetch", async () => {
+    const fetchPage = vi.fn().mockResolvedValue(paginaVacia);
+    const { result } = renderHook(() => usePaginatedList(fetchPage));
+
+    await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      result.current.setCurrentPage(2);
+    });
+    await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(2));
+
+    act(() => {
+      result.current.setFilters({ estado: "pendiente" });
+    });
+
+    await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(3));
+    expect(fetchPage).toHaveBeenLastCalledWith(1, 10, "", {
+      estado: "pendiente",
+    });
     expect(result.current.currentPage).toBe(1);
   });
 
