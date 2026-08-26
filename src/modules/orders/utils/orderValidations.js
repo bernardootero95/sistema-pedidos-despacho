@@ -27,6 +27,33 @@ export const redondearACantidadValida = (cantidad) => {
 };
 
 /**
+ * Roles con permiso para anular cualquier pedido, sin restricción de
+ * estado ni de dueño — mismo criterio sin restricciones que usa
+ * anular_pedido_transaccional en el servidor.
+ */
+const ROLES_ANULAR_SIN_RESTRICCION = ["gerencia", "soporte", "despachador"];
+
+/**
+ * Replica en el cliente la regla de permiso de `anular_pedido_transaccional`
+ * (fuente de verdad real: el RPC la vuelve a validar en el servidor), para
+ * ocultar la opción "Anular" a quien de todas formas el backend rechazaría.
+ * gerencia/soporte/despachador pueden anular cualquier pedido; vendedor
+ * solo el suyo propio y solo si sigue 'pendiente'.
+ *
+ * @param {{ estado: string, vendedor_id: string }} pedido
+ * @param {{ id: string, rol: string }} user
+ */
+export const puedeAnularPedido = (pedido, user) => {
+  if (!pedido || !user || pedido.estado === "anulado") return false;
+  if (ROLES_ANULAR_SIN_RESTRICCION.includes(user.rol)) return true;
+  return (
+    user.rol === "vendedor" &&
+    pedido.estado === "pendiente" &&
+    pedido.vendedor_id === user.id
+  );
+};
+
+/**
  * Diccionario de reglas de validación para la Cabecera y el Detalle del Pedido.
  */
 export const validators = {

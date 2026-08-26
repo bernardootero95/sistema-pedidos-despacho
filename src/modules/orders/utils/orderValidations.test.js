@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   esFraccionValida,
   redondearACantidadValida,
+  puedeAnularPedido,
   validators,
 } from "./orderValidations";
 
@@ -57,5 +58,47 @@ describe("validators.carrito: rechaza fracciones no permitidas", () => {
       },
     ];
     expect(validators.carrito(carrito)).toBe("");
+  });
+});
+
+describe("puedeAnularPedido", () => {
+  const pedidoPendientePropio = { estado: "pendiente", vendedor_id: "v1" };
+  const pedidoDespachado = { estado: "despachado", vendedor_id: "v1" };
+  const pedidoAnulado = { estado: "anulado", vendedor_id: "v1" };
+
+  it.each(["gerencia", "soporte", "despachador"])(
+    "%s puede anular cualquier pedido no anulado, sin importar el dueño",
+    (rol) => {
+      const user = { id: "otro", rol };
+      expect(puedeAnularPedido(pedidoPendientePropio, user)).toBe(true);
+      expect(puedeAnularPedido(pedidoDespachado, user)).toBe(true);
+    },
+  );
+
+  it.each(["gerencia", "soporte", "despachador"])(
+    "%s no puede anular un pedido ya anulado",
+    (rol) => {
+      expect(puedeAnularPedido(pedidoAnulado, { id: "otro", rol })).toBe(false);
+    },
+  );
+
+  it("vendedor puede anular su propio pedido pendiente", () => {
+    const user = { id: "v1", rol: "vendedor" };
+    expect(puedeAnularPedido(pedidoPendientePropio, user)).toBe(true);
+  });
+
+  it("vendedor no puede anular el pedido de otro vendedor", () => {
+    const user = { id: "v2", rol: "vendedor" };
+    expect(puedeAnularPedido(pedidoPendientePropio, user)).toBe(false);
+  });
+
+  it("vendedor no puede anular su propio pedido si ya no está pendiente", () => {
+    const user = { id: "v1", rol: "vendedor" };
+    expect(puedeAnularPedido(pedidoDespachado, user)).toBe(false);
+  });
+
+  it("repartidor no puede anular ningún pedido", () => {
+    const user = { id: "otro", rol: "repartidor" };
+    expect(puedeAnularPedido(pedidoPendientePropio, user)).toBe(false);
   });
 });

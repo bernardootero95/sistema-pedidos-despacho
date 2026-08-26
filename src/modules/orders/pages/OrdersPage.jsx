@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { userService } from "../../users/services/userService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
+import { puedeAnularPedido } from "../utils/orderValidations";
 import { useToast } from "../../../context/useToast";
+import { useAuth } from "../../../context/useAuth";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { usePaginatedList } from "../../../hooks/usePaginatedList";
 import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
@@ -28,6 +30,7 @@ const ESTADOS_PEDIDO = ["pendiente", "en_ruta", "entregado", "anulado"];
 export const OrdersPage = () => {
   const navigate = useNavigate();
   const { showError } = useToast();
+  const { user } = useAuth();
 
   const {
     items: pedidos,
@@ -186,7 +189,7 @@ export const OrdersPage = () => {
         </button>
       )}
 
-      {pedido.estado !== "anulado" && (
+      {puedeAnularPedido(pedido, user) && (
         <button
           onClick={() => handleAnular(pedido.id, pedido.numero_pedido)}
           className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
