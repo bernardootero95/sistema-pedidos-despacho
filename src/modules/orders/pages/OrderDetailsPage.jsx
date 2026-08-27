@@ -225,9 +225,9 @@ export const OrderDetailsPage = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/pedidos")}
             className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors"
-            title="Volver"
+            title="Volver al listado"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
