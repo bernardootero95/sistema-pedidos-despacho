@@ -7,6 +7,8 @@ import { useAuth } from "../../../context/useAuth";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { OrderDeliveryDate } from "../components/OrderDeliveryDate";
 import { OrderHistoryTimeline } from "../components/OrderHistoryTimeline";
+import { OrderDispatchInfo } from "../components/OrderDispatchInfo";
+import { ROLES_MODULO } from "../../../config/roles";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -33,6 +35,7 @@ export const OrderDetailsPage = () => {
   const { user } = useAuth();
   const puedeEditarEntrega = ["gerencia", "soporte"].includes(user?.rol);
   const puedeVerHistorial = ["gerencia", "soporte"].includes(user?.rol);
+  const puedeVerDespacho = ROLES_MODULO.DESPACHOS.includes(user?.rol);
 
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -329,6 +332,11 @@ export const OrderDetailsPage = () => {
             pedido={pedido}
             puedeEditar={puedeEditarEntrega}
             onUpdated={recargarPedido}
+          />
+          <OrderDispatchInfo
+            key={pedido.id}
+            pedido={pedido}
+            puedeVerDespacho={puedeVerDespacho}
           />
           {pedido.notas && (
             <div className="pt-2 border-t border-slate-100">

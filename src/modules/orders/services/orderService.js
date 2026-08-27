@@ -270,6 +270,30 @@ export const orderService = {
   },
 
   /**
+   * Despacho (más reciente) al que fue asignado el pedido, para mostrar su
+   * número en el detalle. Devuelve `null` si el pedido nunca se asignó a
+   * una ruta o si la RLS de despachos_pedidos no deja ver la fila (ver
+   * política `despachos_pedidos_select_operativo`).
+   *
+   * @param {string} pedidoId
+   */
+  async obtenerDespachoDePedido(pedidoId) {
+    const { data, error } = await supabase
+      .from("despachos_pedidos")
+      .select("despachos ( id, codigo_despacho, estado )")
+      .eq("pedido_id", pedidoId)
+      .order("creado_en", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Error al obtener el despacho del pedido: ${error.message}`);
+    }
+
+    return data?.despachos || null;
+  },
+
+  /**
    * Anula un pedido mediante la función RPC `anular_pedido_transaccional`.
    * A diferencia del update directo que reemplazó, esta función devuelve al
    * stock las cantidades del pedido cuando corresponde (pedidos
