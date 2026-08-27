@@ -32,6 +32,7 @@ export const OrderDetailsPage = () => {
   const { showError } = useToast();
   const { user } = useAuth();
   const puedeEditarEntrega = ["gerencia", "soporte"].includes(user?.rol);
+  const puedeVerHistorial = ["gerencia", "soporte"].includes(user?.rol);
 
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -434,8 +435,10 @@ export const OrderDetailsPage = () => {
         </div>
       </div>
 
-      {/* HISTORIAL DE ESTADOS */}
-      <OrderHistoryTimeline key={historialVersion} pedidoId={pedido.id} />
+      {/* HISTORIAL DE ESTADOS: solo soporte/gerencia */}
+      {puedeVerHistorial && (
+        <OrderHistoryTimeline key={historialVersion} pedidoId={pedido.id} />
+      )}
     </div>
   );
 };
