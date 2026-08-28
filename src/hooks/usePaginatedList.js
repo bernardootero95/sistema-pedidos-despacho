@@ -21,11 +21,16 @@ import { useState, useEffect } from "react";
  * tecleo), pero sí resetea a la página 1 igual que la búsqueda para no
  * dejar al usuario en una página fuera de rango.
  *
+ * `pageSize` también es controlable en caliente vía `setPageSize` (además
+ * del valor inicial en `options`), para listados que dejan elegir cuántos
+ * elementos mostrar por página. Cambiarlo resetea a la página 1 por la
+ * misma razón que los filtros.
+ *
  * @param {(page: number, pageSize: number, search: string, filters: Object) => Promise<{data: unknown[], total: number, totalPages: number}>} fetchPage
  * @param {{ pageSize?: number, debounceMs?: number }} [options]
  */
 export function usePaginatedList(fetchPage, options = {}) {
-  const { pageSize = 10, debounceMs = 500 } = options;
+  const { pageSize: pageSizeInicial = 10, debounceMs = 500 } = options;
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +39,7 @@ export function usePaginatedList(fetchPage, options = {}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSizeState] = useState(pageSizeInicial);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [filters, setFiltersState] = useState({});
@@ -48,6 +54,11 @@ export function usePaginatedList(fetchPage, options = {}) {
 
   const setFilters = (newFilters) => {
     setFiltersState(newFilters);
+    setCurrentPage(1);
+  };
+
+  const setPageSize = (newPageSize) => {
+    setPageSizeState(newPageSize);
     setCurrentPage(1);
   };
 
@@ -73,7 +84,7 @@ export function usePaginatedList(fetchPage, options = {}) {
   useEffect(() => {
     queueMicrotask(reload);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, debouncedSearch, JSON.stringify(filters)]);
+  }, [currentPage, pageSize, debouncedSearch, JSON.stringify(filters)]);
 
   return {
     items,
@@ -85,6 +96,8 @@ export function usePaginatedList(fetchPage, options = {}) {
     debouncedSearch,
     currentPage,
     setCurrentPage,
+    pageSize,
+    setPageSize,
     totalPages,
     totalItems,
     filters,

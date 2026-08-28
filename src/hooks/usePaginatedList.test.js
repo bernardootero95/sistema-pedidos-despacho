@@ -59,6 +59,27 @@ describe("usePaginatedList", () => {
     expect(result.current.currentPage).toBe(1);
   });
 
+  it("al cambiar pageSize vía setPageSize resetea a la página 1 y lo pasa al fetch", async () => {
+    const fetchPage = vi.fn().mockResolvedValue(paginaVacia);
+    const { result } = renderHook(() => usePaginatedList(fetchPage));
+
+    await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      result.current.setCurrentPage(2);
+    });
+    await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(2));
+
+    act(() => {
+      result.current.setPageSize(50);
+    });
+
+    await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(3));
+    expect(fetchPage).toHaveBeenLastCalledWith(1, 50, "", {});
+    expect(result.current.currentPage).toBe(1);
+    expect(result.current.pageSize).toBe(50);
+  });
+
   it("al cambiar los filtros resetea a la página 1 y los pasa al fetch", async () => {
     const fetchPage = vi.fn().mockResolvedValue(paginaVacia);
     const { result } = renderHook(() => usePaginatedList(fetchPage));
