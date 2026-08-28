@@ -65,6 +65,7 @@ export const OrderDetailsPage = () => {
     estado: searchParams.get("estado") || "",
     fechaDesde: searchParams.get("desde") || "",
     fechaHasta: searchParams.get("hasta") || "",
+    campoFecha: searchParams.get("campoFecha") || "",
     vendedorId: searchParams.get("vendedor") || "",
   };
 

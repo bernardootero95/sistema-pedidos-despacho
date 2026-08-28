@@ -6,14 +6,19 @@ import { supabase } from "../../../config/supabase";
  * compartidos entre el listado paginado y la búsqueda de pedido adyacente
  * (siguiente/anterior), para que ambos recorran exactamente el mismo
  * subconjunto de pedidos.
+ *
+ * `campoFecha` decide si el rango de fechas filtra por `fecha_pedido`
+ * (default) o por `fecha_entrega`, para poder acotar por cuándo se creó el
+ * pedido o por cuándo se entregó sin duplicar los controles de filtro.
  */
 function aplicarFiltrosPedidos(query, filtros = {}) {
-  const { estado, fechaDesde, fechaHasta, vendedorId } = filtros;
+  const { estado, fechaDesde, fechaHasta, vendedorId, campoFecha } = filtros;
+  const columnaFecha = campoFecha === "fecha_entrega" ? "fecha_entrega" : "fecha_pedido";
 
   if (estado) query = query.eq("estado", estado);
   if (vendedorId) query = query.eq("vendedor_id", vendedorId);
-  if (fechaDesde) query = query.gte("fecha_pedido", `${fechaDesde}T00:00:00`);
-  if (fechaHasta) query = query.lte("fecha_pedido", `${fechaHasta}T23:59:59.999`);
+  if (fechaDesde) query = query.gte(columnaFecha, `${fechaDesde}T00:00:00`);
+  if (fechaHasta) query = query.lte(columnaFecha, `${fechaHasta}T23:59:59.999`);
 
   return query;
 }

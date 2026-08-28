@@ -9,6 +9,7 @@ import { useAuth } from "../../../context/useAuth";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { usePaginatedList } from "../../../hooks/usePaginatedList";
 import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
+import { Pagination } from "../../../components/ui/Pagination";
 import {
   ShoppingCart,
   Search,
@@ -18,14 +19,17 @@ import {
   Ban,
   Printer,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   User,
   Calendar,
+  CalendarCheck,
   X,
 } from "lucide-react";
 
 const ESTADOS_PEDIDO = ["pendiente", "en_ruta", "entregado", "anulado"];
+const CAMPOS_FECHA = [
+  { value: "fecha_pedido", label: "Fecha de pedido" },
+  { value: "fecha_entrega", label: "Fecha de entrega" },
+];
 
 export const OrdersPage = () => {
   const navigate = useNavigate();
@@ -41,13 +45,17 @@ export const OrdersPage = () => {
     setSearchTerm,
     currentPage,
     setCurrentPage,
+    pageSize,
+    setPageSize,
     totalPages,
     totalItems,
     filters: filtros,
     setFilters: setFiltros,
     reload: cargarPedidos,
-  } = usePaginatedList((page, pageSize, search, filtrosActivos) =>
-    orderService.getPedidosPaginados(page, pageSize, search, filtrosActivos),
+  } = usePaginatedList(
+    (page, pageSizeActual, search, filtrosActivos) =>
+      orderService.getPedidosPaginados(page, pageSizeActual, search, filtrosActivos),
+    { pageSize: 20 },
   );
   const [printingId, setPrintingId] = useState(null);
   const [vendedores, setVendedores] = useState([]);
@@ -78,6 +86,7 @@ export const OrdersPage = () => {
     if (filtros.estado) params.set("estado", filtros.estado);
     if (filtros.fechaDesde) params.set("desde", filtros.fechaDesde);
     if (filtros.fechaHasta) params.set("hasta", filtros.fechaHasta);
+    if (filtros.campoFecha) params.set("campoFecha", filtros.campoFecha);
     if (filtros.vendedorId) params.set("vendedor", filtros.vendedorId);
     return params.toString();
   };
@@ -102,6 +111,9 @@ export const OrdersPage = () => {
       day: "numeric",
     });
   };
+
+  const formatFechaEntrega = (dateString) =>
+    dateString ? formatDate(dateString) : "—";
 
   const getStatusBadge = (estado) => {
     const styles = {
@@ -252,6 +264,20 @@ export const OrdersPage = () => {
               ))}
             </select>
 
+            <select
+              value={filtros.campoFecha || "fecha_pedido"}
+              onChange={(e) =>
+                handleFilterChange("campoFecha", e.target.value)
+              }
+              className="w-full lg:w-auto px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-700 bg-white"
+            >
+              {CAMPOS_FECHA.map((campo) => (
+                <option key={campo.value} value={campo.value}>
+                  {campo.label}
+                </option>
+              ))}
+            </select>
+
             <div className="flex items-center gap-2 w-full lg:w-auto">
               <input
                 type="date"
@@ -341,6 +367,10 @@ export const OrdersPage = () => {
                           <Calendar className="h-3 w-3" />
                           {formatDate(pedido.fecha_pedido)}
                         </div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                          <CalendarCheck className="h-3 w-3" />
+                          Entrega: {formatFechaEntrega(pedido.fecha_entrega)}
+                        </div>
                       </div>
                       {getStatusBadge(pedido.estado)}
                     </div>
@@ -377,6 +407,7 @@ export const OrdersPage = () => {
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-sm">
                       <th className="p-4 whitespace-nowrap">N° Pedido</th>
                       <th className="p-4 whitespace-nowrap">Fecha</th>
+                      <th className="p-4 whitespace-nowrap">Entrega</th>
                       <th className="p-4">Cliente</th>
                       <th className="p-4">Vendedor</th>
                       <th className="p-4 text-right">Total</th>
@@ -395,6 +426,9 @@ export const OrdersPage = () => {
                         </td>
                         <td className="p-4 text-slate-600">
                           {formatDate(pedido.fecha_pedido)}
+                        </td>
+                        <td className="p-4 text-slate-600">
+                          {formatFechaEntrega(pedido.fecha_entrega)}
                         </td>
                         <td className="p-4">
                           <div className="font-medium text-slate-800">
@@ -425,35 +459,16 @@ export const OrdersPage = () => {
           )}
 
           {/* CONTROLES DE PAGINACIÓN */}
-          <div className="border-t border-slate-200 p-4 bg-white md:bg-slate-50 rounded-b-xl flex items-center justify-between mt-auto">
-            <div className="text-sm text-slate-500">
-              Página{" "}
-              <span className="font-medium text-slate-700">{currentPage}</span>{" "}
-              de{" "}
-              <span className="font-medium text-slate-700">
-                {totalPages || 1}
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1 || loading}
-                className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={
-                  currentPage === totalPages || loading || totalPages === 0
-                }
-                className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
+          <div className="border-t border-slate-200 p-4 bg-white md:bg-slate-50 rounded-b-xl mt-auto">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              loading={loading}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+              totalItems={totalItems}
+            />
           </div>
         </div>
       </div>
