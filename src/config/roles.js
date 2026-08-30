@@ -5,7 +5,7 @@
  * evitando que ambas listas se desincronicen con el tiempo.
  */
 export const ROLES_MODULO = {
-  DASHBOARD: ["soporte", "gerencia", "vendedor", "despachador", "repartidor"],
+  DASHBOARD: ["soporte", "gerencia", "vendedor", "despachador", "repartidor", "cajera"],
   USUARIOS: ["soporte", "gerencia"],
   // El vendedor selecciona/crea clientes desde Nuevo Pedido (quick-add), no
   // necesita el directorio completo con edición/suspensión/eliminación.
@@ -19,7 +19,7 @@ export const ROLES_MODULO = {
   // DispatchCreatePage (no gateado por este permiso); no necesita el
   // listado/alta de vehículos.
   VEHICULOS: ["soporte", "gerencia"],
-  PEDIDOS: ["soporte", "gerencia", "vendedor", "despachador"],
+  PEDIDOS: ["soporte", "gerencia", "vendedor", "despachador", "cajera"],
   // repartidor ya no ve el listado/detalle de escritorio: tiene su propia
   // vista simplificada en MI_RUTA.
   DESPACHOS: ["soporte", "gerencia", "despachador"],

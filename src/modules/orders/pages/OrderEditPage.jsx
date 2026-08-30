@@ -19,8 +19,8 @@ import { useAuth } from "../../../context/useAuth";
 
 // Mismos roles que resolver_precio_pedido valida en el servidor.
 const ROLES_MAYORISTA = ["soporte", "gerencia"];
-const ROLES_FRIO = ["soporte", "gerencia", "despachador"];
-const ROLES_CREDITO = ["soporte", "gerencia", "despachador"];
+const ROLES_FRIO = ["soporte", "gerencia", "despachador", "cajera"];
+const ROLES_CREDITO = ["soporte", "gerencia", "despachador", "cajera"];
 
 /**
  * Edita un pedido pendiente: mismo carrito/buscador de productos que

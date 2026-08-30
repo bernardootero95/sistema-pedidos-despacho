@@ -22,12 +22,13 @@ import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { useAuth } from "../../../context/useAuth";
 
 // Precio al por mayor: solo soporte/gerencia. Precio frío y crédito:
-// además despachador (los ve al facturar), nunca vendedor. Mismos roles
-// que valida resolver_precio_pedido en el servidor — esto es solo para no
-// mostrar un control que el backend rechazaría.
+// además despachador (los ve al facturar) y cajera (venta directa),
+// nunca vendedor. Mismos roles que valida resolver_precio_pedido en el
+// servidor — esto es solo para no mostrar un control que el backend
+// rechazaría.
 const ROLES_MAYORISTA = ["soporte", "gerencia"];
-const ROLES_FRIO = ["soporte", "gerencia", "despachador"];
-const ROLES_CREDITO = ["soporte", "gerencia", "despachador"];
+const ROLES_FRIO = ["soporte", "gerencia", "despachador", "cajera"];
+const ROLES_CREDITO = ["soporte", "gerencia", "despachador", "cajera"];
 
 export const OrderCreatePage = () => {
   const navigate = useNavigate();

@@ -39,7 +39,9 @@ const RESUMEN_INICIAL = {
 export const DashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const esVendedor = user?.rol === "vendedor";
+  // vendedor y cajera solo ven sus propios pedidos (RLS) y no manejan
+  // rutas/despachos: mismo recorte de UI para ambos.
+  const esVendedor = ["vendedor", "cajera"].includes(user?.rol);
   // soporte/gerencia ven la bodega completa y pueden acotar por vendedor;
   // despachador/repartidor ven la bodega completa pero solo el valor
   // global (sin filtro); vendedor ve solo lo suyo vía RLS.
