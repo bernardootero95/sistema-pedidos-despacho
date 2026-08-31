@@ -129,7 +129,9 @@ export const orderService = {
         id,
         numero_pedido,
         total,
-        clientes ( razon_social, primer_nombre, primer_apellido )
+        notas,
+        clientes ( razon_social, primer_nombre, primer_apellido ),
+        vendedor:perfiles ( nombre_completo )
       `,
       )
       .eq("estado", "pendiente")

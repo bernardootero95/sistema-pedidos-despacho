@@ -201,32 +201,28 @@ export const DispatchCreatePage = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4">
-          <DispatchHeaderForm
-            formData={formData}
-            errors={errors}
-            touched={touched}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            vehiculos={vehiculos}
-            repartidores={repartidores}
-          />
-        </div>
+      <div className="flex flex-col gap-6">
+        <DispatchHeaderForm
+          formData={formData}
+          errors={errors}
+          touched={touched}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          vehiculos={vehiculos}
+          repartidores={repartidores}
+        />
 
-        <div className="lg:col-span-8">
-          <PedidosAssignmentPanel
-            pedidosDisponibles={pedidosDisponibles}
-            pedidosSeleccionados={pedidosSeleccionados}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            onAgregar={handleAgregarPedido}
-            onQuitar={handleQuitarPedido}
-            formatCurrency={formatCurrency}
-            loading={loadingData}
-            error={pedidosError}
-          />
-        </div>
+        <PedidosAssignmentPanel
+          pedidosDisponibles={pedidosDisponibles}
+          pedidosSeleccionados={pedidosSeleccionados}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          onAgregar={handleAgregarPedido}
+          onQuitar={handleQuitarPedido}
+          formatCurrency={formatCurrency}
+          loading={loadingData}
+          error={pedidosError}
+        />
       </div>
 
       {/* Botón flotante en móvil */}

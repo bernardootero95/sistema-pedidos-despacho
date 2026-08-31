@@ -21,7 +21,7 @@ export const DispatchHeaderForm = ({
         Datos Logísticos
       </h2>
 
-      <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
             Fecha de Despacho *
@@ -120,7 +120,7 @@ export const DispatchHeaderForm = ({
           )}
         </div>
 
-        <div>
+        <div className="sm:col-span-2 lg:col-span-3">
           <label className="block text-sm font-medium text-slate-700 mb-1">
             Notas / Observaciones de Ruta
           </label>
@@ -129,7 +129,7 @@ export const DispatchHeaderForm = ({
             value={formData.notas}
             onChange={onChange}
             placeholder="Instrucciones para el viaje..."
-            rows="3"
+            rows="2"
             className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 resize-none"
           />
         </div>

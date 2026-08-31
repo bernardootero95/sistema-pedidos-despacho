@@ -5,11 +5,41 @@ import {
   PackageMinus,
   Loader2,
   Inbox,
+  UserRound,
+  StickyNote,
 } from "lucide-react";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
 const nombreClientePedido = (pedido) =>
   getNombreCliente(pedido.clientes) || "Cliente sin nombre";
+
+/**
+ * Bloque de datos que necesita quien arma la ruta para decidir si un
+ * pedido corresponde a esta hoja de despacho, repetido igual en la
+ * columna de disponibles y en la de seleccionados.
+ */
+const PedidoInfo = ({ pedido, formatCurrency }) => (
+  <div className="min-w-0">
+    <p className="text-sm font-semibold text-slate-700 truncate">
+      #{pedido.numero_pedido} — {nombreClientePedido(pedido)}
+    </p>
+    <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+      <UserRound className="w-3 h-3 shrink-0" />
+      <span className="truncate">
+        {pedido.vendedor?.nombre_completo || "Sin vendedor asignado"}
+      </span>
+    </p>
+    <p className="text-xs font-semibold text-slate-600 mt-0.5">
+      {formatCurrency(pedido.total)}
+    </p>
+    {pedido.notas?.trim() && (
+      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded px-1.5 py-1 mt-1.5 flex items-start gap-1">
+        <StickyNote className="w-3 h-3 shrink-0 mt-0.5" />
+        <span className="line-clamp-2">{pedido.notas}</span>
+      </p>
+    )}
+  </div>
+);
 
 /**
  * Panel de asignación de pedidos pendientes a la ruta de despacho.
@@ -78,16 +108,9 @@ export const PedidosAssignmentPanel = ({
                   type="button"
                   key={pedido.id}
                   onClick={() => onAgregar(pedido)}
-                  className="flex items-center justify-between gap-2 p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-lg text-left transition-colors group"
+                  className="flex items-start justify-between gap-2 p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-lg text-left transition-colors group"
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-700 truncate">
-                      #{pedido.numero_pedido} — {nombreClientePedido(pedido)}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {formatCurrency(pedido.total)}
-                    </p>
-                  </div>
+                  <PedidoInfo pedido={pedido} formatCurrency={formatCurrency} />
                   <PackagePlus className="w-5 h-5 text-slate-400 group-hover:text-blue-500 shrink-0 transition-colors" />
                 </button>
               ))
@@ -109,16 +132,9 @@ export const PedidosAssignmentPanel = ({
               pedidosSeleccionados.map((pedido) => (
                 <div
                   key={pedido.id}
-                  className="flex items-center justify-between gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg"
+                  className="flex items-start justify-between gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg"
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-700 truncate">
-                      #{pedido.numero_pedido} — {nombreClientePedido(pedido)}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {formatCurrency(pedido.total)}
-                    </p>
-                  </div>
+                  <PedidoInfo pedido={pedido} formatCurrency={formatCurrency} />
                   <button
                     type="button"
                     onClick={() => onQuitar(pedido)}
