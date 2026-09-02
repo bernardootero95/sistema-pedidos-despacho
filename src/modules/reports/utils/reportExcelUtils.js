@@ -14,13 +14,37 @@
 export const exportarInformeExcel = async (filas, filename) => {
   const { default: writeXlsxFile } = await import("write-excel-file/browser");
 
-  const schema = [
-    { column: "Código", type: String, value: (fila) => fila.codigo, width: 15 },
-    { column: "Producto", type: String, value: (fila) => fila.nombre, width: 40 },
-    { column: "Cantidad", type: Number, value: (fila) => fila.cantidad_total, width: 12 },
-    { column: "Valor total", type: Number, format: "#,##0", value: (fila) => fila.monto_total, width: 16 },
-    { column: "# Pedidos", type: Number, value: (fila) => fila.pedidos_count, width: 12 },
+  // API v4: `schema` fue reemplazado por `columns` (header + función `cell`
+  // por columna) — ver CHANGELOG de write-excel-file. `header` lleva
+  // fontWeight acá porque, a diferencia de v1-v3, ya no aplica negrita a la
+  // fila de encabezado por defecto.
+  const columns = [
+    {
+      header: { value: "Código", fontWeight: "bold" },
+      cell: (fila) => ({ value: fila.codigo, type: String }),
+      width: 15,
+    },
+    {
+      header: { value: "Producto", fontWeight: "bold" },
+      cell: (fila) => ({ value: fila.nombre, type: String }),
+      width: 40,
+    },
+    {
+      header: { value: "Cantidad", fontWeight: "bold" },
+      cell: (fila) => ({ value: fila.cantidad_total, type: Number }),
+      width: 12,
+    },
+    {
+      header: { value: "Valor total", fontWeight: "bold" },
+      cell: (fila) => ({ value: fila.monto_total, type: Number, format: "#,##0" }),
+      width: 16,
+    },
+    {
+      header: { value: "# Pedidos", fontWeight: "bold" },
+      cell: (fila) => ({ value: fila.pedidos_count, type: Number }),
+      width: 12,
+    },
   ];
 
-  await writeXlsxFile(filas, { schema, fileName: filename });
+  await writeXlsxFile(filas, { columns, fileName: filename });
 };
