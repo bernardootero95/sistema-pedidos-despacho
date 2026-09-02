@@ -24,4 +24,5 @@ export const ROLES_MODULO = {
   // vista simplificada en MI_RUTA.
   DESPACHOS: ["soporte", "gerencia", "despachador"],
   MI_RUTA: ["repartidor"],
+  INFORMES: ["soporte", "gerencia"],
 };

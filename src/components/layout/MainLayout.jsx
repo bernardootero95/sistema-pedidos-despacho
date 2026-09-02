@@ -17,6 +17,7 @@ import {
   X,
   UserCog,
   MapPin,
+  FileBarChart,
 } from "lucide-react";
 
 export const MainLayout = () => {
@@ -77,6 +78,12 @@ export const MainLayout = () => {
       label: "Flota de Vehículos",
       icon: Truck,
       roles: ROLES_MODULO.VEHICULOS,
+    },
+    {
+      path: "/informes/productos",
+      label: "Informes",
+      icon: FileBarChart,
+      roles: ROLES_MODULO.INFORMES,
     },
   ];
 

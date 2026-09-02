@@ -84,6 +84,11 @@ const ResetPasswordPage = lazy(() =>
     default: m.ResetPasswordPage,
   })),
 );
+const ProductsReportPage = lazy(() =>
+  import("../modules/reports/pages/ProductsReportPage").then((m) => ({
+    default: m.ProductsReportPage,
+  })),
+);
 
 // Componente visual mientras carga el chunk del módulo
 const PageLoader = () => (
@@ -164,6 +169,11 @@ export const AppRouter = () => {
             </Route>
             <Route element={<RoleGuard roles={ROLES_MODULO.MI_RUTA} />}>
               <Route path="/despachos/mi-ruta" element={<RepartidorRoutePage />} />
+            </Route>
+
+            {/* Informes */}
+            <Route element={<RoleGuard roles={ROLES_MODULO.INFORMES} />}>
+              <Route path="/informes/productos" element={<ProductsReportPage />} />
             </Route>
           </Route>
 

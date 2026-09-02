@@ -49,6 +49,29 @@ export const userService = {
   },
 
   /**
+   * Obtiene los usuarios activos con algún rol que puede facturar pedidos
+   * (vendedor_id en pedidos_cabecera), para poblar el filtro por
+   * vendedor/facturador del listado de pedidos y del informe de productos.
+   * A diferencia de getVendedores(), no se limita al rol "vendedor": desde
+   * OrderCreatePage cualquier rol que puede crear pedidos (vendedor,
+   * cajera, despachador, soporte, gerencia — ver crear_pedido_transaccional)
+   * se autoasigna como vendedor_id de lo que factura.
+   */
+  async getUsuariosFacturadores() {
+    const { data, error } = await supabase
+      .from("perfiles")
+      .select("id, nombre_completo, roles!inner(nombre)")
+      .in("roles.nombre", ["vendedor", "cajera", "despachador", "soporte", "gerencia"])
+      .eq("estado", true)
+      .is("eliminado", null)
+      .order("nombre_completo", { ascending: true });
+
+    if (error)
+      throw new Error("Error al cargar la lista de usuarios: " + error.message);
+    return data;
+  },
+
+  /**
    * Obtiene los roles disponibles para futuros formularios de creación/edición
    */
   async getRoles() {

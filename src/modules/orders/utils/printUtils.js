@@ -121,12 +121,16 @@ export const construirComprobantePedidoHtml = (pedidoCompleto) => {
 
 /**
  * Convierte un fragmento HTML (string, ya armado por construirXHtml) en un
- * blob URL de PDF térmico 80mm vía html2pdf.js. No abre ni descarga nada
- * por sí solo — cada llamador decide qué hacer con la URL (abrir en
- * pestaña nueva, forzar descarga, etc.), ya que eso varía según el caso
- * de uso (un comprobante suelto vs. un lote de varios).
+ * blob URL de PDF vía html2pdf.js. No abre ni descarga nada por sí solo —
+ * cada llamador decide qué hacer con la URL (abrir en pestaña nueva, forzar
+ * descarga, etc.), ya que eso varía según el caso de uso (un comprobante
+ * suelto vs. un lote de varios vs. un informe tabular).
+ *
+ * `optsOverride` reemplaza el formato térmico 80mm por defecto — lo usa el
+ * informe de productos (reports/utils/reportPdfUtils.js) para generar un
+ * PDF A4, en vez de duplicar todo el mecanismo de html2pdf solo por eso.
  */
-export const generarPdfBlobUrl = async (html, filename) => {
+export const generarPdfBlobUrl = async (html, filename, optsOverride = {}) => {
   const container = document.createElement("div");
   container.style.position = "fixed";
   container.style.left = "0";
@@ -144,6 +148,7 @@ export const generarPdfBlobUrl = async (html, filename) => {
     image: { type: "jpeg", quality: 1 },
     html2canvas: { scale: 3, useCORS: true, logging: false },
     jsPDF: { unit: "mm", format: [80, 200], orientation: "portrait" },
+    ...optsOverride,
   };
 
   try {

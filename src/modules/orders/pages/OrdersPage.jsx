@@ -4,6 +4,7 @@ import { orderService } from "../services/orderService";
 import { userService } from "../../users/services/userService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
 import { puedeAnularPedido } from "../utils/orderValidations";
+import { ESTADOS_PEDIDO, CAMPOS_FECHA } from "../utils/orderConstants";
 import { useToast } from "../../../context/useToast";
 import { useAuth } from "../../../context/useAuth";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
@@ -24,12 +25,6 @@ import {
   CalendarCheck,
   X,
 } from "lucide-react";
-
-const ESTADOS_PEDIDO = ["pendiente", "en_ruta", "entregado", "anulado"];
-const CAMPOS_FECHA = [
-  { value: "fecha_pedido", label: "Fecha de pedido" },
-  { value: "fecha_entrega", label: "Fecha de entrega" },
-];
 
 export const OrdersPage = () => {
   const navigate = useNavigate();
