@@ -164,7 +164,10 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
 
   const modificarCantidad = (index, delta) => {
     const item = carrito[index];
-    const nuevaCantidad = item.cantidad + delta;
+    // Redondeado por el mismo motivo que actualizarCantidadInput: suma de
+    // floats en JS (ej. 0.1 + 0.2) puede desviarse del múltiplo de .25 tras
+    // varios clicks seguidos de +/-.
+    const nuevaCantidad = redondearACantidadValida(item.cantidad + delta);
 
     if (nuevaCantidad <= 0) {
       eliminarDelCarrito(index);

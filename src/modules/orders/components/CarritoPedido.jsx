@@ -109,7 +109,7 @@ export const CarritoPedido = ({
                   <div className="flex items-center bg-white border border-slate-300 rounded-xl shadow-sm overflow-hidden">
                     <button
                       type="button"
-                      onClick={() => onModificarCantidad(index, -1)}
+                      onClick={() => onModificarCantidad(index, -0.25)}
                       className="p-2 text-slate-600 hover:bg-slate-100 transition-colors active:bg-slate-200"
                     >
                       <Minus className="h-4 w-4" />
@@ -127,7 +127,7 @@ export const CarritoPedido = ({
                     />
                     <button
                       type="button"
-                      onClick={() => onModificarCantidad(index, 1)}
+                      onClick={() => onModificarCantidad(index, 0.25)}
                       className="p-2 text-slate-600 hover:bg-slate-100 transition-colors active:bg-slate-200"
                     >
                       <Plus className="h-4 w-4" />
