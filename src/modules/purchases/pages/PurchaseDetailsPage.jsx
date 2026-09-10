@@ -62,6 +62,20 @@ export const PurchaseDetailsPage = () => {
     });
   };
 
+  // fecha_compra puede ser una fecha sin hora (compra cargada con fecha
+  // pasada), a diferencia de `creado` que siempre lleva el instante exacto
+  // en que se registró — formatos distintos para no mostrar un "00:00"
+  // engañoso en la fecha de la compra.
+  const formatFechaCompra = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("es-CO", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  };
+
   const handleCompraAnulada = () => {
     cargarDatos();
   };
@@ -124,7 +138,11 @@ export const PurchaseDetailsPage = () => {
               </span>
             </div>
             <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-              <Calendar className="h-3.5 w-3.5" /> {formatDate(compra.fecha_compra)}
+              <Calendar className="h-3.5 w-3.5" /> Compra del{" "}
+              {formatFechaCompra(compra.fecha_compra)}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Registrada el {formatDate(compra.creado)}
             </p>
           </div>
         </div>

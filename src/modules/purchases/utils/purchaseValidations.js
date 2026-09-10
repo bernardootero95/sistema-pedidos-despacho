@@ -6,6 +6,12 @@
  */
 const validators = {
   proveedor_id: (value) => (!value ? "Selecciona un proveedor." : ""),
+  fecha_compra: (value) => {
+    if (!value) return "La fecha de la compra es obligatoria.";
+    const hoy = new Date().toISOString().split("T")[0];
+    if (value > hoy) return "La fecha de la compra no puede ser futura.";
+    return "";
+  },
 };
 
 export const validatePurchaseField = (name, value) => {

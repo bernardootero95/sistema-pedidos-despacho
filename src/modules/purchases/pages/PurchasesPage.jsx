@@ -18,11 +18,14 @@ const formatCurrency = (amount) =>
     maximumFractionDigits: 0,
   }).format(amount || 0);
 
+// timeZone: "UTC" porque fecha_compra puede venir sin hora (medianoche
+// UTC) — en huso horario local negativo se mostraría un día atrás.
 const formatDate = (dateString) =>
   new Date(dateString).toLocaleDateString("es-CO", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 
 export const PurchasesPage = () => {

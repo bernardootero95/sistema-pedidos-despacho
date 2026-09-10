@@ -8,6 +8,7 @@ import {
   ShoppingBag,
   Truck,
   PlusCircle,
+  Calendar,
 } from "lucide-react";
 import { purchaseService } from "../services/purchaseService";
 import { supplierService } from "../../suppliers/services/supplierService";
@@ -26,6 +27,9 @@ export const PurchaseCreatePage = () => {
   const [loadingData, setLoadingData] = useState(true);
 
   const [proveedorId, setProveedorId] = useState("");
+  const [fechaCompra, setFechaCompra] = useState(
+    new Date().toISOString().split("T")[0],
+  );
   const [notas, setNotas] = useState("");
   const [isSupplierFormOpen, setIsSupplierFormOpen] = useState(false);
 
@@ -73,7 +77,11 @@ export const PurchaseCreatePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const cabeceraData = { proveedor_id: proveedorId, notas };
+    const cabeceraData = {
+      proveedor_id: proveedorId,
+      fecha_compra: fechaCompra,
+      notas,
+    };
     const validationErrors = validatePurchaseForm(cabeceraData, carrito);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -147,43 +155,66 @@ export const PurchaseCreatePage = () => {
           </div>
         )}
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-sm font-semibold text-slate-700">
-              Proveedor *
-            </label>
-            <button
-              type="button"
-              onClick={() => setIsSupplierFormOpen(true)}
-              className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-semibold text-slate-700">
+                Proveedor *
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsSupplierFormOpen(true)}
+                className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+                Proveedor nuevo
+              </button>
+            </div>
+            <select
+              value={proveedorId}
+              onChange={(e) => setProveedorId(e.target.value)}
+              className={`w-full p-3 border rounded-xl outline-none bg-white text-base transition-all ${errors.proveedor_id ? "border-red-500 ring-2 ring-red-100" : "border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
             >
-              <PlusCircle className="h-3.5 w-3.5" />
-              Proveedor nuevo
-            </button>
+              <option value="">-- Selecciona un proveedor --</option>
+              {proveedores.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.numero_identificacion} - {p.nombre_comercial}
+                </option>
+              ))}
+            </select>
+            {errors.proveedor_id && (
+              <p className="text-red-500 text-xs mt-1 font-medium">
+                {errors.proveedor_id}
+              </p>
+            )}
+            {proveedores.length === 0 && (
+              <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+                <Truck className="h-3.5 w-3.5" /> No hay proveedores registrados
+                todavía.
+              </p>
+            )}
           </div>
-          <select
-            value={proveedorId}
-            onChange={(e) => setProveedorId(e.target.value)}
-            className={`w-full p-3 border rounded-xl outline-none bg-white text-base transition-all ${errors.proveedor_id ? "border-red-500 ring-2 ring-red-100" : "border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
-          >
-            <option value="">-- Selecciona un proveedor --</option>
-            {proveedores.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.numero_identificacion} - {p.nombre_comercial}
-              </option>
-            ))}
-          </select>
-          {errors.proveedor_id && (
-            <p className="text-red-500 text-xs mt-1 font-medium">
-              {errors.proveedor_id}
-            </p>
-          )}
-          {proveedores.length === 0 && (
-            <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
-              <Truck className="h-3.5 w-3.5" /> No hay proveedores registrados
-              todavía.
-            </p>
-          )}
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Fecha de la Compra *
+            </label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+              <input
+                type="date"
+                value={fechaCompra}
+                max={new Date().toISOString().split("T")[0]}
+                onChange={(e) => setFechaCompra(e.target.value)}
+                className={`w-full pl-9 p-3 border rounded-xl outline-none bg-white text-base transition-all ${errors.fecha_compra ? "border-red-500 ring-2 ring-red-100" : "border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              />
+            </div>
+            {errors.fecha_compra && (
+              <p className="text-red-500 text-xs mt-1 font-medium">
+                {errors.fecha_compra}
+              </p>
+            )}
+          </div>
         </div>
 
         <PurchaseProductPicker

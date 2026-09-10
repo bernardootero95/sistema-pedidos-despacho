@@ -114,7 +114,7 @@ export const purchaseService = {
    * `crear_compra_transaccional`: valida cada producto, suma el stock y
    * actualiza el último costo conocido, todo en una única transacción.
    *
-   * @param {Object} cabeceraData - { proveedor_id, notas }
+   * @param {Object} cabeceraData - { proveedor_id, notas, fecha_compra }
    * @param {Array<{producto_id: string, cantidad: number, costo_unitario: number}>} detalles
    */
   async crearCompraTransaccional(cabeceraData, detalles) {
@@ -122,6 +122,7 @@ export const purchaseService = {
       p_proveedor_id: cabeceraData.proveedor_id,
       p_notas: cabeceraData.notas || null,
       p_detalles: detalles,
+      p_fecha_compra: cabeceraData.fecha_compra || null,
     });
 
     if (error) {
