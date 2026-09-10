@@ -8,7 +8,14 @@ import { supabase } from "../../../config/supabase";
  * tenga que acordarse de envolverlo en Number().
  */
 const normalizarProducto = (producto) =>
-  producto ? { ...producto, disponible: Number(producto.disponible) } : producto;
+  producto
+    ? {
+        ...producto,
+        disponible: Number(producto.disponible),
+        ultimo_costo:
+          producto.ultimo_costo != null ? Number(producto.ultimo_costo) : null,
+      }
+    : producto;
 
 export const productService = {
   /**

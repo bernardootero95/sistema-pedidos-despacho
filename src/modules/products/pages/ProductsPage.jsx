@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { productService } from "../services/productService";
 import { ProductForm } from "../components/ProductForm";
 import { ProductImportModal } from "../components/ProductImportModal";
+import { PurchaseCostHistoryModal } from "../../purchases/components/PurchaseCostHistoryModal";
 import { useAuth } from "../../../context/useAuth";
 import { useToast } from "../../../context/useToast";
 import { usePaginatedList } from "../../../hooks/usePaginatedList";
@@ -23,6 +24,7 @@ import {
   Layers,
   Snowflake,
   CreditCard,
+  History,
 } from "lucide-react";
 
 /**
@@ -73,7 +75,7 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-const ProductDetailsModal = ({ product, onClose }) => {
+const ProductDetailsModal = ({ product, onClose, onVerHistorial }) => {
   if (!product) return null;
 
   return (
@@ -207,6 +209,26 @@ const ProductDetailsModal = ({ product, onClose }) => {
                   )}
                 </p>
               </div>
+              <div className="pt-2 border-t border-emerald-200/50 mt-2 flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">
+                    Último Costo de Compra
+                  </p>
+                  <p className="text-base font-black text-slate-800">
+                    {product.ultimo_costo != null
+                      ? formatCurrency(product.ultimo_costo)
+                      : "Sin compras registradas"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onVerHistorial(product)}
+                  title="Ver historial de compras"
+                  className="p-2 text-slate-400 hover:text-primary hover:bg-white rounded-lg transition-colors shrink-0"
+                >
+                  <History className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -238,6 +260,7 @@ export const ProductsPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
   const [productToView, setProductToView] = useState(null);
+  const [productToViewHistory, setProductToViewHistory] = useState(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
   // Set de producto_id con al menos una franja de mayorista activa, solo
@@ -319,6 +342,11 @@ export const ProductsPage = () => {
       <ProductDetailsModal
         product={productToView}
         onClose={() => setProductToView(null)}
+        onVerHistorial={setProductToViewHistory}
+      />
+      <PurchaseCostHistoryModal
+        producto={productToViewHistory}
+        onClose={() => setProductToViewHistory(null)}
       />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">

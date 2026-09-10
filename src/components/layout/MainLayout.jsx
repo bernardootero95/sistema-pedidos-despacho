@@ -18,6 +18,8 @@ import {
   UserCog,
   MapPin,
   FileBarChart,
+  Handshake,
+  ShoppingBag,
 } from "lucide-react";
 
 export const MainLayout = () => {
@@ -78,6 +80,18 @@ export const MainLayout = () => {
       label: "Flota de Vehículos",
       icon: Truck,
       roles: ROLES_MODULO.VEHICULOS,
+    },
+    {
+      path: "/proveedores",
+      label: "Proveedores",
+      icon: Handshake,
+      roles: ROLES_MODULO.PROVEEDORES,
+    },
+    {
+      path: "/compras",
+      label: "Compras",
+      icon: ShoppingBag,
+      roles: ROLES_MODULO.COMPRAS,
     },
     {
       path: "/informes/productos",

@@ -89,6 +89,26 @@ const ProductsReportPage = lazy(() =>
     default: m.ProductsReportPage,
   })),
 );
+const SuppliersPage = lazy(() =>
+  import("../modules/suppliers/pages/SuppliersPage").then((m) => ({
+    default: m.SuppliersPage,
+  })),
+);
+const PurchasesPage = lazy(() =>
+  import("../modules/purchases/pages/PurchasesPage").then((m) => ({
+    default: m.PurchasesPage,
+  })),
+);
+const PurchaseCreatePage = lazy(() =>
+  import("../modules/purchases/pages/PurchaseCreatePage").then((m) => ({
+    default: m.PurchaseCreatePage,
+  })),
+);
+const PurchaseDetailsPage = lazy(() =>
+  import("../modules/purchases/pages/PurchaseDetailsPage").then((m) => ({
+    default: m.PurchaseDetailsPage,
+  })),
+);
 
 // Componente visual mientras carga el chunk del módulo
 const PageLoader = () => (
@@ -169,6 +189,16 @@ export const AppRouter = () => {
             </Route>
             <Route element={<RoleGuard roles={ROLES_MODULO.MI_RUTA} />}>
               <Route path="/despachos/mi-ruta" element={<RepartidorRoutePage />} />
+            </Route>
+
+            {/* Módulo de Compras */}
+            <Route element={<RoleGuard roles={ROLES_MODULO.PROVEEDORES} />}>
+              <Route path="/proveedores" element={<SuppliersPage />} />
+            </Route>
+            <Route element={<RoleGuard roles={ROLES_MODULO.COMPRAS} />}>
+              <Route path="/compras" element={<PurchasesPage />} />
+              <Route path="/compras/nueva" element={<PurchaseCreatePage />} />
+              <Route path="/compras/:id" element={<PurchaseDetailsPage />} />
             </Route>
 
             {/* Informes */}
