@@ -18,6 +18,7 @@ import { usePurchaseCart } from "../hooks/usePurchaseCart";
 import { PurchaseProductPicker } from "../components/PurchaseProductPicker";
 import { PurchaseCart } from "../components/PurchaseCart";
 import { SupplierForm } from "../../suppliers/components/SupplierForm";
+import { ProductForm } from "../../products/components/ProductForm";
 
 export const PurchaseCreatePage = () => {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ export const PurchaseCreatePage = () => {
   );
   const [notas, setNotas] = useState("");
   const [isSupplierFormOpen, setIsSupplierFormOpen] = useState(false);
+  const [isProductFormOpen, setIsProductFormOpen] = useState(false);
 
   const {
     carrito,
@@ -72,6 +74,12 @@ export const PurchaseCreatePage = () => {
     } finally {
       if (proveedorNuevo?.id) setProveedorId(proveedorNuevo.id);
     }
+  };
+
+  const handleProductoCreado = async () => {
+    setIsProductFormOpen(false);
+    const productosData = await productService.getProductosActivos();
+    setProductos(productosData);
   };
 
   const handleSubmit = async (e) => {
@@ -221,6 +229,7 @@ export const PurchaseCreatePage = () => {
           productos={productos}
           onAgregar={agregarLinea}
           error={errors.carrito}
+          onCrearProducto={() => setIsProductFormOpen(true)}
         />
 
         <PurchaseCart
@@ -264,6 +273,13 @@ export const PurchaseCreatePage = () => {
         <SupplierForm
           onSuccess={handleProveedorCreado}
           onCancel={() => setIsSupplierFormOpen(false)}
+        />
+      )}
+
+      {isProductFormOpen && (
+        <ProductForm
+          onSuccess={handleProductoCreado}
+          onCancel={() => setIsProductFormOpen(false)}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, PlusCircle } from "lucide-react";
 import { SearchableSelect } from "../../../components/ui/SearchableSelect";
 
 /**
@@ -7,9 +7,14 @@ import { SearchableSelect } from "../../../components/ui/SearchableSelect";
  * de una compra. A diferencia de ProductSearchBar (pedidos) no muestra ni
  * valida el stock disponible: comprar siempre suma, no hay tope.
  * Componente de presentación puro (SRP): el padre decide qué hacer con la
- * línea vía onAgregar.
+ * línea vía onAgregar, y con el alta de producto nuevo vía onCrearProducto.
  */
-export const PurchaseProductPicker = ({ productos, onAgregar, error }) => {
+export const PurchaseProductPicker = ({
+  productos,
+  onAgregar,
+  error,
+  onCrearProducto,
+}) => {
   const [productoId, setProductoId] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [costoUnitario, setCostoUnitario] = useState("");
@@ -37,9 +42,21 @@ export const PurchaseProductPicker = ({ productos, onAgregar, error }) => {
 
   return (
     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-      <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-        Agregar Productos a la Compra
-      </label>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="block text-sm font-semibold text-slate-700">
+          Agregar Productos a la Compra
+        </label>
+        {onCrearProducto && (
+          <button
+            type="button"
+            onClick={onCrearProducto}
+            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+          >
+            <PlusCircle className="h-3.5 w-3.5" />
+            Producto nuevo
+          </button>
+        )}
+      </div>
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1">
           <SearchableSelect
