@@ -152,6 +152,17 @@ export const productService = {
   },
 
   /**
+   * Sugiere el próximo código consecutivo disponible para un producto nuevo.
+   */
+  async getSiguienteCodigo() {
+    const { data, error } = await supabase.rpc(
+      "obtener_siguiente_codigo_producto",
+    );
+    if (error) throw new Error("Error al calcular el siguiente código: " + error.message);
+    return data;
+  },
+
+  /**
    * Crea un nuevo producto
    */
   async crearProducto(productoData) {

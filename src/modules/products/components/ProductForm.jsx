@@ -51,6 +51,19 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
 
+  // Precarga el siguiente código consecutivo solo al crear: es una
+  // sugerencia editable, no reemplaza la unicidad que ya garantiza
+  // productos_codigo_key.
+  useEffect(() => {
+    if (isEditing) return;
+    productService
+      .getSiguienteCodigo()
+      .then((codigo) =>
+        setFormData((prev) => (prev.codigo ? prev : { ...prev, codigo })),
+      )
+      .catch(() => {});
+  }, [isEditing]);
+
   useEffect(() => {
     if (!isEditing) return;
     productService
@@ -240,10 +253,16 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
                     onBlur={handleBlur}
                     className={`w-full p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.codigo ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
                   />
-                  {errors.codigo && (
+                  {errors.codigo ? (
                     <p className="mt-1 text-xs text-red-500 font-bold">
                       {errors.codigo}
                     </p>
+                  ) : (
+                    !isEditing && (
+                      <p className="mt-1 text-xs text-slate-400">
+                        Sugerido según el consecutivo actual, editable.
+                      </p>
+                    )
                   )}
                 </div>
                 <div>
