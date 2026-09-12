@@ -183,6 +183,23 @@ export const productService = {
   },
 
   /**
+   * Actualiza solo los precios (venta, frío, crédito) de un producto.
+   * Usado por roles con acceso restringido (despachador): la RPC nunca
+   * toca stock ni el resto de la ficha, sin importar qué se le mande.
+   */
+  async actualizarPreciosProducto(id, { precio_venta, precio_frio, precio_credito }) {
+    const { data, error } = await supabase.rpc("actualizar_precios_producto", {
+      p_id: id,
+      p_precio_venta: precio_venta,
+      p_precio_frio: precio_frio,
+      p_precio_credito: precio_credito,
+    });
+
+    if (error) throw new Error(error.message);
+    return normalizarProducto(data);
+  },
+
+  /**
    * Actualiza un producto existente
    */
   async actualizarProducto(id, productoData) {

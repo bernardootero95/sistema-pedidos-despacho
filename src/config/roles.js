@@ -10,11 +10,13 @@ export const ROLES_MODULO = {
   // El vendedor selecciona/crea clientes desde Nuevo Pedido (quick-add), no
   // necesita el directorio completo con edición/suspensión/eliminación.
   CLIENTES: ["soporte", "gerencia"],
-  // Igual que clientes: vendedor y despachador ven productos al armar un
-  // pedido (fetch propio en OrderCreatePage, no gateado por este permiso),
-  // pero no necesitan el catálogo completo ni pudieron nunca escribir en
-  // él (productos_write_admin ya era solo soporte/gerencia).
-  PRODUCTOS: ["soporte", "gerencia"],
+  // vendedor sigue sin el catálogo completo (ve productos al armar un
+  // pedido vía su propio fetch en OrderCreatePage, no gateado por este
+  // permiso). despachador sí entra al catálogo completo: puede crear
+  // productos y editar precios (RPC actualizar_precios_producto), pero no
+  // stock/ficha completa ni eliminar — eso sigue siendo solo soporte/
+  // gerencia (productos_write_admin).
+  PRODUCTOS: ["soporte", "gerencia", "despachador"],
   // El despachador arma rutas con los vehículos vía su propio fetch en
   // DispatchCreatePage (no gateado por este permiso); no necesita el
   // listado/alta de vehículos.

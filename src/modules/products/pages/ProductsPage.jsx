@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { productService } from "../services/productService";
 import { ProductForm } from "../components/ProductForm";
+import { ProductPriceForm } from "../components/ProductPriceForm";
 import { ProductImportModal } from "../components/ProductImportModal";
 import { PurchaseCostHistoryModal } from "../../purchases/components/PurchaseCostHistoryModal";
 import { useAuth } from "../../../context/useAuth";
@@ -241,6 +242,10 @@ export const ProductsPage = () => {
   const { user } = useAuth();
   const { showError, showSuccess } = useToast();
   const esSoporte = user?.rol === "soporte";
+  // despachador entra al catálogo pero solo puede editar precios: la
+  // ficha completa (stock, código, impuestos, eliminar) sigue siendo
+  // exclusiva de soporte/gerencia.
+  const puedeGestionCompleta = ["soporte", "gerencia"].includes(user?.rol);
   const {
     items: productos,
     setItems: setProductos,
@@ -259,6 +264,7 @@ export const ProductsPage = () => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
+  const [productoPrecios, setProductoPrecios] = useState(null);
   const [productToView, setProductToView] = useState(null);
   const [productToViewHistory, setProductToViewHistory] = useState(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -299,6 +305,17 @@ export const ProductsPage = () => {
     cargarProductosConMayorista();
   };
 
+  const handleEditar = (product) => {
+    if (puedeGestionCompleta) handleOpenForm(product);
+    else setProductoPrecios(product);
+  };
+
+  const handlePreciosSuccess = () => {
+    setProductoPrecios(null);
+    showSuccess("Precios actualizados correctamente.");
+    cargarProductos();
+  };
+
   const handleToggleEstado = async (id, estadoActual) => {
     try {
       setProductos((prev) =>
@@ -337,6 +354,13 @@ export const ProductsPage = () => {
         <ProductImportModal
           onSuccess={handleImportSuccess}
           onCancel={() => setIsImportOpen(false)}
+        />
+      )}
+      {productoPrecios && (
+        <ProductPriceForm
+          producto={productoPrecios}
+          onSuccess={handlePreciosSuccess}
+          onCancel={() => setProductoPrecios(null)}
         />
       )}
       <ProductDetailsModal
@@ -452,17 +476,20 @@ export const ProductsPage = () => {
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleOpenForm(product)}
+                    onClick={() => handleEditar(product)}
+                    title={puedeGestionCompleta ? "Editar" : "Editar precios"}
                     className="p-2 text-primary hover:bg-primary/10 bg-primary/5 rounded-lg"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => handleEliminar(product.id, product.nombre)}
-                    className="p-2 text-red-500 hover:bg-red-100 bg-red-50 rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {puedeGestionCompleta && (
+                    <button
+                      onClick={() => handleEliminar(product.id, product.nombre)}
+                      className="p-2 text-red-500 hover:bg-red-100 bg-red-50 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -556,35 +583,39 @@ export const ProductsPage = () => {
                       >
                         <Eye className="w-4 h-4" />
                       </button>
+                      {puedeGestionCompleta && (
+                        <button
+                          onClick={() =>
+                            handleToggleEstado(product.id, product.estado)
+                          }
+                          title={product.estado ? "Suspender" : "Activar"}
+                          className={`p-2 rounded-lg transition-colors ${product.estado ? "text-slate-400 hover:text-red-500 hover:bg-red-50" : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"}`}
+                        >
+                          {product.estado ? (
+                            <XCircle className="w-4 h-4" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
                       <button
-                        onClick={() =>
-                          handleToggleEstado(product.id, product.estado)
-                        }
-                        title={product.estado ? "Suspender" : "Activar"}
-                        className={`p-2 rounded-lg transition-colors ${product.estado ? "text-slate-400 hover:text-red-500 hover:bg-red-50" : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"}`}
-                      >
-                        {product.estado ? (
-                          <XCircle className="w-4 h-4" />
-                        ) : (
-                          <CheckCircle2 className="w-4 h-4" />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleOpenForm(product)}
-                        title="Editar"
+                        onClick={() => handleEditar(product)}
+                        title={puedeGestionCompleta ? "Editar" : "Editar precios"}
                         className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() =>
-                          handleEliminar(product.id, product.nombre)
-                        }
-                        title="Eliminar"
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {puedeGestionCompleta && (
+                        <button
+                          onClick={() =>
+                            handleEliminar(product.id, product.nombre)
+                          }
+                          title="Eliminar"
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
