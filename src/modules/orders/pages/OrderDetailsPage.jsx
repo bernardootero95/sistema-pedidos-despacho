@@ -8,6 +8,7 @@ import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { OrderDeliveryDate } from "../components/OrderDeliveryDate";
 import { OrderHistoryTimeline } from "../components/OrderHistoryTimeline";
 import { OrderDispatchInfo } from "../components/OrderDispatchInfo";
+import { EnviarFacturaButton } from "../components/EnviarFacturaButton";
 import { ROLES_MODULO } from "../../../config/roles";
 import {
   ArrowLeft,
@@ -36,6 +37,7 @@ export const OrderDetailsPage = () => {
   const puedeEditarEntrega = ["gerencia", "soporte"].includes(user?.rol);
   const puedeVerHistorial = ["gerencia", "soporte"].includes(user?.rol);
   const puedeVerDespacho = ROLES_MODULO.DESPACHOS.includes(user?.rol);
+  const puedeFacturar = user?.rol === "soporte";
 
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -290,6 +292,9 @@ export const OrderDetailsPage = () => {
             )}
             Imprimir Tiquete 80mm
           </button>
+          {puedeFacturar && (
+            <EnviarFacturaButton pedido={pedido} onEnviada={recargarPedido} />
+          )}
         </div>
       </div>
 
