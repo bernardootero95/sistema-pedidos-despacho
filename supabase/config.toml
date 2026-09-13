@@ -22,3 +22,13 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/reset-user-password/deno.json"
 entrypoint = "./functions/reset-user-password/index.ts"
+
+[functions.enviar-factura-ingefact]
+enabled = true
+# true: exige un JWT válido, y el código además verifica que sea de un
+# usuario con rol soporte (único rol habilitado para facturar) antes de
+# llamar a la API externa de IngeFact. Requiere los secrets
+# INGEFACT_API_URL e INGEFACT_API_KEY (`supabase secrets set ...`).
+verify_jwt = true
+import_map = "./functions/enviar-factura-ingefact/deno.json"
+entrypoint = "./functions/enviar-factura-ingefact/index.ts"
