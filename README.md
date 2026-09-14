@@ -20,35 +20,47 @@ código.
 - **Routing:** react-router-dom v7, con `React.lazy` + `Suspense` para code
   splitting por página.
 - **PDF:** html2pdf.js (import dinámico).
+- **Excel:** read-excel-file / write-excel-file (carga de stock y
+  exportación de reportes).
+- **Observabilidad:** Sentry (`@sentry/react`), opcional por tenant.
+- **Antibot:** Cloudflare Turnstile (`@marsidev/react-turnstile`), opcional
+  en login/recuperación de contraseña.
+- **Facturación electrónica:** integración con IngeFact vía Edge Function.
+- **Tests:** Vitest + Testing Library.
 
 ## Estructura de carpetas
 
 ```
 src/
 ├── modules/                  # Un módulo por dominio de negocio
-│   ├── auth/                 # Login y sesión
-│   ├── users/                # Gestión de personal
-│   ├── clients/               # Catálogo de clientes
-│   ├── products/              # Catálogo de productos
-│   ├── vehicles/               # Flota de vehículos
-│   ├── orders/                # Toma de pedidos
-│   ├── dispatches/            # Órdenes de despacho y entrega
-│   └── dashboard/             # Panel principal (KPIs)
+│   ├── auth/                  # Login, recuperación de contraseña y sesión
+│   ├── users/                  # Gestión de personal
+│   ├── clients/                 # Catálogo de clientes
+│   ├── products/                # Catálogo de productos
+│   ├── vehicles/                 # Flota de vehículos
+│   ├── suppliers/                # Catálogo de proveedores
+│   ├── purchases/                # Compras a proveedores (carga de stock)
+│   ├── orders/                   # Toma de pedidos y facturación (IngeFact)
+│   ├── dispatches/                # Órdenes de despacho y entrega
+│   ├── reports/                   # Reportes y exportación a Excel
+│   └── dashboard/                 # Panel principal (KPIs)
 │       └── <modulo>/
-│           ├── pages/          # Componentes de página (rutas)
-│           ├── components/     # Componentes de presentación
-│           ├── services/       # Acceso a Supabase (única capa que lo toca)
-│           └── utils/          # Validaciones y helpers puros
-├── components/                # Layout y UI compartida (Toast, etc.)
-├── context/                   # AuthContext/Provider, ToastContext/Provider
-├── config/                    # Cliente Supabase y config de tenant (white-label)
-├── routes/                    # AppRouter (rutas + lazy loading)
-└── mock/                      # Datos de demo (aún usados por el Dashboard)
+│           ├── pages/               # Componentes de página (rutas)
+│           ├── components/          # Componentes de presentación
+│           ├── services/            # Acceso a Supabase (única capa que lo toca)
+│           ├── utils/                # Validaciones y helpers puros
+│           └── hooks/                # Hooks propios del módulo (cuando aplica)
+├── components/                 # Layout y UI compartida (Toast, etc.)
+├── context/                    # AuthContext/Provider, ToastContext/Provider
+├── config/                     # Cliente Supabase y config de tenant (white-label)
+├── hooks/                      # Hooks compartidos (paginación server-side, realtime)
+├── routes/                     # AppRouter (rutas + lazy loading)
+└── test/                       # Setup y fixtures de Vitest
 
 supabase/
-├── migrations/                # Migraciones SQL (esquema, RPCs, RLS)
-├── functions/                 # Edge Functions (ej. create-user)
-└── config.toml                 # Configuración del proyecto Supabase
+├── migrations/                 # Migraciones SQL (esquema, RPCs, RLS)
+├── functions/                  # Edge Functions (create-user, reset-user-password, enviar-factura-ingefact)
+└── config.toml                  # Configuración del proyecto Supabase
 ```
 
 Cada módulo separa presentación (`pages`/`components`) de lógica de negocio
@@ -88,6 +100,8 @@ Cada módulo separa presentación (`pages`/`components`) de lógica de negocio
    | `VITE_COLOR_PRIMARY` / `VITE_COLOR_PRIMARY_HOVER` / `VITE_COLOR_PRIMARY_LIGHT` | Paleta de color primario |
    | `VITE_COLOR_SECONDARY` / `VITE_COLOR_SECONDARY_HOVER` | Paleta de color secundario |
    | `VITE_COMPANY_DOMAIN` | Dominio de la empresa (referencia/branding) |
+   | `VITE_SENTRY_DSN` | (Opcional) DSN de Sentry para observabilidad de errores en producción. Vacío = Sentry no se inicializa |
+   | `VITE_TURNSTILE_SITE_KEY` | (Opcional) Sitekey de Cloudflare Turnstile para el CAPTCHA de login/recuperación de contraseña. Vacío = no se muestra CAPTCHA |
 
 3. Levantar el servidor de desarrollo:
 
@@ -98,9 +112,11 @@ Cada módulo separa presentación (`pages`/`components`) de lógica de negocio
 ### Otros comandos
 
 ```bash
-npm run build     # build de producción
-npm run lint      # ESLint
-npm run preview   # preview del build de producción
+npm run build       # build de producción
+npm run lint        # ESLint
+npm run preview     # preview del build de producción
+npm run test        # tests unitarios (Vitest)
+npm run test:watch  # tests en modo watch
 ```
 
 ## Base de datos: migraciones de Supabase
@@ -121,11 +137,12 @@ El esquema, las funciones RPC transaccionales y las políticas RLS viven en
    supabase db push
    ```
 
-3. Desplegar las Edge Functions (ej. `create-user`, usada para el alta de
-   usuarios con privilegios administrativos):
+3. Desplegar las Edge Functions:
 
    ```bash
-   supabase functions deploy create-user
+   supabase functions deploy create-user               # alta de usuarios con privilegios administrativos
+   supabase functions deploy reset-user-password        # restablecimiento de contraseña de personal
+   supabase functions deploy enviar-factura-ingefact     # facturación electrónica de pedidos vía IngeFact
    ```
 
 > Para desarrollo 100% local con Supabase corriendo en Docker, usar
@@ -134,21 +151,27 @@ El esquema, las funciones RPC transaccionales y las políticas RLS viven en
 
 ## Módulos principales
 
-- **Auth** — login y manejo de sesión contra Supabase Auth.
+- **Auth** — login, recuperación de contraseña (con CAPTCHA opcional vía
+  Turnstile) y manejo de sesión contra Supabase Auth.
 - **Usuarios** — alta/edición/activación de personal interno, con roles
   (`vendedor`, `despachador`, `repartidor`, `gerencia`, `soporte`).
 - **Clientes** — catálogo de clientes con validación de dígito verificador.
-- **Productos** — catálogo de productos para la toma de pedidos.
+- **Productos** — catálogo de productos para la toma de pedidos, con
+  sugerencia de código consecutivo al crear uno nuevo.
 - **Vehículos** — flota disponible para asignar a despachos.
+- **Proveedores** — catálogo de proveedores usado en el módulo de Compras.
+- **Compras** — registro de compras a proveedores, con carga de stock por
+  Excel y alta rápida de producto nuevo desde el propio formulario.
 - **Pedidos** — toma de pedidos con carrito, búsqueda de productos y
   exportación a PDF; la creación se resuelve vía RPC transaccional en el
-  servidor.
+  servidor. Incluye envío de factura electrónica a IngeFact (rol
+  `soporte`).
 - **Despachos** — asignación de pedidos a un vehículo/repartidor, control
   de estado del despacho y del estado de entrega por pedido individual,
   también resuelto vía RPC transaccional.
+- **Reportes** — reportes operativos con exportación a Excel.
 - **Dashboard** — indicadores generales (ventas, pedidos pendientes, rutas
-  activas). *Actualmente muestra datos de demostración
-  (`src/mock/demoData.js`), pendiente de conectarse a datos reales.*
+  activas) conectados a datos reales vía `dashboardService`.
 
 El acceso a cada módulo está filtrado por rol tanto en la navegación
 (sidebar) como en las políticas RLS del backend.
