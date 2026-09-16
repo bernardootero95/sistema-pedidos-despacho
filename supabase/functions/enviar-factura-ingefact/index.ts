@@ -12,6 +12,12 @@ const corsHeaders = {
 // producción/demo) -- el prefijo /api/v1/external/v1 se arma acá.
 const INGEFACT_API_URL = Deno.env.get('INGEFACT_API_URL') ?? ''
 const INGEFACT_API_KEY = Deno.env.get('INGEFACT_API_KEY') ?? ''
+// Correo de respaldo para clientes sin correo propio (ej. "consumidor
+// final" de venta de mostrador) -- IngeFact exige uno para crear el
+// cliente, pero no tiene que ser un correo que el cliente real reciba.
+// Un secret por proyecto en vez de un dominio fijo en el código porque el
+// mismo código de Edge Function corre en varios tenants white-label.
+const INGEFACT_CORREO_GENERICO = Deno.env.get('INGEFACT_CORREO_GENERICO') ?? ''
 
 class IngefactError extends Error {
   status: number
@@ -155,9 +161,13 @@ serve(async (req) => {
     }
 
     const cliente = pedido.clientes as any
-    if (!cliente?.correo) {
+    const correoFacturacion = cliente?.correo || INGEFACT_CORREO_GENERICO
+    if (!correoFacturacion) {
       return responder(
-        { error: 'El cliente no tiene correo registrado. Complétalo en su ficha antes de facturar.' },
+        {
+          error:
+            'El cliente no tiene correo registrado y no hay un correo genérico configurado. Completa el correo del cliente o configura el secret INGEFACT_CORREO_GENERICO.',
+        },
         422,
       )
     }
@@ -165,18 +175,30 @@ serve(async (req) => {
     let ingefactClienteId = cliente.ingefact_cliente_id as string | null
 
     if (!ingefactClienteId) {
-      const clienteCreado = await ingefact('/clientes', {
-        method: 'POST',
-        body: JSON.stringify({
-          tipo_identificacion: cliente.tipo_identificacion,
-          numero_identificacion: cliente.numero_identificacion,
-          digito_verificacion: cliente.digito_verificacion || null,
-          nombre: nombreCliente(cliente),
-          correo_electronico: cliente.correo,
-          telefono: cliente.telefono || null,
-        }),
-      })
-      ingefactClienteId = clienteCreado.id
+      // El cliente puede ya existir en IngeFact (creado por otra vía, ej. el
+      // admin de IngeFact) sin que este sistema lo sepa todavía -- IngeFact
+      // rechaza con 409 un número de identificación duplicado por empresa,
+      // así que se busca primero por NIT exacto antes de intentar crear.
+      const encontrados = await ingefact(`/clientes?search=${encodeURIComponent(cliente.numero_identificacion)}`)
+      const existente = (encontrados || []).find(
+        (c: any) => c.numero_identificacion === cliente.numero_identificacion,
+      )
+
+      ingefactClienteId = existente
+        ? existente.id
+        : (
+            await ingefact('/clientes', {
+              method: 'POST',
+              body: JSON.stringify({
+                tipo_identificacion: cliente.tipo_identificacion,
+                numero_identificacion: cliente.numero_identificacion,
+                digito_verificacion: cliente.digito_verificacion || null,
+                nombre: nombreCliente(cliente),
+                correo_electronico: correoFacturacion,
+                telefono: cliente.telefono || null,
+              }),
+            })
+          ).id
 
       await supabaseAdmin
         .from('clientes')
