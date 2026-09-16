@@ -142,7 +142,7 @@ serve(async (req) => {
     const { data: pedido, error: pedidoError } = await supabaseAdmin
       .from('pedidos_cabecera')
       .select(`
-        id, estado, fecha_pedido, ingefact_factura_id,
+        id, estado, ingefact_factura_id,
         clientes ( id, tipo_identificacion, numero_identificacion, digito_verificacion, primer_nombre, primer_apellido, razon_social, correo, telefono, ingefact_cliente_id ),
         detalles:pedidos_detalle ( cantidad, precio_unitario, iva_porcentaje, inc_porcentaje, producto_id, producto:productos ( codigo, nombre ) )
       `)
@@ -210,7 +210,11 @@ serve(async (req) => {
       method: 'POST',
       body: JSON.stringify({
         cliente_id: ingefactClienteId,
-        fecha: String(pedido.fecha_pedido).slice(0, 10),
+        // Fecha de EMISIÓN de la factura (hoy), no la del pedido: un pedido
+        // puede tomarse, entregarse y facturarse en tres días distintos --
+        // fecha_pedido/fecha_entrega quedan en pedidos_cabecera, la fecha de
+        // factura la marca ingefact_enviado_en (guardado más abajo).
+        fecha: new Date().toISOString().slice(0, 10),
         lineas: (pedido.detalles || []).map(lineaFactura),
       }),
     })
