@@ -81,6 +81,15 @@ function lineaFactura(detalle: any) {
   const inc = Number(detalle.inc_porcentaje) || 0
   const [tributo, tarifa_impuesto] = iva > 0 ? ['01', iva] : inc > 0 ? ['02', inc] : [null, 0]
 
+  // pedidos_detalle.precio_unitario es el precio de venta CON impuesto
+  // incluido (así lo arma crear_pedido_transaccional desde
+  // productos.precio_venta) -- IngeFact espera el precio SIN impuesto y le
+  // suma tarifa_impuesto encima, así que hay que descontarlo acá primero.
+  // Misma cuenta que ya hace OrderDetailsPage para mostrar la "base
+  // gravable" (baseLinea = subtotalLinea / factor).
+  const factor = 1 + (iva + inc) / 100
+  const precioBase = Number(detalle.precio_unitario) / factor
+
   return {
     codigo: detalle.producto?.codigo || detalle.producto_id,
     nombre: detalle.producto?.nombre || 'Producto',
@@ -89,7 +98,7 @@ function lineaFactura(detalle: any) {
     tributo,
     tarifa_impuesto,
     cantidad: Number(detalle.cantidad),
-    precio_unitario: Number(detalle.precio_unitario),
+    precio_unitario: precioBase,
   }
 }
 
