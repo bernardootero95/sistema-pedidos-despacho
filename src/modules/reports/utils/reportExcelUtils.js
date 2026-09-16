@@ -46,5 +46,10 @@ export const exportarInformeExcel = async (filas, filename) => {
     },
   ];
 
-  await writeXlsxFile(filas, { columns, fileName: filename });
+  // writeXlsxFile() del build de navegador no devuelve una promesa
+  // directamente: devuelve sincrónicamente { toBlob, toFile } y hay que
+  // encadenar .toFile(nombre) para que genere y dispare la descarga (a
+  // diferencia del ejemplo suelto del README con `fileName` en las
+  // opciones, que corresponde a la API vieja v1.x).
+  await writeXlsxFile(filas, { columns }).toFile(filename);
 };
