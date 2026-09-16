@@ -63,6 +63,12 @@ function nombreCliente(cliente: any): string {
   return cliente.razon_social || nombreCompleto
 }
 
+// Fecha de hoy en zona horaria de Colombia (YYYY-MM-DD) -- toISOString()
+// da la fecha en UTC, que de noche ya cae al día siguiente ahí.
+function fechaHoyBogota(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date())
+}
+
 // Traduce una línea de pedidos_detalle al ítem embebido que espera IngeFact.
 // El sistema no registra unidad de medida por producto: se usa "94" (DIAN:
 // unidad) como default fijo, válido para el catálogo actual (bienes físicos
@@ -214,7 +220,7 @@ serve(async (req) => {
         // puede tomarse, entregarse y facturarse en tres días distintos --
         // fecha_pedido/fecha_entrega quedan en pedidos_cabecera, la fecha de
         // factura la marca ingefact_enviado_en (guardado más abajo).
-        fecha: new Date().toISOString().slice(0, 10),
+        fecha: fechaHoyBogota(),
         lineas: (pedido.detalles || []).map(lineaFactura),
       }),
     })
