@@ -89,6 +89,7 @@ export const PurchaseProductPicker = ({
           type="button"
           onClick={handleAgregar}
           disabled={!puedeAgregar}
+          aria-label="Agregar producto a la compra"
           className="bg-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm shrink-0"
         >
           <Plus className="h-5 w-5" />
