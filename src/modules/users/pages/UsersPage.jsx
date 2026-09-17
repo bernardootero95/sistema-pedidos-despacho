@@ -312,7 +312,7 @@ export const UsersPage = () => {
                       </button>
                       <button
                         onClick={() => handleToggleEstado(user.id, user.estado)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
                           user.estado
                             ? "bg-red-50 text-red-600 hover:bg-red-100"
                             : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
