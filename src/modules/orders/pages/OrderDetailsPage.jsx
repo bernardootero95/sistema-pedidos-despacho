@@ -270,7 +270,7 @@ export const OrderDetailsPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto">
           {pedido.estado === "pendiente" && (
             <button
               onClick={() => navigate(`/orders/${id}/editar`)}
@@ -290,7 +290,7 @@ export const OrderDetailsPage = () => {
             ) : (
               <Printer className="h-4 w-4" />
             )}
-            Imprimir Tiquete 80mm
+            Imprimir Tiquete
           </button>
           {puedeFacturar && (
             <EnviarFacturaButton pedido={pedido} onEnviada={recargarPedido} />

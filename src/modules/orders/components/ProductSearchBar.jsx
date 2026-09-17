@@ -44,6 +44,7 @@ export const ProductSearchBar = ({
           type="button"
           onClick={onAgregar}
           disabled={!productoSeleccionado}
+          aria-label="Agregar producto al pedido"
           className="bg-blue-600 text-white px-5 py-3 rounded-xl flex items-center justify-center hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
         >
           <Plus className="h-6 w-6" />

@@ -110,6 +110,7 @@ export const CarritoPedido = ({
                     <button
                       type="button"
                       onClick={() => onModificarCantidad(index, -0.25)}
+                      aria-label="Restar cantidad"
                       className="p-2 text-slate-600 hover:bg-slate-100 transition-colors active:bg-slate-200"
                     >
                       <Minus className="h-4 w-4" />
@@ -128,6 +129,7 @@ export const CarritoPedido = ({
                     <button
                       type="button"
                       onClick={() => onModificarCantidad(index, 0.25)}
+                      aria-label="Sumar cantidad"
                       className="p-2 text-slate-600 hover:bg-slate-100 transition-colors active:bg-slate-200"
                     >
                       <Plus className="h-4 w-4" />
@@ -146,9 +148,10 @@ export const CarritoPedido = ({
                   <button
                     type="button"
                     onClick={() => onEliminar(index)}
+                    aria-label="Eliminar producto"
                     className="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors"
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>

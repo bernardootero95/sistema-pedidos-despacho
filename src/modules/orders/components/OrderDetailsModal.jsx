@@ -122,12 +122,14 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[95vh] flex flex-col overflow-hidden relative">
         {/* HEADER DE CONTROL */}
-        <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50">
-          <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-            <Package className="h-5 w-5 text-blue-600" />
-            Detalle del Pedido #{pedido?.numero_pedido}
+        <div className="flex justify-between items-center gap-3 p-4 border-b border-slate-200 bg-slate-50">
+          <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 min-w-0 truncate">
+            <Package className="h-5 w-5 text-blue-600 shrink-0" />
+            <span className="truncate">
+              Detalle del Pedido #{pedido?.numero_pedido}
+            </span>
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleOpenPdf}
               disabled={isGeneratingPdf || !pedido}
@@ -138,7 +140,7 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
               ) : (
                 <ExternalLink className="h-4 w-4" />
               )}
-              Abrir PDF 80mm
+              Abrir PDF
             </button>
             <button
               onClick={onClose}
