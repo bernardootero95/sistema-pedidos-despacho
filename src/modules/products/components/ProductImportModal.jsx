@@ -182,7 +182,7 @@ export const ProductImportModal = ({ onSuccess, onCancel }) => {
           )}
         </div>
 
-        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 shrink-0">
+        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex flex-wrap items-center justify-end gap-3 shrink-0">
           {resultado ? (
             <button
               type="button"
