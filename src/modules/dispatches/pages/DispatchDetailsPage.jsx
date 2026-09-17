@@ -178,7 +178,7 @@ export const DispatchDetailsPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto">
           <button
             onClick={handleImprimirTiqueteYFacturas}
             disabled={isPrinting || pedidosAsignados.length === 0}

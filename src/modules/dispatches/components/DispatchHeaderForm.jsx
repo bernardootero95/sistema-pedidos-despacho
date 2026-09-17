@@ -53,13 +53,13 @@ export const DispatchHeaderForm = ({
             Vehículo Asignado *
           </label>
           <div className="relative">
-            <Truck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+            <Truck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
             <select
               name="vehiculo_id"
               value={formData.vehiculo_id}
               onChange={onChange}
               onBlur={onBlur}
-              className={`w-full pl-10 border rounded-lg p-2.5 outline-none focus:ring-2 appearance-none bg-white transition-colors ${
+              className={`w-full pl-9 border rounded-lg p-2.5 outline-none focus:ring-2 appearance-none bg-white transition-colors ${
                 touched.vehiculo_id && errors.vehiculo_id
                   ? "border-red-300 focus:ring-red-200"
                   : "border-slate-300 focus:ring-blue-100 focus:border-blue-500"
@@ -89,13 +89,13 @@ export const DispatchHeaderForm = ({
             Conductor / Repartidor *
           </label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
             <select
               name="repartidor_id"
               value={formData.repartidor_id}
               onChange={onChange}
               onBlur={onBlur}
-              className={`w-full pl-10 border rounded-lg p-2.5 outline-none focus:ring-2 appearance-none bg-white transition-colors ${
+              className={`w-full pl-9 border rounded-lg p-2.5 outline-none focus:ring-2 appearance-none bg-white transition-colors ${
                 touched.repartidor_id && errors.repartidor_id
                   ? "border-red-300 focus:ring-red-200"
                   : "border-slate-300 focus:ring-blue-100 focus:border-blue-500"
