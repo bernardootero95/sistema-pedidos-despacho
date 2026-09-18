@@ -1,27 +1,12 @@
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
 import { tenantConfig } from "../../config/tenant";
-import { ROLES_MODULO } from "../../config/roles";
 import { Footer } from "./Footer"; // <-- Asegúrate de ajustar esta ruta donde hayas guardado Footer.jsx
 import { ProfileMenu } from "./ProfileMenu";
-import {
-  LayoutDashboard,
-  ShoppingCart,
-  Truck,
-  Users,
-  Package,
-  LogOut,
-  Building2,
-  Menu,
-  X,
-  UserCog,
-  MapPin,
-  FileBarChart,
-  Handshake,
-  ShoppingBag,
-  Tag,
-} from "lucide-react";
+import { SidebarMenu } from "./SidebarMenu";
+import { MENU_ITEMS, getMenuVisible } from "./menuItems";
+import { LogOut, Building2, Menu, X } from "lucide-react";
 
 export const MainLayout = () => {
   const { user, logout } = useAuth();
@@ -33,84 +18,7 @@ export const MainLayout = () => {
     navigate("/login");
   };
 
-  const menuItems = [
-    {
-      path: "/dashboard",
-      label: "Panel Principal",
-      icon: LayoutDashboard,
-      roles: ROLES_MODULO.DASHBOARD,
-    },
-    {
-      path: "/usuarios",
-      label: "Gestión de Personal",
-      icon: UserCog,
-      roles: ROLES_MODULO.USUARIOS,
-    },
-    {
-      path: "/pedidos",
-      label: "Toma de Pedidos",
-      icon: ShoppingCart,
-      roles: ROLES_MODULO.PEDIDOS,
-    },
-    {
-      path: "/despachos",
-      label: "Órdenes de Despacho",
-      icon: Truck,
-      roles: ROLES_MODULO.DESPACHOS,
-    },
-    {
-      path: "/despachos/mi-ruta",
-      label: "Mi Ruta de Hoy",
-      icon: MapPin,
-      roles: ROLES_MODULO.MI_RUTA,
-    },
-    {
-      path: "/clientes",
-      label: "Clientes",
-      icon: Users,
-      roles: ROLES_MODULO.CLIENTES,
-    },
-    {
-      path: "/productos",
-      label: "Catálogo de Productos",
-      icon: Package,
-      roles: ROLES_MODULO.PRODUCTOS,
-    },
-    {
-      path: "/tipos-precio",
-      label: "Tipos de Precio",
-      icon: Tag,
-      roles: ROLES_MODULO.TIPOS_PRECIO,
-    },
-    {
-      path: "/vehiculos",
-      label: "Flota de Vehículos",
-      icon: Truck,
-      roles: ROLES_MODULO.VEHICULOS,
-    },
-    {
-      path: "/proveedores",
-      label: "Proveedores",
-      icon: Handshake,
-      roles: ROLES_MODULO.PROVEEDORES,
-    },
-    {
-      path: "/compras",
-      label: "Compras",
-      icon: ShoppingBag,
-      roles: ROLES_MODULO.COMPRAS,
-    },
-    {
-      path: "/informes/productos",
-      label: "Informes",
-      icon: FileBarChart,
-      roles: ROLES_MODULO.INFORMES,
-    },
-  ];
-
-  const visibleMenuItems = menuItems.filter(
-    (item) => user && item.roles.includes(user.rol),
-  );
+  const visibleMenuItems = getMenuVisible(MENU_ITEMS, user?.rol);
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden relative">
@@ -155,26 +63,10 @@ export const MainLayout = () => {
           <div className="text-[10px] font-bold uppercase text-slate-500 px-3 mb-2 tracking-wider">
             Módulos del Sistema
           </div>
-          {visibleMenuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-3 md:py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    isActive
-                      ? "bg-primary text-white shadow-md shadow-primary/20 font-bold"
-                      : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                  }`
-                }
-              >
-                <Icon className="w-5 h-5 shrink-0" />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
+          <SidebarMenu
+            items={visibleMenuItems}
+            onNavigate={() => setIsMobileMenuOpen(false)}
+          />
         </nav>
 
         <div className="p-4 bg-slate-950/50 border-t border-slate-800 flex items-center justify-between">
