@@ -21,21 +21,16 @@ import { ClientForm } from "../../clients/components/ClientForm";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { useAuth } from "../../../context/useAuth";
 
-// Precio al por mayor: solo soporte/gerencia. Precio frío y crédito:
-// además despachador (los ve al facturar) y cajera (venta directa),
-// nunca vendedor. Mismos roles que valida resolver_precio_pedido en el
-// servidor — esto es solo para no mostrar un control que el backend
-// rechazaría.
+// Precio al por mayor: solo soporte/gerencia (mismos roles que valida
+// resolver_precio_pedido en el servidor). Los precios personalizados (frío,
+// crédito, etc.) no se resuelven acá: cada tipo trae sus propios
+// roles_permitidos y CarritoPedido filtra con ellos.
 const ROLES_MAYORISTA = ["soporte", "gerencia"];
-const ROLES_FRIO = ["soporte", "gerencia", "despachador", "cajera"];
-const ROLES_CREDITO = ["soporte", "gerencia", "despachador", "cajera"];
 
 export const OrderCreatePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const puedeMayorista = ROLES_MAYORISTA.includes(user?.rol);
-  const puedeFrio = ROLES_FRIO.includes(user?.rol);
-  const puedeCredito = ROLES_CREDITO.includes(user?.rol);
 
   // --- ESTADOS DE DATOS EXTERNOS ---
   const [clientes, setClientes] = useState([]);
@@ -86,22 +81,30 @@ export const OrderCreatePage = () => {
           console.error("Error obteniendo sesión:", authError);
         }
 
-        const [clientesData, productosData, preciosMayoristas] =
-          await Promise.all([
-            clientService.getClientesActivos(),
-            productService.getProductosActivos(),
-            // Solo soporte/gerencia las aplican; el resto ni las ve (RLS
-            // igual las filtraría, pero así se evita la consulta de más).
-            ROLES_MAYORISTA.includes(user?.rol)
-              ? productService.getTodosPreciosMayoristas()
-              : Promise.resolve([]),
-          ]);
+        const [
+          clientesData,
+          productosData,
+          preciosMayoristas,
+          preciosPersonalizados,
+        ] = await Promise.all([
+          clientService.getClientesActivos(),
+          productService.getProductosActivos(),
+          // Solo soporte/gerencia las aplican; el resto ni las ve (RLS
+          // igual las filtraría, pero así se evita la consulta de más).
+          ROLES_MAYORISTA.includes(user?.rol)
+            ? productService.getTodosPreciosMayoristas()
+            : Promise.resolve([]),
+          productService.getTodosPreciosPersonalizados(),
+        ]);
 
         setClientes(clientesData);
         setProductos(
           productosData.map((p) => ({
             ...p,
             tiersMayoristas: preciosMayoristas.filter(
+              (t) => t.producto_id === p.id,
+            ),
+            preciosPersonalizados: preciosPersonalizados.filter(
               (t) => t.producto_id === p.id,
             ),
           })),
@@ -295,8 +298,7 @@ export const OrderCreatePage = () => {
           formatCurrency={formatCurrency}
           error={errorStock || errors.carrito}
           puedeMayorista={puedeMayorista}
-          puedeFrio={puedeFrio}
-          puedeCredito={puedeCredito}
+          rolActual={user?.rol}
         />
 
         {/* NOTAS Y TOTAL */}

@@ -61,13 +61,14 @@ export const orderService = {
    * concurrentes y evitando confiar en precios enviados por el cliente.
    *
    * @param {Object} cabeceraData - { cliente_id, vendedor_id, notas }
-   * @param {Array} detallesData - [{ producto_id, cantidad, tipo_precio }, ...]
+   * @param {Array} detallesData - [{ producto_id, cantidad, tipo_precio, tipo_precio_id }, ...]
    */
   async crearPedido(cabeceraData, detallesData) {
     const detallesParaRpc = detallesData.map((item) => ({
       producto_id: item.producto_id,
       cantidad: Number(item.cantidad),
       tipo_precio: item.tipo_precio || "normal",
+      tipo_precio_id: item.tipo_precio_id ?? null,
     }));
 
     const { data, error } = await supabase.rpc("crear_pedido_transaccional", {
@@ -93,13 +94,14 @@ export const orderService = {
    * cliente. Rechaza pedidos que ya no estén 'pendiente'.
    *
    * @param {string} pedidoId
-   * @param {{ notas?: string, detalles: Array<{producto_id: string, cantidad: number, tipo_precio?: string}> }} data
+   * @param {{ notas?: string, detalles: Array<{producto_id: string, cantidad: number, tipo_precio?: string, tipo_precio_id?: string|null}> }} data
    */
   async editarPedido(pedidoId, { notas, detalles }) {
     const detallesParaRpc = detalles.map((item) => ({
       producto_id: item.producto_id,
       cantidad: Number(item.cantidad),
       tipo_precio: item.tipo_precio || "normal",
+      tipo_precio_id: item.tipo_precio_id ?? null,
     }));
 
     const { data, error } = await supabase.rpc("editar_pedido_transaccional", {
@@ -155,7 +157,8 @@ export const orderService = {
         vendedor:perfiles (*),
         detalles:pedidos_detalle (
           *,
-          producto:productos (codigo, nombre)
+          producto:productos (codigo, nombre),
+          tipo:tipos_precio (nombre)
         )
       `,
       )

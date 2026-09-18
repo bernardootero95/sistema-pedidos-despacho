@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { X, Package, Loader2, AlertCircle, ExternalLink } from "lucide-react";
 import { orderService } from "../services/orderService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
+import { etiquetaTipoPrecio } from "../utils/tipoPrecioDisplay";
 import { useToast } from "../../../context/useToast";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
@@ -251,9 +252,8 @@ export const OrderDetailsModal = ({ orderId, onClose }) => {
                         style={{ color: "#000000" }}
                       >
                         V. Unit: {formatCurrency(item.precio_unitario)}
-                        {item.tipo_precio === "mayorista" && " (Mayorista)"}
-                        {item.tipo_precio === "frio" && " (Frío)"}
-                        {item.tipo_precio === "credito" && " (Crédito)"}
+                        {etiquetaTipoPrecio(item) &&
+                          ` (${etiquetaTipoPrecio(item)})`}
                       </div>
                     </div>
                   ))}

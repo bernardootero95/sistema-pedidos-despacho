@@ -199,7 +199,6 @@ describe("useCarritoPedido: precio al por mayor automático por cantidad", () =>
     iva: 19,
     inc: 0,
     disponible: 100,
-    precio_frio: null,
     tiersMayoristas: [
       { producto_id: "p3", cantidad_minima: 10, precio: 900 },
       { producto_id: "p3", cantidad_minima: 50, precio: 800 },
@@ -286,52 +285,84 @@ describe("useCarritoPedido: precio al por mayor automático por cantidad", () =>
   });
 });
 
-describe("useCarritoPedido: precio a crédito (manual, no depende de la cantidad)", () => {
-  const productoConCredito = {
+describe("useCarritoPedido: precios personalizados (manuales, no dependen de la cantidad)", () => {
+  const roles = ["soporte", "gerencia", "despachador"];
+  const productoConPersonalizados = {
     id: "p4",
-    nombre: "Producto Crédito",
+    nombre: "Producto Personalizado",
     codigo: "P004",
     precio_venta: 1000,
     iva: 19,
     inc: 0,
     disponible: 100,
-    precio_frio: null,
-    precio_credito: 1300,
     tiersMayoristas: [],
+    preciosPersonalizados: [
+      { tipo_precio_id: "t-credito", nombre: "Crédito", precio: 1300, roles_permitidos: roles },
+      { tipo_precio_id: "t-vip", nombre: "VIP", precio: 800, roles_permitidos: roles },
+    ],
+  };
+
+  const agregar = () => {
+    const hook = renderHook(() =>
+      useCarritoPedido([productoConPersonalizados]),
+    );
+    act(() => hook.result.current.agregarAlCarrito("p4"));
+    return hook;
   };
 
   it("no se activa solo, hay que forzarlo con cambiarTipoPrecio", () => {
-    const { result } = renderHook(() =>
-      useCarritoPedido([productoConCredito]),
-    );
-    act(() => result.current.agregarAlCarrito("p4"));
+    const { result } = agregar();
     act(() => result.current.actualizarCantidadInput(0, "20"));
 
     expect(result.current.carrito[0].tipo_precio).toBe("normal");
+    expect(result.current.carrito[0].tipo_precio_id).toBeNull();
     expect(result.current.carrito[0].precio_unitario).toBe(1000);
   });
 
-  it("cambiarTipoPrecio aplica el precio a crédito configurado", () => {
-    const { result } = renderHook(() =>
-      useCarritoPedido([productoConCredito]),
-    );
-    act(() => result.current.agregarAlCarrito("p4"));
+  it("cambiarTipoPrecio aplica el precio del tipo elegido", () => {
+    const { result } = agregar();
 
-    act(() => result.current.cambiarTipoPrecio(0, "credito"));
-    expect(result.current.carrito[0].tipo_precio).toBe("credito");
+    act(() => result.current.cambiarTipoPrecio(0, "personalizado", "t-credito"));
+    expect(result.current.carrito[0].tipo_precio).toBe("personalizado");
+    expect(result.current.carrito[0].tipo_precio_id).toBe("t-credito");
     expect(result.current.carrito[0].precio_unitario).toBe(1300);
   });
 
-  it("una vez en crédito, el precio no cambia al modificar la cantidad", () => {
-    const { result } = renderHook(() =>
-      useCarritoPedido([productoConCredito]),
-    );
-    act(() => result.current.agregarAlCarrito("p4"));
-    act(() => result.current.cambiarTipoPrecio(0, "credito"));
+  it("distingue entre varios tipos personalizados del mismo producto", () => {
+    const { result } = agregar();
+
+    act(() => result.current.cambiarTipoPrecio(0, "personalizado", "t-credito"));
+    act(() => result.current.cambiarTipoPrecio(0, "personalizado", "t-vip"));
+    expect(result.current.carrito[0].tipo_precio_id).toBe("t-vip");
+    expect(result.current.carrito[0].precio_unitario).toBe(800);
+  });
+
+  it("una vez en un tipo personalizado, el precio no cambia al modificar la cantidad", () => {
+    const { result } = agregar();
+    act(() => result.current.cambiarTipoPrecio(0, "personalizado", "t-credito"));
 
     act(() => result.current.modificarCantidad(0, 1));
-    expect(result.current.carrito[0].tipo_precio).toBe("credito");
+    expect(result.current.carrito[0].tipo_precio).toBe("personalizado");
+    expect(result.current.carrito[0].tipo_precio_id).toBe("t-credito");
     expect(result.current.carrito[0].precio_unitario).toBe(1300);
     expect(result.current.carrito[0].subtotal_linea).toBe(2600); // 2 * 1300
+  });
+
+  it("volver a normal limpia el tipo_precio_id", () => {
+    const { result } = agregar();
+    act(() => result.current.cambiarTipoPrecio(0, "personalizado", "t-vip"));
+
+    act(() => result.current.cambiarTipoPrecio(0, "normal"));
+    expect(result.current.carrito[0].tipo_precio).toBe("normal");
+    expect(result.current.carrito[0].tipo_precio_id).toBeNull();
+    expect(result.current.carrito[0].precio_unitario).toBe(1000);
+  });
+
+  it("ignora un tipo personalizado que el producto no tiene configurado", () => {
+    const { result } = agregar();
+
+    act(() => result.current.cambiarTipoPrecio(0, "personalizado", "t-inexistente"));
+    expect(result.current.carrito[0].tipo_precio).toBe("normal");
+    expect(result.current.carrito[0].precio_unitario).toBe(1000);
   });
 });

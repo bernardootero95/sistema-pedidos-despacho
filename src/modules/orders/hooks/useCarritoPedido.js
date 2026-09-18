@@ -35,17 +35,22 @@ const resolverPrecioMayoristaPreview = (tiersMayoristas, cantidad) => {
 };
 
 /**
- * Recalcula tipo_precio + precio_unitario de una línea al cambiar su
- * cantidad. Frío y crédito nunca dependen de la cantidad, así que una vez
- * activados se mantienen tal cual. El mayorista sí: se activa SOLO por
- * cantidad — "se calcula según la cantidad" — sin que quien arma el
- * pedido tenga que activarlo a mano; si ya estaba forzado manualmente
- * (cambiarTipoPrecio) y la cantidad baja del umbral, se mantiene forzado
- * en la franja más económica en vez de perder el forzado silenciosamente.
+ * Recalcula tipo_precio + tipo_precio_id + precio_unitario de una línea al
+ * cambiar su cantidad. Los precios personalizados (frío, crédito, etc.)
+ * nunca dependen de la cantidad, así que una vez activados se mantienen
+ * tal cual. El mayorista sí: se activa SOLO por cantidad — "se calcula
+ * según la cantidad" — sin que quien arma el pedido tenga que activarlo a
+ * mano; si ya estaba forzado manualmente (cambiarTipoPrecio) y la cantidad
+ * baja del umbral, se mantiene forzado en la franja más económica en vez
+ * de perder el forzado silenciosamente.
  */
 const resolverLineaParaCantidad = (item, cantidad) => {
-  if (item.tipo_precio === "frio" || item.tipo_precio === "credito") {
-    return { tipo_precio: item.tipo_precio, precio_unitario: item.precio_unitario };
+  if (item.tipo_precio === "personalizado") {
+    return {
+      tipo_precio: "personalizado",
+      tipo_precio_id: item.tipo_precio_id,
+      precio_unitario: item.precio_unitario,
+    };
   }
 
   // `mayoristaForzado` (marcado solo por cambiarTipoPrecio) es lo único
@@ -64,6 +69,7 @@ const resolverLineaParaCantidad = (item, cantidad) => {
   ) {
     return {
       tipo_precio: "mayorista",
+      tipo_precio_id: null,
       precio_unitario: resolverPrecioMayoristaPreview(
         item.tiersMayoristas,
         cantidad,
@@ -71,7 +77,11 @@ const resolverLineaParaCantidad = (item, cantidad) => {
     };
   }
 
-  return { tipo_precio: "normal", precio_unitario: item.precio_venta };
+  return {
+    tipo_precio: "normal",
+    tipo_precio_id: null,
+    precio_unitario: item.precio_venta,
+  };
 };
 
 /**
@@ -113,14 +123,13 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
         const nuevo = [...prev];
         const item = nuevo[existeIndex];
         const cantidad = item.cantidad + 1;
-        const { tipo_precio, precio_unitario } = resolverLineaParaCantidad(
-          item,
-          cantidad,
-        );
+        const { tipo_precio, tipo_precio_id, precio_unitario } =
+          resolverLineaParaCantidad(item, cantidad);
         nuevo[existeIndex] = {
           ...item,
           cantidad,
           tipo_precio,
+          tipo_precio_id,
           precio_unitario,
           subtotal_linea: cantidad * precio_unitario,
         };
@@ -138,21 +147,20 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
         subtotal_linea: producto.precio_venta * 1,
         disponible: producto.disponible,
         tipo_precio: "normal",
+        tipo_precio_id: null,
         precio_venta: producto.precio_venta,
-        precio_frio: producto.precio_frio ?? null,
-        precio_credito: producto.precio_credito ?? null,
+        preciosPersonalizados: producto.preciosPersonalizados || [],
         tiersMayoristas: producto.tiersMayoristas || [],
         mayoristaForzado: false,
       };
-      const { tipo_precio, precio_unitario } = resolverLineaParaCantidad(
-        itemNuevo,
-        1,
-      );
+      const { tipo_precio, tipo_precio_id, precio_unitario } =
+        resolverLineaParaCantidad(itemNuevo, 1);
       setCarrito((prev) => [
         ...prev,
         {
           ...itemNuevo,
           tipo_precio,
+          tipo_precio_id,
           precio_unitario,
           subtotal_linea: precio_unitario,
         },
@@ -186,14 +194,13 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
 
     setCarrito((prev) => {
       const nuevo = [...prev];
-      const { tipo_precio, precio_unitario } = resolverLineaParaCantidad(
-        item,
-        nuevaCantidad,
-      );
+      const { tipo_precio, tipo_precio_id, precio_unitario } =
+        resolverLineaParaCantidad(item, nuevaCantidad);
       nuevo[index] = {
         ...item,
         cantidad: nuevaCantidad,
         tipo_precio,
+        tipo_precio_id,
         precio_unitario,
         subtotal_linea: nuevaCantidad * precio_unitario,
       };
@@ -224,14 +231,13 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
 
     setCarrito((prev) => {
       const nuevo = [...prev];
-      const { tipo_precio, precio_unitario } = resolverLineaParaCantidad(
-        item,
-        cantidadFinal,
-      );
+      const { tipo_precio, tipo_precio_id, precio_unitario } =
+        resolverLineaParaCantidad(item, cantidadFinal);
       nuevo[index] = {
         ...item,
         cantidad: cantidadFinal,
         tipo_precio,
+        tipo_precio_id,
         precio_unitario,
         subtotal_linea: cantidadFinal * precio_unitario,
       };
@@ -240,30 +246,35 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
   };
 
   /**
-   * Cambia el tipo de precio (normal/mayorista/frio/credito) de una línea
-   * ya agregada. El precio mostrado es solo un preview local — el
-   * servidor lo recalcula de todas formas al guardar (ver
-   * resolver_precio_pedido).
+   * Cambia el tipo de precio (normal/mayorista/personalizado) de una línea
+   * ya agregada. Para "personalizado" hay que indicar cuál con
+   * `tipoPrecioId` (frío, crédito, etc.); si la línea no tiene ese precio
+   * configurado, no se hace ningún cambio. El precio mostrado es solo un
+   * preview local — el servidor lo recalcula de todas formas al guardar
+   * (ver resolver_precio_pedido).
    */
-  const cambiarTipoPrecio = (index, tipoPrecio) => {
+  const cambiarTipoPrecio = (index, tipoPrecio, tipoPrecioId = null) => {
     setCarrito((prev) => {
-      const nuevo = [...prev];
-      const item = nuevo[index];
+      const item = prev[index];
       let precio_unitario = item.precio_venta;
 
-      if (tipoPrecio === "frio" && item.precio_frio != null) {
-        precio_unitario = item.precio_frio;
-      } else if (tipoPrecio === "credito" && item.precio_credito != null) {
-        precio_unitario = item.precio_credito;
+      if (tipoPrecio === "personalizado") {
+        const personalizado = item.preciosPersonalizados?.find(
+          (p) => p.tipo_precio_id === tipoPrecioId,
+        );
+        if (!personalizado) return prev;
+        precio_unitario = personalizado.precio;
       } else if (tipoPrecio === "mayorista") {
         precio_unitario =
           resolverPrecioMayoristaPreview(item.tiersMayoristas, item.cantidad) ??
           item.precio_venta;
       }
 
+      const nuevo = [...prev];
       nuevo[index] = {
         ...item,
         tipo_precio: tipoPrecio,
+        tipo_precio_id: tipoPrecio === "personalizado" ? tipoPrecioId : null,
         precio_unitario,
         subtotal_linea: item.cantidad * precio_unitario,
         // Solo esta elección explícita puede mantener "mayorista" pegado

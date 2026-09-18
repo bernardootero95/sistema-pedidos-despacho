@@ -8,6 +8,7 @@ import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { OrderDeliveryDate } from "../components/OrderDeliveryDate";
 import { OrderHistoryTimeline } from "../components/OrderHistoryTimeline";
 import { OrderDispatchInfo } from "../components/OrderDispatchInfo";
+import { etiquetaTipoPrecio } from "../utils/tipoPrecioDisplay";
 import { EnviarFacturaButton } from "../components/EnviarFacturaButton";
 import { ROLES_MODULO } from "../../../config/roles";
 import {
@@ -24,8 +25,7 @@ import {
   AlertCircle,
   ShieldCheck,
   Layers,
-  Snowflake,
-  CreditCard,
+  Tag,
 } from "lucide-react";
 
 export const OrderDetailsPage = () => {
@@ -392,14 +392,12 @@ export const OrderDetailsPage = () => {
                       <Layers className="h-3 w-3" /> Precio mayorista
                     </span>
                   )}
-                  {item.tipo_precio === "frio" && (
-                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
-                      <Snowflake className="h-3 w-3" /> Precio frío
-                    </span>
-                  )}
-                  {item.tipo_precio === "credito" && (
-                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
-                      <CreditCard className="h-3 w-3" /> Precio crédito
+                  {item.tipo_precio === "personalizado" && (
+                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 max-w-full bg-cyan-50 text-cyan-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                      <Tag className="h-3 w-3 shrink-0" />
+                      <span className="truncate">
+                        Precio {etiquetaTipoPrecio(item)}
+                      </span>
                     </span>
                   )}
                 </div>

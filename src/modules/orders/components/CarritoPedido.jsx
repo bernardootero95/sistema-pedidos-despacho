@@ -1,11 +1,41 @@
-import { Plus, Minus, Trash2, Layers, Snowflake, CreditCard } from "lucide-react";
+import { Plus, Minus, Trash2, Layers, Tag } from "lucide-react";
 
-const OPCIONES_TIPO_PRECIO = [
-  { value: "normal", label: "Normal" },
-  { value: "mayorista", label: "Mayorista", icon: Layers },
-  { value: "frio", label: "Frío", icon: Snowflake },
-  { value: "credito", label: "Crédito", icon: CreditCard },
-];
+/**
+ * Opciones de tipo de precio que se le ofrecen a quien arma el pedido para
+ * una línea: Normal siempre; Mayorista si su rol puede y el producto tiene
+ * franjas; y un botón por cada precio personalizado del producto cuyo tipo
+ * permita el rol actual (tipos_precio.roles_permitidos). `tipoPrecioId`
+ * distingue entre varios personalizados, que comparten el mismo `value`.
+ */
+const obtenerOpcionesLinea = (item, { puedeMayorista, rolActual }) => {
+  const opciones = [
+    { key: "normal", value: "normal", tipoPrecioId: null, label: "Normal" },
+  ];
+
+  if (puedeMayorista && item.tiersMayoristas?.length > 0) {
+    opciones.push({
+      key: "mayorista",
+      value: "mayorista",
+      tipoPrecioId: null,
+      label: "Mayorista",
+      icon: Layers,
+    });
+  }
+
+  (item.preciosPersonalizados || [])
+    .filter((precio) => precio.roles_permitidos.includes(rolActual))
+    .forEach((precio) =>
+      opciones.push({
+        key: precio.tipo_precio_id,
+        value: "personalizado",
+        tipoPrecioId: precio.tipo_precio_id,
+        label: precio.nombre,
+        icon: Tag,
+      }),
+    );
+
+  return opciones;
+};
 
 /**
  * Lista de productos agregados al pedido, con controles de cantidad y
@@ -13,10 +43,10 @@ const OPCIONES_TIPO_PRECIO = [
  * validación de stock vive en orderValidations.js y se resuelve en el
  * padre (OrderCreatePage) antes de llegar aquí.
  *
- * El selector de tipo de precio por línea (Normal/Mayorista/Frío/Crédito)
- * solo se muestra si el rol de quien arma el pedido puede usar esa opción
- * (puedeMayorista/puedeFrio/puedeCredito, resueltos por el padre desde el
- * rol autenticado) Y el producto de esa línea la tiene configurada — el
+ * El selector de tipo de precio por línea (Normal/Mayorista/personalizados)
+ * solo muestra las opciones que el rol de quien arma el pedido puede usar
+ * (puedeMayorista y `rolActual` los resuelve el padre desde el usuario
+ * autenticado) Y que el producto de esa línea tiene configuradas — el
  * servidor vuelve a validar todo esto igual, esto es solo para no
  * mostrar un control que de todas formas el backend va a rechazar.
  */
@@ -29,8 +59,7 @@ export const CarritoPedido = ({
   formatCurrency,
   error,
   puedeMayorista = false,
-  puedeFrio = false,
-  puedeCredito = false,
+  rolActual = "",
 }) => {
   return (
     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
@@ -49,15 +78,9 @@ export const CarritoPedido = ({
       ) : (
         <div className="flex flex-col gap-3">
           {carrito.map((item, index) => {
-            const opcionesLinea = OPCIONES_TIPO_PRECIO.filter((op) => {
-              if (op.value === "normal") return true;
-              if (op.value === "mayorista")
-                return puedeMayorista && item.tiersMayoristas?.length > 0;
-              if (op.value === "frio")
-                return puedeFrio && item.precio_frio != null;
-              if (op.value === "credito")
-                return puedeCredito && item.precio_credito != null;
-              return false;
+            const opcionesLinea = obtenerOpcionesLinea(item, {
+              puedeMayorista,
+              rolActual,
             });
             const mostrarSelectorPrecio = opcionesLinea.length > 1;
 
@@ -81,23 +104,32 @@ export const CarritoPedido = ({
                   </p>
 
                   {mostrarSelectorPrecio && (
-                    <div className="flex items-center gap-1 mt-2">
+                    <div className="flex flex-wrap items-center gap-1 mt-2">
                       {opcionesLinea.map((op) => {
                         const Icon = op.icon;
-                        const activo = item.tipo_precio === op.value;
+                        const activo =
+                          item.tipo_precio === op.value &&
+                          (item.tipo_precio_id ?? null) === op.tipoPrecioId;
                         return (
                           <button
-                            key={op.value}
+                            key={op.key}
                             type="button"
-                            onClick={() => onCambiarTipoPrecio(index, op.value)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                            onClick={() =>
+                              onCambiarTipoPrecio(
+                                index,
+                                op.value,
+                                op.tipoPrecioId,
+                              )
+                            }
+                            title={op.label}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors max-w-full ${
                               activo
                                 ? "bg-primary text-white"
                                 : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-100"
                             }`}
                           >
-                            {Icon && <Icon className="h-3 w-3" />}
-                            {op.label}
+                            {Icon && <Icon className="h-3 w-3 shrink-0" />}
+                            <span className="truncate max-w-32">{op.label}</span>
                           </button>
                         );
                       })}

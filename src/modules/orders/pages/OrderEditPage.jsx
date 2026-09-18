@@ -17,10 +17,10 @@ import { CarritoPedido } from "../components/CarritoPedido";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { useAuth } from "../../../context/useAuth";
 
-// Mismos roles que resolver_precio_pedido valida en el servidor.
+// Mismos roles que resolver_precio_pedido valida en el servidor para el
+// precio al por mayor. Los personalizados traen sus propios
+// roles_permitidos (ver CarritoPedido).
 const ROLES_MAYORISTA = ["soporte", "gerencia"];
-const ROLES_FRIO = ["soporte", "gerencia", "despachador", "cajera"];
-const ROLES_CREDITO = ["soporte", "gerencia", "despachador", "cajera"];
 
 /**
  * Edita un pedido pendiente: mismo carrito/buscador de productos que
@@ -33,8 +33,6 @@ export const OrderEditPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const puedeMayorista = ROLES_MAYORISTA.includes(user?.rol);
-  const puedeFrio = ROLES_FRIO.includes(user?.rol);
-  const puedeCredito = ROLES_CREDITO.includes(user?.rol);
 
   const [pedido, setPedido] = useState(null);
   const [productos, setProductos] = useState([]);
@@ -65,14 +63,19 @@ export const OrderEditPage = () => {
         setLoadingData(true);
         setLoadError("");
 
-        const [pedidoData, productosData, preciosMayoristas] =
-          await Promise.all([
-            orderService.getPedidoCompleto(id),
-            productService.getProductosActivos(),
-            ROLES_MAYORISTA.includes(user?.rol)
-              ? productService.getTodosPreciosMayoristas()
-              : Promise.resolve([]),
-          ]);
+        const [
+          pedidoData,
+          productosData,
+          preciosMayoristas,
+          preciosPersonalizados,
+        ] = await Promise.all([
+          orderService.getPedidoCompleto(id),
+          productService.getProductosActivos(),
+          ROLES_MAYORISTA.includes(user?.rol)
+            ? productService.getTodosPreciosMayoristas()
+            : Promise.resolve([]),
+          productService.getTodosPreciosPersonalizados(),
+        ]);
 
         setPedido(pedidoData);
 
@@ -99,6 +102,9 @@ export const OrderEditPage = () => {
             tiersMayoristas: preciosMayoristas.filter(
               (t) => t.producto_id === p.id,
             ),
+            preciosPersonalizados: preciosPersonalizados.filter(
+              (t) => t.producto_id === p.id,
+            ),
           };
         });
 
@@ -117,9 +123,9 @@ export const OrderEditPage = () => {
             subtotal_linea: Number(d.subtotal_linea),
             disponible: productoAjustado?.disponible ?? 0,
             tipo_precio: d.tipo_precio || "normal",
+            tipo_precio_id: d.tipo_precio_id ?? null,
             precio_venta: productoAjustado?.precio_venta ?? Number(d.precio_unitario),
-            precio_frio: productoAjustado?.precio_frio ?? null,
-            precio_credito: productoAjustado?.precio_credito ?? null,
+            preciosPersonalizados: productoAjustado?.preciosPersonalizados || [],
             tiersMayoristas: productoAjustado?.tiersMayoristas || [],
           };
         });
@@ -159,6 +165,7 @@ export const OrderEditPage = () => {
       producto_id: item.producto_id,
       cantidad: item.cantidad,
       tipo_precio: item.tipo_precio,
+      tipo_precio_id: item.tipo_precio_id,
     }));
 
     try {
@@ -277,8 +284,7 @@ export const OrderEditPage = () => {
           formatCurrency={formatCurrency}
           error={errorStock || carritoError}
           puedeMayorista={puedeMayorista}
-          puedeFrio={puedeFrio}
-          puedeCredito={puedeCredito}
+          rolActual={user?.rol}
         />
 
         {/* NOTAS Y TOTAL */}
