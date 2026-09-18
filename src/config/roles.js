@@ -17,6 +17,9 @@ export const ROLES_MODULO = {
   // stock/ficha completa ni eliminar — eso sigue siendo solo soporte/
   // gerencia (productos_write_admin).
   PRODUCTOS: ["soporte", "gerencia", "despachador"],
+  // Catálogo de tipos de precio diferenciados (y qué roles los aplican):
+  // configuración exclusiva de soporte/gerencia.
+  TIPOS_PRECIO: ["soporte", "gerencia"],
   // El despachador arma rutas con los vehículos vía su propio fetch en
   // DispatchCreatePage (no gateado por este permiso); no necesita el
   // listado/alta de vehículos.

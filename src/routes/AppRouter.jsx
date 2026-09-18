@@ -89,6 +89,11 @@ const ProductsReportPage = lazy(() =>
     default: m.ProductsReportPage,
   })),
 );
+const PriceTypesPage = lazy(() =>
+  import("../modules/priceTypes/pages/PriceTypesPage").then((m) => ({
+    default: m.PriceTypesPage,
+  })),
+);
 const SuppliersPage = lazy(() =>
   import("../modules/suppliers/pages/SuppliersPage").then((m) => ({
     default: m.SuppliersPage,
@@ -160,6 +165,9 @@ export const AppRouter = () => {
             </Route>
             <Route element={<RoleGuard roles={ROLES_MODULO.PRODUCTOS} />}>
               <Route path="/productos" element={<ProductsPage />} />
+            </Route>
+            <Route element={<RoleGuard roles={ROLES_MODULO.TIPOS_PRECIO} />}>
+              <Route path="/tipos-precio" element={<PriceTypesPage />} />
             </Route>
 
             {/* Módulos de Vehículos */}

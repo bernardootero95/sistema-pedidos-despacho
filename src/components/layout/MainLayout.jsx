@@ -20,6 +20,7 @@ import {
   FileBarChart,
   Handshake,
   ShoppingBag,
+  Tag,
 } from "lucide-react";
 
 export const MainLayout = () => {
@@ -74,6 +75,12 @@ export const MainLayout = () => {
       label: "Catálogo de Productos",
       icon: Package,
       roles: ROLES_MODULO.PRODUCTOS,
+    },
+    {
+      path: "/tipos-precio",
+      label: "Tipos de Precio",
+      icon: Tag,
+      roles: ROLES_MODULO.TIPOS_PRECIO,
     },
     {
       path: "/vehiculos",
