@@ -53,12 +53,6 @@ export const MENU_ITEMS = [
     roles: ROLES_MODULO.PRODUCTOS,
   },
   {
-    path: "/vehiculos",
-    label: "Flota de Vehículos",
-    icon: Truck,
-    roles: ROLES_MODULO.VEHICULOS,
-  },
-  {
     path: "/compras",
     label: "Compras",
     icon: ShoppingBag,
@@ -99,6 +93,12 @@ export const MENU_ITEMS = [
         label: "Gestión de Personal",
         icon: UserCog,
         roles: ROLES_MODULO.USUARIOS,
+      },
+      {
+        path: "/vehiculos",
+        label: "Flota de Vehículos",
+        icon: Truck,
+        roles: ROLES_MODULO.VEHICULOS,
       },
       {
         path: "/tipos-precio",

@@ -16,6 +16,7 @@ describe("getMenuVisible", () => {
     expect(hijos(menu, "terceros")).toEqual(["Clientes", "Proveedores"]);
     expect(hijos(menu, "configuracion")).toEqual([
       "Gestión de Personal",
+      "Flota de Vehículos",
       "Tipos de Precio",
     ]);
   });
