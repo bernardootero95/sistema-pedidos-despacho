@@ -1,20 +1,22 @@
 import { useState } from "react";
 import { productService } from "../services/productService";
+import { usePreciosPersonalizados } from "../hooks/usePreciosPersonalizados";
+import { PreciosDiferenciadosSection } from "./PreciosDiferenciadosSection";
 import { validateProductField } from "../utils/productValidations";
 import { X, Save, ShieldAlert, DollarSign, Loader2 } from "lucide-react";
 
 /**
- * Modal de edición restringida a precios (venta, frío, crédito). Pensado
+ * Modal de edición restringida a precios (venta y diferenciados). Pensado
  * para roles con acceso parcial al catálogo (despachador): a diferencia de
  * ProductForm no toca stock, código ni el resto de la ficha, ni en el
- * formulario ni en el backend (ver RPC actualizar_precios_producto).
+ * formulario ni en el backend (ver RPC actualizar_precios_producto y las
+ * políticas RLS de productos_precios).
  */
 export const ProductPriceForm = ({ producto, onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
     precio_venta: producto.precio_venta ?? "",
-    precio_frio: producto.precio_frio ?? "",
-    precio_credito: producto.precio_credito ?? "",
   });
+  const precios = usePreciosPersonalizados(producto.id);
 
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -49,28 +51,18 @@ export const ProductPriceForm = ({ producto, onSuccess, onCancel }) => {
 
     const newErrors = {
       precio_venta: validateProductField("precio_venta", formData.precio_venta, formData),
-      precio_frio: validateProductField("precio_frio", formData.precio_frio, formData),
-      precio_credito: validateProductField(
-        "precio_credito",
-        formData.precio_credito,
-        formData,
-      ),
     };
-    setTouched({ precio_venta: true, precio_frio: true, precio_credito: true });
+    setTouched({ precio_venta: true });
     setErrors(newErrors);
-    if (Object.values(newErrors).some(Boolean)) return;
+    const preciosValidos = precios.validar();
+    if (Object.values(newErrors).some(Boolean) || !preciosValidos) return;
 
     setIsSubmitting(true);
     try {
       await productService.actualizarPreciosProducto(producto.id, {
         precio_venta: parseFloat(formData.precio_venta),
-        precio_frio:
-          formData.precio_frio !== "" ? parseFloat(formData.precio_frio) : null,
-        precio_credito:
-          formData.precio_credito !== ""
-            ? parseFloat(formData.precio_credito)
-            : null,
       });
+      await precios.guardar(producto.id);
       onSuccess();
     } catch (error) {
       setServerError(error.message);
@@ -143,57 +135,15 @@ export const ProductPriceForm = ({ producto, onSuccess, onCancel }) => {
               )}
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Precio Frío (Opcional)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
-                  $
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  name="precio_frio"
-                  value={formData.precio_frio}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  className={`w-full pl-8 p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.precio_frio ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-                />
-              </div>
-              {errors.precio_frio && (
-                <p className="mt-1 text-xs text-red-500 font-bold">
-                  {errors.precio_frio}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Precio a Crédito (Opcional)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
-                  $
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  name="precio_credito"
-                  value={formData.precio_credito}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  className={`w-full pl-8 p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.precio_credito ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-                />
-              </div>
-              {errors.precio_credito && (
-                <p className="mt-1 text-xs text-red-500 font-bold">
-                  {errors.precio_credito}
-                </p>
-              )}
-            </div>
+            <PreciosDiferenciadosSection
+              tiposPrecio={precios.tiposPrecio}
+              valores={precios.valores}
+              errores={precios.errores}
+              loading={precios.loading}
+              loadError={precios.loadError}
+              onChange={precios.cambiarValor}
+              onBlur={precios.tocarValor}
+            />
           </form>
         </div>
 
@@ -209,7 +159,7 @@ export const ProductPriceForm = ({ producto, onSuccess, onCancel }) => {
           <button
             type="submit"
             form="product-price-form"
-            disabled={isSubmitting}
+            disabled={isSubmitting || precios.loading}
             className="px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-bold rounded-lg shadow-sm flex items-center gap-2 transition-all"
           >
             {isSubmitting ? (

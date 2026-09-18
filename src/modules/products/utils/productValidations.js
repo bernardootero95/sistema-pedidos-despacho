@@ -39,18 +39,20 @@ const validators = {
     if (Number(value) < 0) return "La cantidad no puede ser negativa.";
     return "";
   },
+};
 
-  precio_frio: (value) => {
-    if (value === "" || value === null || value === undefined) return ""; // Opcional
-    if (Number(value) < 0) return "El precio no puede ser negativo.";
-    return "";
-  },
-
-  precio_credito: (value) => {
-    if (value === "" || value === null || value === undefined) return ""; // Opcional
-    if (Number(value) < 0) return "El precio no puede ser negativo.";
-    return "";
-  },
+/**
+ * Valida el valor de un precio diferenciado (frío, crédito, etc.): opcional,
+ * pero si viene debe ser un número no negativo. Se usa por cada tipo de
+ * precio dinámico del catálogo, no por el diccionario `validators` porque
+ * no corresponde a un campo fijo de `formData`.
+ */
+export const validatePrecioPersonalizado = (value) => {
+  if (value === "" || value === null || value === undefined) return "";
+  const precio = Number(value);
+  if (isNaN(precio)) return "Ingresa un número válido.";
+  if (precio < 0) return "El precio no puede ser negativo.";
+  return "";
 };
 
 /**

@@ -60,9 +60,7 @@ export const productService = {
   async getProductosActivos() {
     const { data, error } = await supabase
       .from("productos")
-      .select(
-        "id, nombre, codigo, precio_venta, iva, inc, disponible, precio_frio, precio_credito",
-      )
+      .select("id, nombre, codigo, precio_venta, iva, inc, disponible")
       .is("eliminado", null)
       .order("codigo", { ascending: true });
 
@@ -152,6 +150,104 @@ export const productService = {
   },
 
   /**
+   * Precios diferenciados (frío, crédito, etc.) de TODOS los productos, con
+   * el nombre y los roles permitidos de cada tipo, para armar un pedido y
+   * para los indicadores del catálogo. Solo tipos vigentes (activos y no
+   * eliminados). Sin filtrar por producto_id por el mismo motivo que
+   * getTodosPreciosMayoristas: el catálogo ya está completo en memoria.
+   */
+  async getTodosPreciosPersonalizados() {
+    const { data, error } = await supabase
+      .from("productos_precios")
+      .select(
+        "producto_id, tipo_precio_id, precio, tipo:tipos_precio(nombre, roles_permitidos, estado, eliminado)",
+      )
+      .eq("estado", true)
+      .is("eliminado", null);
+
+    if (error)
+      throw new Error(
+        "Error al cargar los precios diferenciados: " + error.message,
+      );
+
+    return (data || [])
+      .filter((fila) => fila.tipo?.estado && !fila.tipo.eliminado)
+      .map((fila) => ({
+        producto_id: fila.producto_id,
+        tipo_precio_id: fila.tipo_precio_id,
+        precio: Number(fila.precio),
+        nombre: fila.tipo.nombre,
+        roles_permitidos: fila.tipo.roles_permitidos,
+      }));
+  },
+
+  /**
+   * Valor de cada tipo de precio configurado para un producto puntual, para
+   * precargar el formulario de edición.
+   */
+  async getPreciosPersonalizados(productoId) {
+    const { data, error } = await supabase
+      .from("productos_precios")
+      .select("tipo_precio_id, precio")
+      .eq("producto_id", productoId)
+      .eq("estado", true)
+      .is("eliminado", null);
+
+    if (error)
+      throw new Error(
+        "Error al cargar los precios diferenciados: " + error.message,
+      );
+    return (data || []).map((fila) => ({
+      tipo_precio_id: fila.tipo_precio_id,
+      precio: Number(fila.precio),
+    }));
+  },
+
+  /**
+   * Reemplaza los precios diferenciados de un producto para los tipos que el
+   * formulario administró (`tiposGestionadosIds`): borra los de esos tipos e
+   * inserta los que traen valor en `precios`. Los tipos que el formulario no
+   * mostró (ej. uno desactivado después) no se tocan. CRUD directo bajo RLS,
+   * igual que reemplazarPreciosMayoristas.
+   */
+  async reemplazarPreciosPersonalizados(
+    productoId,
+    tiposGestionadosIds,
+    precios,
+  ) {
+    if (tiposGestionadosIds.length > 0) {
+      const { error: deleteError } = await supabase
+        .from("productos_precios")
+        .delete()
+        .eq("producto_id", productoId)
+        .in("tipo_precio_id", tiposGestionadosIds);
+
+      if (deleteError)
+        throw new Error(
+          "Error al actualizar los precios diferenciados: " +
+            deleteError.message,
+        );
+    }
+
+    if (precios.length === 0) return;
+
+    const { error: insertError } = await supabase
+      .from("productos_precios")
+      .insert(
+        precios.map((p) => ({
+          producto_id: productoId,
+          tipo_precio_id: p.tipo_precio_id,
+          precio: p.precio,
+        })),
+      );
+
+    if (insertError)
+      throw new Error(
+        "Error al guardar los precios diferenciados: " + insertError.message,
+      );
+  },
+
+  /**
    * Sugiere el próximo código consecutivo disponible para un producto nuevo.
    */
   async getSiguienteCodigo() {
@@ -183,16 +279,15 @@ export const productService = {
   },
 
   /**
-   * Actualiza solo los precios (venta, frío, crédito) de un producto.
-   * Usado por roles con acceso restringido (despachador): la RPC nunca
-   * toca stock ni el resto de la ficha, sin importar qué se le mande.
+   * Actualiza solo el precio de venta de un producto. Usado por roles con
+   * acceso restringido (despachador): la RPC nunca toca stock ni el resto
+   * de la ficha, sin importar qué se le mande. Los precios diferenciados
+   * van aparte (reemplazarPreciosPersonalizados).
    */
-  async actualizarPreciosProducto(id, { precio_venta, precio_frio, precio_credito }) {
+  async actualizarPreciosProducto(id, { precio_venta }) {
     const { data, error } = await supabase.rpc("actualizar_precios_producto", {
       p_id: id,
       p_precio_venta: precio_venta,
-      p_precio_frio: precio_frio,
-      p_precio_credito: precio_credito,
     });
 
     if (error) throw new Error(error.message);

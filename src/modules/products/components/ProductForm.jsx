@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { productService } from "../services/productService";
+import { usePreciosPersonalizados } from "../hooks/usePreciosPersonalizados";
+import { PreciosDiferenciadosSection } from "./PreciosDiferenciadosSection";
 import {
   validateProductField,
   validateProductForm,
@@ -10,9 +12,7 @@ import {
   Save,
   ShieldAlert,
   Package,
-  Snowflake,
   Layers,
-  CreditCard,
   Plus,
   Trash2,
   Loader2,
@@ -35,9 +35,11 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
     inc: productToEdit?.inc ?? "0",
     clasificacion: productToEdit?.clasificacion || "",
     disponible: productToEdit?.disponible ?? "0",
-    precio_frio: productToEdit?.precio_frio ?? "",
-    precio_credito: productToEdit?.precio_credito ?? "",
   });
+
+  // Precios diferenciados (frío, crédito, etc.): filas de productos_precios,
+  // una por tipo activo del catálogo, no campos planos de `productos`.
+  const precios = usePreciosPersonalizados(productToEdit?.id ?? null);
 
   // Franjas de precio al por mayor: array independiente de formData porque
   // no es un campo plano de `productos`, sino filas de una tabla aparte
@@ -151,7 +153,13 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
     const hayErroresTiers = newTiersErrors.some(
       (e) => Object.keys(e).length > 0,
     );
-    if (Object.keys(newErrors).length > 0 || hayErroresTiers) return;
+    const preciosValidos = precios.validar();
+    if (
+      Object.keys(newErrors).length > 0 ||
+      hayErroresTiers ||
+      !preciosValidos
+    )
+      return;
 
     setIsSubmitting(true);
     try {
@@ -169,12 +177,6 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
         inc: parseFloat(formData.inc) || 0,
         clasificacion: formData.clasificacion,
         disponible: parseFloat(formData.disponible) || 0,
-        precio_frio:
-          formData.precio_frio !== "" ? parseFloat(formData.precio_frio) : null,
-        precio_credito:
-          formData.precio_credito !== ""
-            ? parseFloat(formData.precio_credito)
-            : null,
       };
 
       const productoGuardado = isEditing
@@ -188,6 +190,8 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
           precio: parseFloat(t.precio),
         })),
       );
+
+      await precios.guardar(productoGuardado.id);
 
       onSuccess();
     } catch (error) {
@@ -481,77 +485,15 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
               </div>
             </div>
 
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Snowflake className="w-3.5 h-3.5" />
-                  Precio Frío (Opcional)
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Solo lo pueden aplicar gerencia, soporte y despachador al
-                  armar un pedido.
-                </p>
-              </div>
-              <div className="max-w-xs">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    name="precio_frio"
-                    value={formData.precio_frio}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: 4500"
-                    className={`w-full pl-8 p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.precio_frio ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-                  />
-                </div>
-                {errors.precio_frio && (
-                  <p className="mt-1 text-xs text-red-500 font-bold">
-                    {errors.precio_frio}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <CreditCard className="w-3.5 h-3.5" />
-                  Precio a Crédito (Opcional)
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Solo lo pueden aplicar gerencia, soporte y despachador al
-                  armar un pedido.
-                </p>
-              </div>
-              <div className="max-w-xs">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    name="precio_credito"
-                    value={formData.precio_credito}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: 6000"
-                    className={`w-full pl-8 p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.precio_credito ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
-                  />
-                </div>
-                {errors.precio_credito && (
-                  <p className="mt-1 text-xs text-red-500 font-bold">
-                    {errors.precio_credito}
-                  </p>
-                )}
-              </div>
-            </div>
+            <PreciosDiferenciadosSection
+              tiposPrecio={precios.tiposPrecio}
+              valores={precios.valores}
+              errores={precios.errores}
+              loading={precios.loading}
+              loadError={precios.loadError}
+              onChange={precios.cambiarValor}
+              onBlur={precios.tocarValor}
+            />
 
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
               <div className="flex items-center justify-between">
@@ -662,7 +604,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
           <button
             type="submit"
             form="product-form"
-            disabled={isSubmitting || loadingTiers}
+            disabled={isSubmitting || loadingTiers || precios.loading}
             className="px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-bold rounded-lg shadow-sm flex items-center gap-2 transition-all"
           >
             <Save className="w-4 h-4" />

@@ -1,40 +1,31 @@
 import { describe, it, expect } from "vitest";
 import {
-  validateProductField,
+  validatePrecioPersonalizado,
   validateTierMayorista,
 } from "./productValidations";
 
-describe("validateProductField: precio_frio", () => {
+describe("validatePrecioPersonalizado", () => {
   it("es opcional", () => {
-    expect(validateProductField("precio_frio", "")).toBe("");
-    expect(validateProductField("precio_frio", null)).toBe("");
+    expect(validatePrecioPersonalizado("")).toBe("");
+    expect(validatePrecioPersonalizado(null)).toBe("");
+    expect(validatePrecioPersonalizado(undefined)).toBe("");
   });
 
   it("rechaza valores negativos", () => {
-    expect(validateProductField("precio_frio", "-100")).toBe(
+    expect(validatePrecioPersonalizado("-100")).toBe(
       "El precio no puede ser negativo.",
     );
   });
 
-  it("acepta un precio válido", () => {
-    expect(validateProductField("precio_frio", "4500")).toBe("");
-  });
-});
-
-describe("validateProductField: precio_credito", () => {
-  it("es opcional", () => {
-    expect(validateProductField("precio_credito", "")).toBe("");
-    expect(validateProductField("precio_credito", null)).toBe("");
-  });
-
-  it("rechaza valores negativos", () => {
-    expect(validateProductField("precio_credito", "-100")).toBe(
-      "El precio no puede ser negativo.",
+  it("rechaza texto que no es un número", () => {
+    expect(validatePrecioPersonalizado("abc")).toBe(
+      "Ingresa un número válido.",
     );
   });
 
-  it("acepta un precio válido", () => {
-    expect(validateProductField("precio_credito", "6000")).toBe("");
+  it("acepta un precio válido, incluido 0", () => {
+    expect(validatePrecioPersonalizado("4500")).toBe("");
+    expect(validatePrecioPersonalizado("0")).toBe("");
   });
 });
 

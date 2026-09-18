@@ -23,19 +23,18 @@ import {
   AlertTriangle,
   FileSpreadsheet,
   Layers,
-  Snowflake,
-  CreditCard,
   History,
 } from "lucide-react";
 
+const SIN_PRECIOS_PERSONALIZADOS = [];
+
 /**
  * Íconos que marcan si el producto tiene precios especiales configurados
- * (franjas al por mayor, precio frío y/o precio a crédito) — solo
- * indicador visual, la gestión real de esos precios vive en el propio
- * ProductForm.
+ * (franjas al por mayor y/o precios diferenciados) — solo indicador visual,
+ * la gestión real de esos precios vive en el propio ProductForm.
  */
-const BadgesPreciosEspeciales = ({ tieneMayorista, tieneFrio, tieneCredito }) => {
-  if (!tieneMayorista && !tieneFrio && !tieneCredito) return null;
+const BadgesPreciosEspeciales = ({ tieneMayorista, preciosPersonalizados }) => {
+  if (!tieneMayorista && preciosPersonalizados.length === 0) return null;
 
   return (
     <span className="inline-flex items-center gap-1 ml-1.5">
@@ -47,20 +46,12 @@ const BadgesPreciosEspeciales = ({ tieneMayorista, tieneFrio, tieneCredito }) =>
           <Layers className="w-3 h-3" />
         </span>
       )}
-      {tieneFrio && (
+      {preciosPersonalizados.length > 0 && (
         <span
-          title="Tiene precio frío configurado"
+          title={`Precios diferenciados: ${preciosPersonalizados.map((p) => p.nombre).join(", ")}`}
           className="inline-flex items-center justify-center w-5 h-5 bg-cyan-50 text-cyan-600 rounded"
         >
-          <Snowflake className="w-3 h-3" />
-        </span>
-      )}
-      {tieneCredito && (
-        <span
-          title="Tiene precio a crédito configurado"
-          className="inline-flex items-center justify-center w-5 h-5 bg-amber-50 text-amber-600 rounded"
-        >
-          <CreditCard className="w-3 h-3" />
+          <Tag className="w-3 h-3" />
         </span>
       )}
     </span>
@@ -76,7 +67,12 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-const ProductDetailsModal = ({ product, onClose, onVerHistorial }) => {
+const ProductDetailsModal = ({
+  product,
+  preciosPersonalizados,
+  onClose,
+  onVerHistorial,
+}) => {
   if (!product) return null;
 
   return (
@@ -177,26 +173,20 @@ const ProductDetailsModal = ({ product, onClose, onVerHistorial }) => {
                   </p>
                 </div>
               </div>
-              {product.precio_frio != null && (
-                <div className="pt-2 border-t border-emerald-200/50 mt-2">
+              {preciosPersonalizados.map((precio) => (
+                <div
+                  key={precio.tipo_precio_id}
+                  className="pt-2 border-t border-emerald-200/50 mt-2"
+                >
                   <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 flex items-center gap-1">
-                    <Snowflake className="w-3 h-3" /> Precio Frío
+                    <Tag className="w-3 h-3 shrink-0" />
+                    <span className="truncate">Precio {precio.nombre}</span>
                   </p>
                   <p className="font-bold text-cyan-700">
-                    {formatCurrency(product.precio_frio)}
+                    {formatCurrency(precio.precio)}
                   </p>
                 </div>
-              )}
-              {product.precio_credito != null && (
-                <div className="pt-2 border-t border-emerald-200/50 mt-2">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 flex items-center gap-1">
-                    <CreditCard className="w-3 h-3" /> Precio a Crédito
-                  </p>
-                  <p className="font-bold text-amber-700">
-                    {formatCurrency(product.precio_credito)}
-                  </p>
-                </div>
-              )}
+              ))}
               <div className="pt-2 border-t border-emerald-200/50 mt-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">
                   Stock Disponible
@@ -276,16 +266,39 @@ export const ProductsPage = () => {
     new Set(),
   );
 
-  const cargarProductosConMayorista = () => {
+  // Precios diferenciados agrupados por producto_id, misma idea que arriba:
+  // catálogo completo, no por página.
+  const [preciosPersonalizadosPorProducto, setPreciosPersonalizadosPorProducto] =
+    useState(new Map());
+
+  const cargarPreciosEspeciales = () => {
+    // Indicadores secundarios: si fallan, simplemente no se muestran.
     productService
       .getTodosPreciosMayoristas()
       .then((tiers) =>
         setProductosConMayorista(new Set(tiers.map((t) => t.producto_id))),
       )
-      .catch(() => {}); // Indicador secundario: si falla, simplemente no se muestra.
+      .catch(() => {});
+
+    productService
+      .getTodosPreciosPersonalizados()
+      .then((filas) => {
+        const agrupados = new Map();
+        filas.forEach((fila) => {
+          const lista = agrupados.get(fila.producto_id) ?? [];
+          lista.push(fila);
+          agrupados.set(fila.producto_id, lista);
+        });
+        setPreciosPersonalizadosPorProducto(agrupados);
+      })
+      .catch(() => {});
   };
 
-  useEffect(cargarProductosConMayorista, []);
+  useEffect(cargarPreciosEspeciales, []);
+
+  const preciosPersonalizadosDe = (productoId) =>
+    preciosPersonalizadosPorProducto.get(productoId) ??
+    SIN_PRECIOS_PERSONALIZADOS;
 
   const handleImportSuccess = () => {
     setIsImportOpen(false);
@@ -302,7 +315,7 @@ export const ProductsPage = () => {
     setIsFormOpen(false);
     setProductToEdit(null);
     cargarProductos();
-    cargarProductosConMayorista();
+    cargarPreciosEspeciales();
   };
 
   const handleEditar = (product) => {
@@ -314,6 +327,7 @@ export const ProductsPage = () => {
     setProductoPrecios(null);
     showSuccess("Precios actualizados correctamente.");
     cargarProductos();
+    cargarPreciosEspeciales();
   };
 
   const handleToggleEstado = async (id, estadoActual) => {
@@ -365,6 +379,9 @@ export const ProductsPage = () => {
       )}
       <ProductDetailsModal
         product={productToView}
+        preciosPersonalizados={
+          productToView ? preciosPersonalizadosDe(productToView.id) : []
+        }
         onClose={() => setProductToView(null)}
         onVerHistorial={setProductToViewHistory}
       />
@@ -432,8 +449,7 @@ export const ProductsPage = () => {
                     {product.nombre}
                     <BadgesPreciosEspeciales
                       tieneMayorista={productosConMayorista.has(product.id)}
-                      tieneFrio={product.precio_frio != null}
-                      tieneCredito={product.precio_credito != null}
+                      preciosPersonalizados={preciosPersonalizadosDe(product.id)}
                     />
                   </h4>
                 </div>
@@ -529,7 +545,7 @@ export const ProductsPage = () => {
                       {product.nombre}
                       <BadgesPreciosEspeciales
                         tieneMayorista={productosConMayorista.has(product.id)}
-                        tieneFrio={product.precio_frio != null}
+                        preciosPersonalizados={preciosPersonalizadosDe(product.id)}
                       />
                     </p>
                   </td>
