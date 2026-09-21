@@ -14,6 +14,7 @@ import { validateOrderField } from "../utils/orderValidations";
 import { useCarritoPedido } from "../hooks/useCarritoPedido";
 import { ProductSearchBar } from "../components/ProductSearchBar";
 import { CarritoPedido } from "../components/CarritoPedido";
+import { DevolucionConfirmModal } from "../components/DevolucionConfirmModal";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { useAuth } from "../../../context/useAuth";
 
@@ -44,6 +45,9 @@ export const OrderEditPage = () => {
   const [carritoError, setCarritoError] = useState("");
   const [globalError, setGlobalError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Monto a devolver que el usuario debe confirmar (el nuevo total queda por
+  // debajo de lo ya abonado); null = nada pendiente de confirmar.
+  const [devolucionPendiente, setDevolucionPendiente] = useState(null);
 
   const {
     carrito,
@@ -150,17 +154,7 @@ export const OrderEditPage = () => {
     setProductoSeleccionado("");
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setGlobalError("");
-
-    const errorCarrito = validateOrderField("carrito", carrito);
-    if (errorCarrito) {
-      setCarritoError(errorCarrito);
-      return;
-    }
-    setCarritoError("");
-
+  const guardarCambios = async (confirmarDevolucion = false) => {
     const detallesParaGuardar = carrito.map((item) => ({
       producto_id: item.producto_id,
       cantidad: item.cantidad,
@@ -173,9 +167,14 @@ export const OrderEditPage = () => {
       await orderService.editarPedido(id, {
         notas,
         detalles: detallesParaGuardar,
+        confirmarDevolucion,
       });
       navigate(`/orders/${id}`);
     } catch (err) {
+      if (err.requiereConfirmacion) {
+        setDevolucionPendiente(err.montoDevolucion);
+        return;
+      }
       console.error(err);
       setGlobalError(
         err.message || "Ocurrió un error al guardar los cambios.",
@@ -183,6 +182,25 @@ export const OrderEditPage = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setGlobalError("");
+
+    const errorCarrito = validateOrderField("carrito", carrito);
+    if (errorCarrito) {
+      setCarritoError(errorCarrito);
+      return;
+    }
+    setCarritoError("");
+
+    await guardarCambios();
+  };
+
+  const handleConfirmarDevolucion = async () => {
+    setDevolucionPendiente(null);
+    await guardarCambios(true);
   };
 
   const formatCurrency = (amount) =>
@@ -248,6 +266,17 @@ export const OrderEditPage = () => {
           <div className="bg-red-50 text-red-700 p-3 rounded-xl flex items-center gap-2 text-sm border border-red-200">
             <AlertCircle className="h-5 w-5 shrink-0" />
             {globalError}
+          </div>
+        )}
+
+        {Number(pedido?.total_pagado) > 0 && (
+          <div className="bg-amber-50 text-amber-800 p-3 rounded-xl flex items-start gap-2 text-sm border border-amber-200">
+            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+            <p>
+              Este pedido tiene {formatCurrency(Number(pedido.total_pagado))}{" "}
+              abonados. Si el nuevo total queda por debajo de ese monto, se te
+              pedirá confirmar la devolución de la diferencia.
+            </p>
           </div>
         )}
 
@@ -324,6 +353,15 @@ export const OrderEditPage = () => {
           </button>
         </div>
       </form>
+
+      {devolucionPendiente !== null && (
+        <DevolucionConfirmModal
+          monto={devolucionPendiente}
+          enviando={isSubmitting}
+          onConfirm={handleConfirmarDevolucion}
+          onCancel={() => setDevolucionPendiente(null)}
+        />
+      )}
     </div>
   );
 };

@@ -89,6 +89,17 @@ describe("orderService.crearPedido", () => {
     expect(resultado).toEqual(pedidoCreado);
   });
 
+  it("envía los pagos a la RPC solo cuando se proporcionan (venta directa)", async () => {
+    supabase.rpc.mockResolvedValue({ data: {}, error: null });
+    const pagos = [{ metodo_pago_id: "m1", monto: 9000 }];
+
+    await orderService.crearPedido({ cliente_id: "c1", vendedor_id: "v1" }, [], pagos);
+    expect(supabase.rpc.mock.calls[0][1].p_pagos).toEqual(pagos);
+
+    await orderService.crearPedido({ cliente_id: "c1", vendedor_id: "v1" }, []);
+    expect(supabase.rpc.mock.calls[1][1]).not.toHaveProperty("p_pagos");
+  });
+
   it("propaga como Error el mensaje de la excepción de Postgres (RAISE EXCEPTION)", async () => {
     supabase.rpc.mockResolvedValue({
       data: null,
@@ -191,5 +202,46 @@ describe("orderService.editarPedido", () => {
     await expect(
       orderService.editarPedido("pedido-1", { detalles: [] }),
     ).rejects.toThrow("Error al editar el pedido.");
+  });
+
+  it("marca el error como requiereConfirmacion (con el monto) cuando el servidor pide confirmar la devolución", async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: {
+        code: "PD001",
+        message: "El nuevo total es menor a lo ya abonado.",
+        details: "5750",
+      },
+    });
+
+    const error = await orderService
+      .editarPedido("pedido-1", { detalles: [] })
+      .catch((e) => e);
+
+    expect(error.requiereConfirmacion).toBe(true);
+    expect(error.montoDevolucion).toBe(5750);
+  });
+
+  it("no marca requiereConfirmacion en otros errores", async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: { code: "P0001", message: "Stock insuficiente" },
+    });
+
+    const error = await orderService
+      .editarPedido("pedido-1", { detalles: [] })
+      .catch((e) => e);
+
+    expect(error.requiereConfirmacion).toBeUndefined();
+  });
+
+  it("envía p_confirmar_devolucion solo cuando se confirma", async () => {
+    supabase.rpc.mockResolvedValue({ data: {}, error: null });
+
+    await orderService.editarPedido("pedido-1", { detalles: [], confirmarDevolucion: true });
+    expect(supabase.rpc.mock.calls[0][1].p_confirmar_devolucion).toBe(true);
+
+    await orderService.editarPedido("pedido-1", { detalles: [] });
+    expect(supabase.rpc.mock.calls[1][1]).not.toHaveProperty("p_confirmar_devolucion");
   });
 });

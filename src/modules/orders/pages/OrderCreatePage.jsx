@@ -20,6 +20,9 @@ import { CarritoPedido } from "../components/CarritoPedido";
 import { ClientForm } from "../../clients/components/ClientForm";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { useAuth } from "../../../context/useAuth";
+import { useSettings } from "../../../context/useSettings";
+import { PaymentModal } from "../../payments/components/PaymentModal";
+import { MODOS_PAGO } from "../../payments/utils/paymentLines";
 
 // Precio al por mayor: solo soporte/gerencia (mismos roles que valida
 // resolver_precio_pedido en el servidor). Los precios personalizados (frío,
@@ -31,6 +34,11 @@ export const OrderCreatePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const puedeMayorista = ROLES_MAYORISTA.includes(user?.rol);
+  const { metodosPagoActivo } = useSettings();
+  // La cajera hace venta directa: el pedido nace entregado y se cobra en el
+  // acto, así que con métodos de pago activos se pide cómo se paga antes de
+  // crearlo (los demás roles crean pedidos pendientes que se cobran al entregar).
+  const cobraAlCrear = user?.rol === "cajera" && metodosPagoActivo;
 
   // --- ESTADOS DE DATOS EXTERNOS ---
   const [clientes, setClientes] = useState([]);
@@ -60,6 +68,7 @@ export const OrderCreatePage = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cobrando, setCobrando] = useState(false);
 
   // Cargar datos iniciales trayendo el campo 'disponible' de productos
   useEffect(() => {
@@ -154,31 +163,42 @@ export const OrderCreatePage = () => {
     setProductoSeleccionado("");
   };
 
+  const guardarPedido = async (pagos = null) => {
+    const detallesParaGuardar = carrito.map(
+      // eslint-disable-next-line no-unused-vars -- se destructuran para excluirlas de "rest"
+      ({ nombre, codigo, disponible, ...rest }) => rest,
+    );
+
+    await orderService.crearPedido(
+      { cliente_id: clienteId, vendedor_id: vendedorId, notas },
+      detallesParaGuardar,
+      pagos,
+    );
+    navigate("/pedidos");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const cabeceraData = {
-      cliente_id: clienteId,
-      vendedor_id: vendedorId,
-      notas,
-    };
-
-    const validationErrors = validateOrderForm(cabeceraData, carrito);
+    const validationErrors = validateOrderForm(
+      { cliente_id: clienteId, vendedor_id: vendedorId, notas },
+      carrito,
+    );
     setTouched((prev) => ({ ...prev, cliente_id: true }));
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
 
-    const detallesParaGuardar = carrito.map(
-      // eslint-disable-next-line no-unused-vars -- se destructuran para excluirlas de "rest"
-      ({ nombre, codigo, disponible, ...rest }) => rest,
-    );
+    if (cobraAlCrear) {
+      setErrors({});
+      setCobrando(true);
+      return;
+    }
 
     try {
       setIsSubmitting(true);
-      await orderService.crearPedido(cabeceraData, detallesParaGuardar);
-      navigate("/pedidos");
+      await guardarPedido();
     } catch (error) {
       console.error(error);
       setErrors({
@@ -343,6 +363,19 @@ export const OrderCreatePage = () => {
         <ClientForm
           onSuccess={handleClienteCreado}
           onCancel={() => setIsClientFormOpen(false)}
+        />
+      )}
+
+      {cobrando && (
+        <PaymentModal
+          titulo="Cobrar venta"
+          subtitulo={vendedorNombre ? `Atiende: ${vendedorNombre}` : undefined}
+          objetivo={totalPedido}
+          etiquetaObjetivo="Total"
+          modo={MODOS_PAGO.EXACTO}
+          etiquetaConfirmar="Cobrar y guardar"
+          onConfirm={guardarPedido}
+          onCancel={() => setCobrando(false)}
         />
       )}
     </div>

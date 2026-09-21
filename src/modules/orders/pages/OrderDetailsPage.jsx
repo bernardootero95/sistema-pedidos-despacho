@@ -10,6 +10,7 @@ import { OrderHistoryTimeline } from "../components/OrderHistoryTimeline";
 import { OrderDispatchInfo } from "../components/OrderDispatchInfo";
 import { etiquetaTipoPrecio } from "../utils/tipoPrecioDisplay";
 import { EnviarFacturaButton } from "../components/EnviarFacturaButton";
+import { OrderPaymentsCard } from "../components/OrderPaymentsCard";
 import { ROLES_MODULO } from "../../../config/roles";
 import {
   ArrowLeft,
@@ -446,6 +447,9 @@ export const OrderDetailsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* PAGOS: se oculta si la empresa no usa métodos de pago ni abonos */}
+      <OrderPaymentsCard pedido={pedido} onActualizado={recargarPedido} />
 
       {/* HISTORIAL DE ESTADOS: solo soporte/gerencia */}
       {puedeVerHistorial && (

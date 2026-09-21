@@ -7,6 +7,9 @@ import { puedeAnularPedido } from "../utils/orderValidations";
 import { ESTADOS_PEDIDO, CAMPOS_FECHA } from "../utils/orderConstants";
 import { useToast } from "../../../context/useToast";
 import { useAuth } from "../../../context/useAuth";
+import { useSettings } from "../../../context/useSettings";
+import { PaymentStatusBadge } from "../../payments/components/PaymentStatusBadge";
+import { formatearMoneda } from "../../payments/utils/paymentLines";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { usePaginatedList } from "../../../hooks/usePaginatedList";
 import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
@@ -30,6 +33,7 @@ export const OrdersPage = () => {
   const navigate = useNavigate();
   const { showError } = useToast();
   const { user } = useAuth();
+  const { abonosPedidosActivo } = useSettings();
 
   const {
     items: pedidos,
@@ -130,7 +134,18 @@ export const OrdersPage = () => {
     );
   };
 
-  const handleAnular = async (id, numero_pedido) => {
+  // Con pagos registrados avisa antes de pedir el motivo: al anular, el
+  // servidor registra automáticamente la devolución de lo pagado.
+  const handleAnular = async ({ id, numero_pedido, total_pagado }) => {
+    const pagado = Number(total_pagado) || 0;
+    if (
+      pagado > 0 &&
+      !window.confirm(
+        `El pedido ${numero_pedido} tiene ${formatearMoneda(pagado)} pagados. Al anularlo se registrará la devolución de ese dinero al cliente. ¿Continuar?`,
+      )
+    )
+      return;
+
     const motivo = window.prompt(
       `¿Indique el motivo para anular el pedido ${numero_pedido}?`,
     );
@@ -139,7 +154,9 @@ export const OrdersPage = () => {
     try {
       setPedidos((prev) =>
         prev.map((p) =>
-          p.id === id ? { ...p, estado: "anulado", notas: motivo } : p,
+          p.id === id
+            ? { ...p, estado: "anulado", notas: motivo, total_pagado: 0 }
+            : p,
         ),
       );
       await orderService.anularPedido(id, motivo);
@@ -148,6 +165,12 @@ export const OrdersPage = () => {
       cargarPedidos();
     }
   };
+
+  // El estado de pago solo aporta información si la empresa usa abonos o el
+  // pedido ya tiene pagos; con la funcionalidad apagada el listado no cambia.
+  const mostrarPago = (pedido) =>
+    pedido.estado !== "anulado" &&
+    (abonosPedidosActivo || Number(pedido.total_pagado) > 0);
 
   const handleDirectPrint = async (id) => {
     try {
@@ -198,7 +221,7 @@ export const OrdersPage = () => {
 
       {puedeAnularPedido(pedido, user) && (
         <button
-          onClick={() => handleAnular(pedido.id, pedido.numero_pedido)}
+          onClick={() => handleAnular(pedido)}
           className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
           title="Anular Pedido"
         >
@@ -388,6 +411,14 @@ export const OrdersPage = () => {
                         <span className="font-bold text-slate-800 text-lg">
                           {formatCurrency(pedido.total)}
                         </span>
+                        {mostrarPago(pedido) && (
+                          <div className="mt-1">
+                            <PaymentStatusBadge
+                              total={pedido.total}
+                              pagado={pedido.total_pagado}
+                            />
+                          </div>
+                        )}
                       </div>
                       <ActionButtons pedido={pedido} />
                     </div>
@@ -438,6 +469,14 @@ export const OrdersPage = () => {
                         </td>
                         <td className="p-4 text-right font-semibold text-slate-800">
                           {formatCurrency(pedido.total)}
+                          {mostrarPago(pedido) && (
+                            <div className="mt-1 font-normal">
+                              <PaymentStatusBadge
+                                total={pedido.total}
+                                pagado={pedido.total_pagado}
+                              />
+                            </div>
+                          )}
                         </td>
                         <td className="p-4 text-center">
                           {getStatusBadge(pedido.estado)}

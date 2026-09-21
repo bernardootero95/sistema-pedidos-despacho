@@ -23,6 +23,10 @@ function aplicarFiltrosPedidos(query, filtros = {}) {
   return query;
 }
 
+// SQLSTATE con que editar_pedido_transaccional pide confirmar la devolución
+// del exceso abonado cuando el nuevo total baja de lo pagado.
+const CODIGO_REQUIERE_CONFIRMACION_DEVOLUCION = "PD001";
+
 export const orderService = {
   async getPedidosPaginados(page = 1, limit = 10, searchTerm = "", filtros = {}) {
     const from = (page - 1) * limit;
@@ -62,8 +66,10 @@ export const orderService = {
    *
    * @param {Object} cabeceraData - { cliente_id, vendedor_id, notas }
    * @param {Array} detallesData - [{ producto_id, cantidad, tipo_precio, tipo_precio_id }, ...]
+   * @param {Array<{metodo_pago_id: string|null, monto: number}>} [pagos] solo
+   *   la venta directa (cajera) nace entregada y cobra el total al crearse.
    */
-  async crearPedido(cabeceraData, detallesData) {
+  async crearPedido(cabeceraData, detallesData, pagos = null) {
     const detallesParaRpc = detallesData.map((item) => ({
       producto_id: item.producto_id,
       cantidad: Number(item.cantidad),
@@ -76,6 +82,7 @@ export const orderService = {
       p_vendedor_id: cabeceraData.vendedor_id,
       p_notas: cabeceraData.notas || null,
       p_detalles: detallesParaRpc,
+      ...(pagos && { p_pagos: pagos }),
     });
 
     if (error) {
@@ -93,10 +100,18 @@ export const orderService = {
    * servidor desde `productos` — nunca se confía en lo que mande el
    * cliente. Rechaza pedidos que ya no estén 'pendiente'.
    *
+   * Si el nuevo total queda por debajo de lo ya abonado, el servidor rechaza
+   * la edición con SQLSTATE PD001 hasta que se confirme la devolución de la
+   * diferencia: en ese caso se lanza un error con `requiereConfirmacion` y
+   * `montoDevolucion`, y quien llama repite con `confirmarDevolucion: true`.
+   *
    * @param {string} pedidoId
-   * @param {{ notas?: string, detalles: Array<{producto_id: string, cantidad: number, tipo_precio?: string, tipo_precio_id?: string|null}> }} data
+   * @param {{ notas?: string, detalles: Array<{producto_id: string, cantidad: number, tipo_precio?: string, tipo_precio_id?: string|null}>, confirmarDevolucion?: boolean }} data
    */
-  async editarPedido(pedidoId, { notas, detalles }) {
+  async editarPedido(
+    pedidoId,
+    { notas, detalles, confirmarDevolucion = false },
+  ) {
     const detallesParaRpc = detalles.map((item) => ({
       producto_id: item.producto_id,
       cantidad: Number(item.cantidad),
@@ -108,10 +123,16 @@ export const orderService = {
       p_pedido_id: pedidoId,
       p_notas: notas || null,
       p_detalles: detallesParaRpc,
+      ...(confirmarDevolucion && { p_confirmar_devolucion: true }),
     });
 
     if (error) {
-      throw new Error(error.message || "Error al editar el pedido.");
+      const err = new Error(error.message || "Error al editar el pedido.");
+      if (error.code === CODIGO_REQUIERE_CONFIRMACION_DEVOLUCION) {
+        err.requiereConfirmacion = true;
+        err.montoDevolucion = Number(error.details) || 0;
+      }
+      throw err;
     }
 
     return data;
