@@ -18,6 +18,7 @@ describe("getMenuVisible", () => {
       "Gestión de Personal",
       "Flota de Vehículos",
       "Tipos de Precio",
+      "Opciones",
     ]);
   });
 

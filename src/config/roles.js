@@ -20,6 +20,9 @@ export const ROLES_MODULO = {
   // Catálogo de tipos de precio diferenciados (y qué roles los aplican):
   // configuración exclusiva de soporte/gerencia.
   TIPOS_PRECIO: ["soporte", "gerencia"],
+  // Opciones de la empresa (interruptores de métodos de pago y abonos, y el
+  // catálogo de métodos de pago): configuración exclusiva de soporte/gerencia.
+  OPCIONES: ["soporte", "gerencia"],
   // El despachador arma rutas con los vehículos vía su propio fetch en
   // DispatchCreatePage (no gateado por este permiso); no necesita el
   // listado/alta de vehículos.

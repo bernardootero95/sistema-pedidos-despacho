@@ -12,6 +12,7 @@ import {
   Tag,
   Contact,
   Settings,
+  SlidersHorizontal,
 } from "lucide-react";
 import { ROLES_MODULO } from "../../config/roles";
 
@@ -105,6 +106,12 @@ export const MENU_ITEMS = [
         label: "Tipos de Precio",
         icon: Tag,
         roles: ROLES_MODULO.TIPOS_PRECIO,
+      },
+      {
+        path: "/opciones",
+        label: "Opciones",
+        icon: SlidersHorizontal,
+        roles: ROLES_MODULO.OPCIONES,
       },
     ],
   },

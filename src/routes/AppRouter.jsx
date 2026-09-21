@@ -94,6 +94,11 @@ const PriceTypesPage = lazy(() =>
     default: m.PriceTypesPage,
   })),
 );
+const SettingsPage = lazy(() =>
+  import("../modules/settings/pages/SettingsPage").then((m) => ({
+    default: m.SettingsPage,
+  })),
+);
 const SuppliersPage = lazy(() =>
   import("../modules/suppliers/pages/SuppliersPage").then((m) => ({
     default: m.SuppliersPage,
@@ -168,6 +173,9 @@ export const AppRouter = () => {
             </Route>
             <Route element={<RoleGuard roles={ROLES_MODULO.TIPOS_PRECIO} />}>
               <Route path="/tipos-precio" element={<PriceTypesPage />} />
+            </Route>
+            <Route element={<RoleGuard roles={ROLES_MODULO.OPCIONES} />}>
+              <Route path="/opciones" element={<SettingsPage />} />
             </Route>
 
             {/* Módulos de Vehículos */}
