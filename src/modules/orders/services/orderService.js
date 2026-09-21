@@ -180,7 +180,8 @@ export const orderService = {
           *,
           producto:productos (codigo, nombre),
           tipo:tipos_precio (nombre)
-        )
+        ),
+        pagos ( id, tipo, monto, creado, metodo:metodos_pago ( nombre, es_efectivo ) )
       `,
       )
       .eq("id", id)

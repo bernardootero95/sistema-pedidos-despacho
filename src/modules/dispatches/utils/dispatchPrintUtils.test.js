@@ -155,3 +155,21 @@ describe("imprimirTiqueteYFacturasDespacho", () => {
     expect(nombresArchivo).toContain("comprobante-pedido-11.pdf");
   });
 });
+
+describe("construirTiqueteDespachoHtml - saldo por cobrar", () => {
+  it("no muestra abonos ni saldo cuando ningún pedido tiene abonos", () => {
+    const html = construirTiqueteDespachoHtml(despacho, [
+      { ...pedidoA, total_pagado: 0 },
+    ]);
+    expect(html).not.toContain("TOTAL POR COBRAR");
+    expect(html).not.toContain("Por cobrar");
+  });
+
+  it("muestra lo abonado y el saldo de un pedido con abono parcial y suma el total por cobrar", () => {
+    const html = construirTiqueteDespachoHtml(despacho, [
+      { ...pedidoA, total_pagado: 5000 },
+    ]);
+    expect(html).toContain("Abonado");
+    expect(html).toContain("TOTAL POR COBRAR");
+  });
+});

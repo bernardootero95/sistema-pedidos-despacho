@@ -6,6 +6,7 @@ import {
   formatDatePdf,
 } from "../../orders/utils/printUtils";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
+import { calcularSaldo } from "./cobroEntrega";
 
 /**
  * Agrega las líneas de todos los pedidos del despacho en un mapa
@@ -43,6 +44,14 @@ export const construirTiqueteDespachoHtml = (despacho, pedidosCompletos) => {
   const filasResumen = agregarMercanciaPorProducto(pedidosCompletos);
   const totalDespacho = pedidosCompletos.reduce(
     (acc, pedido) => acc + (Number(pedido.total) || 0),
+    0,
+  );
+  // Solo cuenta saldo de pedidos con abonos parciales: sin abonos el tiquete
+  // queda igual que siempre (no se muestra ni se suma nada).
+  const conAbonoParcial = (pedido) =>
+    Number(pedido.total_pagado) > 0 && calcularSaldo(pedido) > 0;
+  const totalPorCobrar = pedidosCompletos.reduce(
+    (acc, pedido) => acc + (conAbonoParcial(pedido) ? calcularSaldo(pedido) : 0),
     0,
   );
 
@@ -102,6 +111,11 @@ export const construirTiqueteDespachoHtml = (despacho, pedidosCompletos) => {
                   )
                   .join("")}
               </div>
+              ${
+                conAbonoParcial(pedido)
+                  ? `<div style="margin-top: 3px; display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; color: #000000;"><span>Abonado ${formatCurrencyPdf(pedido.total_pagado)}</span><span>Por cobrar ${formatCurrencyPdf(calcularSaldo(pedido))}</span></div>`
+                  : ""
+              }
             </div>
           `,
             )
@@ -112,6 +126,11 @@ export const construirTiqueteDespachoHtml = (despacho, pedidosCompletos) => {
       <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px;">
         <span>TOTAL DESPACHO:</span><span>${formatCurrencyPdf(totalDespacho)}</span>
       </div>
+      ${
+        totalPorCobrar > 0
+          ? `<div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px;"><span>TOTAL POR COBRAR:</span><span>${formatCurrencyPdf(totalPorCobrar)}</span></div>`
+          : ""
+      }
 
       <div style="text-align: center; font-size: 9px; font-weight: 600; color: #000000;">
         <p style="font-size: 9px; font-weight: 600; margin: 0;">Sistema de pedidos y despacho desarrollado por TecnoIngenieria B.O.</p>

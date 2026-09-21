@@ -48,6 +48,28 @@ describe("construirComprobantePedidoHtml", () => {
     expect(html).toContain("123456789");
   });
 
+  it("no agrega bloque de pagos si el pedido se pagó solo en efectivo", () => {
+    const html = construirComprobantePedidoHtml({
+      ...pedidoCompleto,
+      pagos: [
+        { tipo: "entrega", monto: 11900, metodo: { nombre: "Efectivo", es_efectivo: true } },
+      ],
+    });
+    expect(html).not.toContain("PAGOS:");
+  });
+
+  it("muestra los pagos por método y el saldo por cobrar cuando hay abonos", () => {
+    const html = construirComprobantePedidoHtml({
+      ...pedidoCompleto,
+      pagos: [
+        { tipo: "abono", monto: 5000, metodo: { nombre: "Transferencia", es_efectivo: false } },
+      ],
+    });
+    expect(html).toContain("PAGOS:");
+    expect(html).toContain("Transferencia:");
+    expect(html).toContain("SALDO POR COBRAR:");
+  });
+
   it("incluye las notas solo cuando el pedido las tiene", () => {
     const conNotas = construirComprobantePedidoHtml(pedidoCompleto);
     expect(conNotas).toContain("Entregar en la tarde");

@@ -1,5 +1,6 @@
 // src/modules/orders/utils/printUtils.js
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
+import { resumirPagosParaTicket } from "../../payments/utils/ticketPagos";
 
 export const formatCurrencyPdf = (amount) =>
   new Intl.NumberFormat("es-CO", {
@@ -48,6 +49,7 @@ export const construirComprobantePedidoHtml = (pedidoCompleto) => {
   });
 
   const clienteNombre = getNombreCliente(pedidoCompleto.clientes);
+  const resumenPagos = resumirPagosParaTicket(pedidoCompleto);
 
   return `
     <div style="background-color: #ffffff; color: #000000; width: 72mm; padding: 12px; font-family: monospace; font-size: 11px; display: flex; flex-direction: column; gap: 10px;">
@@ -99,6 +101,27 @@ export const construirComprobantePedidoHtml = (pedidoCompleto) => {
           <span>TOTAL:</span><span>${formatCurrencyPdf(pedidoCompleto.total)}</span>
         </div>
       </div>
+
+      ${
+        resumenPagos
+          ? `
+        <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; display: flex; flex-direction: column; gap: 4px; font-size: 10px; font-weight: 600; color: #000000;">
+          <strong>PAGOS:</strong>
+          ${resumenPagos.lineas
+            .map(
+              (linea) =>
+                `<div style="display: flex; justify-content: space-between;"><span>${linea.nombre}:</span><span>${formatCurrencyPdf(linea.monto)}</span></div>`,
+            )
+            .join("")}
+          ${
+            resumenPagos.saldo > 0
+              ? `<div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px; border-top: 1px solid #000000; padding-top: 4px;"><span>SALDO POR COBRAR:</span><span>${formatCurrencyPdf(resumenPagos.saldo)}</span></div>`
+              : ""
+          }
+        </div>
+      `
+          : ""
+      }
 
       ${
         pedidoCompleto.notas
