@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { purchaseService } from "../services/purchaseService";
 import { PurchaseAnularControl } from "../components/PurchaseAnularControl";
+import { PurchasePaymentsCard } from "../components/PurchasePaymentsCard";
 import {
   ArrowLeft,
   Truck,
@@ -236,6 +237,9 @@ export const PurchaseDetailsPage = () => {
           </span>
         </div>
       </div>
+
+      {/* PAGOS: se oculta si la empresa no usa métodos de pago ni abonos */}
+      <PurchasePaymentsCard compra={compra} onActualizada={cargarDatos} />
     </div>
   );
 };

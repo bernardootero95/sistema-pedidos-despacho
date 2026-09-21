@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { purchaseService } from "../services/purchaseService";
 import { usePaginatedList } from "../../../hooks/usePaginatedList";
+import { useSettings } from "../../../context/useSettings";
+import { PaymentStatusBadge } from "../../payments/components/PaymentStatusBadge";
 import {
   ShoppingBag,
   Search,
@@ -29,6 +31,11 @@ const formatDate = (dateString) =>
   });
 
 export const PurchasesPage = () => {
+  const { abonosComprasActivo } = useSettings();
+  // El estado de pago solo aporta información si la empresa usa abonos a
+  // compras: apagado, toda compra registrada está pagada completa.
+  const mostrarPago = (compra) =>
+    abonosComprasActivo && compra.estado === "registrada";
   const navigate = useNavigate();
   const {
     items: compras,
@@ -129,6 +136,14 @@ export const PurchasesPage = () => {
                         {formatCurrency(compra.total)}
                       </span>
                     </div>
+                    {mostrarPago(compra) && (
+                      <div>
+                        <PaymentStatusBadge
+                          total={compra.total}
+                          pagado={compra.total_pagado}
+                        />
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
@@ -163,6 +178,14 @@ export const PurchasesPage = () => {
                         </td>
                         <td className="py-4 px-6 text-right font-bold text-slate-900">
                           {formatCurrency(compra.total)}
+                          {mostrarPago(compra) && (
+                            <div className="mt-1 font-normal">
+                              <PaymentStatusBadge
+                                total={compra.total}
+                                pagado={compra.total_pagado}
+                              />
+                            </div>
+                          )}
                         </td>
                         <td className="py-4 px-6 text-center">
                           <span

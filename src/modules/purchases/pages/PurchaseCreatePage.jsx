@@ -19,9 +19,18 @@ import { PurchaseProductPicker } from "../components/PurchaseProductPicker";
 import { PurchaseCart } from "../components/PurchaseCart";
 import { SupplierForm } from "../../suppliers/components/SupplierForm";
 import { ProductForm } from "../../products/components/ProductForm";
+import { useSettings } from "../../../context/useSettings";
+import { PaymentModal } from "../../payments/components/PaymentModal";
+import { MODOS_PAGO } from "../../payments/utils/paymentLines";
 
 export const PurchaseCreatePage = () => {
   const navigate = useNavigate();
+  const { metodosPagoActivo, abonosComprasActivo } = useSettings();
+  // Con métodos de pago o abonos activos se pregunta cómo se paga antes de
+  // registrar. Con abonos el pago inicial es opcional y puede ser parcial
+  // (queda saldo con el proveedor); sin abonos la compra se paga completa.
+  const pidePago = metodosPagoActivo || abonosComprasActivo;
+  const modoPago = abonosComprasActivo ? MODOS_PAGO.OPCIONAL : MODOS_PAGO.EXACTO;
 
   const [proveedores, setProveedores] = useState([]);
   const [productos, setProductos] = useState([]);
@@ -46,6 +55,7 @@ export const PurchaseCreatePage = () => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pagando, setPagando] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,33 +92,45 @@ export const PurchaseCreatePage = () => {
     setProductos(productosData);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const cabeceraData = {
+    proveedor_id: proveedorId,
+    fecha_compra: fechaCompra,
+    notas,
+  };
 
-    const cabeceraData = {
-      proveedor_id: proveedorId,
-      fecha_compra: fechaCompra,
-      notas,
-    };
-    const validationErrors = validatePurchaseForm(cabeceraData, carrito);
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
-
+  const guardarCompra = async (pagos = null) => {
     const detalles = carrito.map((l) => ({
       producto_id: l.producto_id,
       cantidad: l.cantidad,
       costo_unitario: l.costo_unitario,
     }));
 
+    const resultado = await purchaseService.crearCompraTransaccional(
+      cabeceraData,
+      detalles,
+      pagos,
+    );
+    navigate(`/compras/${resultado.id}`);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const validationErrors = validatePurchaseForm(cabeceraData, carrito);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    if (pidePago) {
+      setErrors({});
+      setPagando(true);
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      const resultado = await purchaseService.crearCompraTransaccional(
-        cabeceraData,
-        detalles,
-      );
-      navigate(`/compras/${resultado.id}`);
+      await guardarCompra();
     } catch (error) {
       console.error(error);
       setErrors({
@@ -280,6 +302,23 @@ export const PurchaseCreatePage = () => {
         <ProductForm
           onSuccess={handleProductoCreado}
           onCancel={() => setIsProductFormOpen(false)}
+        />
+      )}
+
+      {pagando && (
+        <PaymentModal
+          titulo="Pago de la compra"
+          subtitulo={
+            abonosComprasActivo
+              ? "Registra lo que pagas hoy; el resto queda como saldo al proveedor."
+              : undefined
+          }
+          objetivo={total}
+          etiquetaObjetivo="Total de la compra"
+          modo={modoPago}
+          etiquetaConfirmar="Registrar compra"
+          onConfirm={guardarCompra}
+          onCancel={() => setPagando(false)}
         />
       )}
     </div>

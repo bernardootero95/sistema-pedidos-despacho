@@ -116,13 +116,18 @@ export const purchaseService = {
    *
    * @param {Object} cabeceraData - { proveedor_id, notas, fecha_compra }
    * @param {Array<{producto_id: string, cantidad: number, costo_unitario: number}>} detalles
+   * @param {Array<{metodo_pago_id: string|null, monto: number}>} [pagos] pago
+   *   al registrar. Con abonos a compras activos puede ser parcial o vacío
+   *   (el resto queda como saldo al proveedor); sin abonos debe cubrir el
+   *   total (y sin métodos de pago se omite: se paga en efectivo).
    */
-  async crearCompraTransaccional(cabeceraData, detalles) {
+  async crearCompraTransaccional(cabeceraData, detalles, pagos = null) {
     const { data, error } = await supabase.rpc("crear_compra_transaccional", {
       p_proveedor_id: cabeceraData.proveedor_id,
       p_notas: cabeceraData.notas || null,
       p_detalles: detalles,
       p_fecha_compra: cabeceraData.fecha_compra || null,
+      ...(pagos && { p_pagos: pagos }),
     });
 
     if (error) {

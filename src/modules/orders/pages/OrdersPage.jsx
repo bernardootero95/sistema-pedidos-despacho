@@ -166,11 +166,11 @@ export const OrdersPage = () => {
     }
   };
 
-  // El estado de pago solo aporta información si la empresa usa abonos o el
-  // pedido ya tiene pagos; con la funcionalidad apagada el listado no cambia.
+  // El estado de pago solo aporta información si la empresa usa abonos: con
+  // la funcionalidad apagada todo pedido entregado está pagado y el listado
+  // queda igual que antes.
   const mostrarPago = (pedido) =>
-    pedido.estado !== "anulado" &&
-    (abonosPedidosActivo || Number(pedido.total_pagado) > 0);
+    abonosPedidosActivo && pedido.estado !== "anulado";
 
   const handleDirectPrint = async (id) => {
     try {
