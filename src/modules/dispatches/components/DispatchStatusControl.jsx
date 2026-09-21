@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { dispatchService } from "../services/dispatchService";
+import { useSettings } from "../../../context/useSettings";
+import { CobroDespachoModal } from "./CobroDespachoModal";
+import { pedidosPorCobrar } from "../utils/cobroEntrega";
 import {
   TRANSICIONES_VALIDAS_DESPACHO,
   ETIQUETAS_TRANSICION_DESPACHO,
@@ -14,6 +17,10 @@ import {
  * vía onUpdated para que refresque su estado local. La anulación pide
  * una segunda confirmación antes de ejecutar (acción destructiva:
  * cascada a los pedidos asignados).
+ *
+ * Al completar un despacho cuyos pedidos aún tienen saldo por cobrar (y la
+ * empresa usa métodos de pago o abonos) abre un solo diálogo con todos los
+ * saldos antes de llamar a la RPC.
  *
  * variant="badge" (por defecto): burbuja compacta con menú desplegable,
  * pensada para una fila de tabla (DispatchesPage).
@@ -30,7 +37,9 @@ export const DispatchStatusControl = ({
   const [confirmandoAnular, setConfirmandoAnular] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+  const [saldosPorCobrar, setSaldosPorCobrar] = useState(null);
   const menuRef = useRef(null);
+  const { metodosPagoActivo, abonosPedidosActivo } = useSettings();
 
   const transiciones = TRANSICIONES_VALIDAS_DESPACHO[estado] || [];
 
@@ -46,6 +55,18 @@ export const DispatchStatusControl = ({
     return () => document.removeEventListener("mousedown", handleClickFuera);
   }, [variant]);
 
+  const aplicarCambio = async (nuevoEstado, pagos = null) => {
+    const actualizado =
+      await dispatchService.actualizarEstadoDespachoTransaccional(
+        despachoId,
+        nuevoEstado,
+        pagos,
+      );
+    onUpdated?.(actualizado.estado);
+    setAbierto(false);
+    setConfirmandoAnular(false);
+  };
+
   const ejecutarCambio = async (nuevoEstado) => {
     if (nuevoEstado === "anulado" && !confirmandoAnular) {
       setConfirmandoAnular(true);
@@ -55,20 +76,38 @@ export const DispatchStatusControl = ({
     setCargando(true);
     setError("");
     try {
-      const actualizado =
-        await dispatchService.actualizarEstadoDespachoTransaccional(
-          despachoId,
-          nuevoEstado,
-        );
-      onUpdated?.(actualizado.estado);
-      setAbierto(false);
-      setConfirmandoAnular(false);
+      if (
+        nuevoEstado === "completado" &&
+        (metodosPagoActivo || abonosPedidosActivo)
+      ) {
+        const items = await dispatchService.obtenerDetallesDespacho(despachoId);
+        const conSaldo = pedidosPorCobrar(items);
+        if (conSaldo.length > 0) {
+          setSaldosPorCobrar(conSaldo);
+          setAbierto(false);
+          return;
+        }
+      }
+      await aplicarCambio(nuevoEstado);
     } catch (err) {
       setError(err.message || "No se pudo actualizar el estado.");
     } finally {
       setCargando(false);
     }
   };
+
+  const handleCobrar = async (pagos) => {
+    await aplicarCambio("completado", pagos);
+    setSaldosPorCobrar(null);
+  };
+
+  const modalCobro = saldosPorCobrar && (
+    <CobroDespachoModal
+      pedidos={saldosPorCobrar}
+      onConfirm={handleCobrar}
+      onCancel={() => setSaldosPorCobrar(null)}
+    />
+  );
 
   if (variant === "buttons") {
     return (
@@ -105,6 +144,7 @@ export const DispatchStatusControl = ({
           </div>
         )}
         {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
+        {modalCobro}
       </div>
     );
   }
@@ -155,6 +195,7 @@ export const DispatchStatusControl = ({
           )}
         </div>
       )}
+      {modalCobro}
     </div>
   );
 };

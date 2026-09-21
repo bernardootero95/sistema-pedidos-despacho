@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Clock, PackageCheck, PackageX, Loader2 } from "lucide-react";
 import { dispatchService } from "../services/dispatchService";
 import { ETIQUETAS_ESTADO_ENTREGA } from "../utils/dispatchStatus";
+import { useSettings } from "../../../context/useSettings";
+import { CobroEntregaModal } from "./CobroEntregaModal";
+import { requiereCobroAlEntregar } from "../utils/cobroEntrega";
 
 const OPCIONES = [
   { value: "pendiente", Icon: Clock, activo: "bg-slate-600 text-white" },
@@ -19,31 +22,54 @@ const OPCIONES = [
  * el despacho como un todo siga 'en_ruta' o ya esté 'completado').
  * Autónomo: llama directamente a actualizarEstadoEntregaPedido y avisa
  * al padre vía onUpdated para refrescar su lista local.
+ *
+ * Marcar 'entregado' un pedido con saldo por cobrar abre antes el diálogo
+ * de cobro; `pedido` trae total, total_pagado y los datos para mostrarlo.
  */
 export const EntregaStatusControl = ({
   despachoPedidoId,
   estadoEntrega,
+  pedido,
   onUpdated,
   disabled = false,
 }) => {
+  const settings = useSettings();
   const [cargando, setCargando] = useState(false);
+  const [cobrando, setCobrando] = useState(false);
   const [error, setError] = useState("");
+
+  const actualizar = async (nuevoEstado, pagos = null) => {
+    const resultado = await dispatchService.actualizarEstadoEntregaPedido(
+      despachoPedidoId,
+      nuevoEstado,
+      null,
+      pagos,
+    );
+    onUpdated?.(resultado);
+  };
 
   const handleClick = async (nuevoEstado) => {
     if (nuevoEstado === estadoEntrega || disabled || cargando) return;
+
+    if (nuevoEstado === "entregado" && requiereCobroAlEntregar(pedido, settings)) {
+      setCobrando(true);
+      return;
+    }
+
     setCargando(true);
     setError("");
     try {
-      const resultado = await dispatchService.actualizarEstadoEntregaPedido(
-        despachoPedidoId,
-        nuevoEstado,
-      );
-      onUpdated?.(resultado);
+      await actualizar(nuevoEstado);
     } catch (err) {
       setError(err.message || "No se pudo actualizar.");
     } finally {
       setCargando(false);
     }
+  };
+
+  const handleCobrar = async (pagos) => {
+    await actualizar("entregado", pagos);
+    setCobrando(false);
   };
 
   return (
@@ -77,6 +103,14 @@ export const EntregaStatusControl = ({
         <p className="text-[10px] text-red-500 font-medium max-w-40 text-right">
           {error}
         </p>
+      )}
+
+      {cobrando && (
+        <CobroEntregaModal
+          pedido={pedido}
+          onConfirm={handleCobrar}
+          onCancel={() => setCobrando(false)}
+        />
       )}
     </div>
   );

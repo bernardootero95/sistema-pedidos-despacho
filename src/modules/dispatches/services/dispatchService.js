@@ -103,6 +103,7 @@ export const dispatchService = {
           id,
           numero_pedido,
           total,
+          total_pagado,
           clientes(razon_social, primer_nombre, primer_apellido, direccion, telefono)
         )
       `,
@@ -168,11 +169,19 @@ export const dispatchService = {
    * pedidos pendientes de entrega a 'entregado'; al anular, libera los
    * pedidos aún no entregados de vuelta a 'pendiente' para poder
    * reasignarlos.
+   *
+   * Al completar, el servidor cobra el saldo de cada pedido que pasa a
+   * entregado: `pagos` es [{ pedido_id, pagos: [{ metodo_pago_id, monto }] }]
+   * (con métodos de pago apagado se omite y se cobra en efectivo).
    */
-  async actualizarEstadoDespachoTransaccional(id, nuevoEstado) {
+  async actualizarEstadoDespachoTransaccional(id, nuevoEstado, pagos = null) {
     const { data, error } = await supabase.rpc(
       "actualizar_estado_despacho_transaccional",
-      { p_despacho_id: id, p_nuevo_estado: nuevoEstado },
+      {
+        p_despacho_id: id,
+        p_nuevo_estado: nuevoEstado,
+        ...(pagos && { p_pagos: pagos }),
+      },
     );
 
     if (error) {
@@ -191,11 +200,14 @@ export const dispatchService = {
    * @param {string} despachoPedidoId - id de la fila en despachos_pedidos
    * @param {'pendiente'|'entregado'|'rechazado'} nuevoEstadoEntrega
    * @param {string} [notas]
+   * @param {Array<{metodo_pago_id: string|null, monto: number}>} [pagos] cobro
+   *   del saldo al marcar 'entregado' (el servidor exige cubrirlo completo).
    */
   async actualizarEstadoEntregaPedido(
     despachoPedidoId,
     nuevoEstadoEntrega,
     notas = null,
+    pagos = null,
   ) {
     const { data, error } = await supabase.rpc(
       "actualizar_estado_entrega_pedido_transaccional",
@@ -203,6 +215,7 @@ export const dispatchService = {
         p_despacho_pedido_id: despachoPedidoId,
         p_nuevo_estado_entrega: nuevoEstadoEntrega,
         p_notas_entrega: notas,
+        ...(pagos && { p_pagos: pagos }),
       },
     );
 

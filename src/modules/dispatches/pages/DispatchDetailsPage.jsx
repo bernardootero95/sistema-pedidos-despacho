@@ -20,6 +20,7 @@ import {
   Printer,
 } from "lucide-react";
 import { ETIQUETAS_ESTADO_DESPACHO } from "../utils/dispatchStatus";
+import { marcarPedidoPagado } from "../utils/cobroEntrega";
 
 export const DispatchDetailsPage = () => {
   const { id } = useParams();
@@ -94,7 +95,14 @@ export const DispatchDetailsPage = () => {
     setPedidosAsignados((prev) =>
       prev.map((p) =>
         p.id === despachoPedidoId
-          ? { ...p, estado_entrega: resultado.estado_entrega }
+          ? {
+              ...p,
+              estado_entrega: resultado.estado_entrega,
+              pedido:
+                resultado.estado_entrega === "entregado"
+                  ? marcarPedidoPagado(p.pedido)
+                  : p.pedido,
+            }
           : p,
       ),
     );
@@ -285,6 +293,7 @@ export const DispatchDetailsPage = () => {
                   <EntregaStatusControl
                     despachoPedidoId={item.id}
                     estadoEntrega={item.estado_entrega}
+                    pedido={item.pedido}
                     disabled={despachoAnulado}
                     onUpdated={(resultado) =>
                       handleEntregaActualizada(item.id, resultado)

@@ -2,6 +2,9 @@ import { useState } from "react";
 import { PackageCheck, PackageX, Loader2, MapPin } from "lucide-react";
 import { dispatchService } from "../services/dispatchService";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
+import { useSettings } from "../../../context/useSettings";
+import { CobroEntregaModal } from "./CobroEntregaModal";
+import { requiereCobroAlEntregar } from "../utils/cobroEntrega";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("es-CO", {
@@ -19,7 +22,9 @@ const formatCurrency = (amount) =>
  * una está en vuelo.
  */
 export const EntregaPedidoCard = ({ item, onActualizado }) => {
+  const settings = useSettings();
   const [cargando, setCargando] = useState(false);
+  const [cobrando, setCobrando] = useState(false);
   const [error, setError] = useState("");
 
   const estadoEntrega = item.estado_entrega;
@@ -40,6 +45,28 @@ export const EntregaPedidoCard = ({ item, onActualizado }) => {
     } finally {
       setCargando(false);
     }
+  };
+
+  // Al entregar con saldo por cobrar se abre primero el diálogo de cobro; el
+  // servidor exige el pago completo antes de dejar pasar el pedido.
+  const handleEntregado = () => {
+    if (cargando || estadoEntrega === "entregado") return;
+    if (requiereCobroAlEntregar(item.pedido, settings)) {
+      setCobrando(true);
+      return;
+    }
+    handleActualizar("entregado");
+  };
+
+  const handleCobrar = async (pagos) => {
+    await dispatchService.actualizarEstadoEntregaPedido(
+      item.id,
+      "entregado",
+      null,
+      pagos,
+    );
+    setCobrando(false);
+    onActualizado(item.id, "entregado");
   };
 
   return (
@@ -81,7 +108,7 @@ export const EntregaPedidoCard = ({ item, onActualizado }) => {
         <button
           type="button"
           disabled={cargando}
-          onClick={() => handleActualizar("entregado")}
+          onClick={handleEntregado}
           className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl font-bold text-sm transition-colors disabled:opacity-50 ${
             estadoEntrega === "entregado"
               ? "bg-emerald-600 text-white"
@@ -113,6 +140,14 @@ export const EntregaPedidoCard = ({ item, onActualizado }) => {
           Rechazado
         </button>
       </div>
+
+      {cobrando && (
+        <CobroEntregaModal
+          pedido={item.pedido}
+          onConfirm={handleCobrar}
+          onCancel={() => setCobrando(false)}
+        />
+      )}
     </div>
   );
 };
