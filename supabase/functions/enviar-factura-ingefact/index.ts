@@ -69,6 +69,33 @@ function fechaHoyBogota(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date())
 }
 
+// Medio de pago DIAN de la factura a partir de los pagos del pedido (neto por
+// código: pagos - devoluciones). IngeFact solo acepta UN metodo_pago por
+// factura: con un único código se envía ese; si el pedido se pagó con
+// medios distintos se envía 'ZZZ' (acuerdo mutuo); sin pagos registrados
+// (o con la opción de métodos de pago apagada, que solo genera Efectivo)
+// queda '10' (efectivo), como antes de existir los métodos de pago.
+const MEDIO_PAGO_EFECTIVO = '10'
+const MEDIO_PAGO_MIXTO = 'ZZZ'
+
+function medioPagoDian(pagos: any[]): string {
+  const netoPorCodigo = new Map<string, number>()
+  for (const pago of pagos || []) {
+    const codigo = pago?.metodo?.codigo_dian || MEDIO_PAGO_EFECTIVO
+    const monto = Number(pago?.monto) || 0
+    const delta = pago?.tipo === 'devolucion' ? -monto : monto
+    netoPorCodigo.set(codigo, (netoPorCodigo.get(codigo) || 0) + delta)
+  }
+
+  const codigos = [...netoPorCodigo.entries()]
+    .filter(([, neto]) => neto > 0)
+    .map(([codigo]) => codigo)
+
+  if (codigos.length === 0) return MEDIO_PAGO_EFECTIVO
+  if (codigos.length === 1) return codigos[0]
+  return MEDIO_PAGO_MIXTO
+}
+
 // Traduce una línea de pedidos_detalle al ítem embebido que espera IngeFact.
 // El sistema no registra unidad de medida por producto: se usa "94" (DIAN:
 // unidad) como default fijo, válido para el catálogo actual (bienes físicos
@@ -175,6 +202,15 @@ serve(async (req) => {
       return responder({ error: 'Solo se pueden facturar pedidos ya entregados.' }, 409)
     }
 
+    const { data: pagos, error: pagosError } = await supabaseAdmin
+      .from('pagos')
+      .select('tipo, monto, metodo:metodos_pago ( codigo_dian )')
+      .eq('pedido_id', pedido_id)
+
+    if (pagosError) {
+      return responder({ error: 'No se pudieron consultar los pagos del pedido.' }, 500)
+    }
+
     const cliente = pedido.clientes as any
     const correoFacturacion = cliente?.correo || INGEFACT_CORREO_GENERICO
     if (!correoFacturacion) {
@@ -236,7 +272,7 @@ serve(async (req) => {
 
     const enviada = await ingefact(`/facturas/${borrador.id}/enviar`, {
       method: 'POST',
-      body: JSON.stringify({ forma_pago: '1', metodo_pago: '10' }),
+      body: JSON.stringify({ forma_pago: '1', metodo_pago: medioPagoDian(pagos || []) }),
     })
 
     await supabaseAdmin
