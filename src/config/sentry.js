@@ -18,6 +18,17 @@ export const initSentry = () => {
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,
+    // Varios tenants (mismo repo, distinto despliegue) pueden compartir un
+    // único proyecto de Sentry en vez de crear uno por empresa. El tag
+    // `tenant` es lo que permite separarlos al filtrar/agrupar issues en
+    // el dashboard; reusa VITE_COMPANY_DOMAIN porque ya es el identificador
+    // único por tenant (ver authService.js), sin necesitar una variable
+    // nueva solo para esto.
+    initialScope: {
+      tags: {
+        tenant: import.meta.env.VITE_COMPANY_DOMAIN || "sin-tenant",
+      },
+    },
     // Los datos de clientes/pedidos que puedan colarse en breadcrumbs o
     // contexto de error no deberían salir del sistema sin que alguien lo
     // decida explícitamente más adelante.

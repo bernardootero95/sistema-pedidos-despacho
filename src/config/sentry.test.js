@@ -39,4 +39,24 @@ describe("initSentry", () => {
     const [[config]] = Sentry.init.mock.calls;
     expect(config.sendDefaultPii).toBe(false);
   });
+
+  it("etiqueta los eventos con el dominio del tenant", () => {
+    vi.stubEnv("VITE_SENTRY_DSN", "https://fake@o0.ingest.sentry.io/1");
+    vi.stubEnv("VITE_COMPANY_DOMAIN", "distintoz.local");
+
+    initSentry();
+
+    const [[config]] = Sentry.init.mock.calls;
+    expect(config.initialScope.tags.tenant).toBe("distintoz.local");
+  });
+
+  it("usa un tenant de reserva si VITE_COMPANY_DOMAIN no está configurado", () => {
+    vi.stubEnv("VITE_SENTRY_DSN", "https://fake@o0.ingest.sentry.io/1");
+    vi.stubEnv("VITE_COMPANY_DOMAIN", "");
+
+    initSentry();
+
+    const [[config]] = Sentry.init.mock.calls;
+    expect(config.initialScope.tags.tenant).toBe("sin-tenant");
+  });
 });
