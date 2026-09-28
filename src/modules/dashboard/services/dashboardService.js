@@ -1,11 +1,13 @@
 import { supabase } from "../../../config/supabase";
+import { normalizarResumenVentas } from "../../reports/utils/salesReportFormat";
 
 export const dashboardService = {
   /**
-   * KPIs agregados del dashboard (venta real vs preventa por día/mes,
-   * conteos de pedidos por estado, despachos activos), calculados en el
-   * servidor vía `obtener_resumen_dashboard`, respetando RLS por rol del
-   * usuario autenticado.
+   * KPIs del dashboard calculados en el servidor vía
+   * `obtener_resumen_dashboard`, respetando RLS por rol: resumen de hoy y
+   * del mes con los mismos conceptos del informe de ventas (preventa,
+   * ventas, anulados/devueltos, pendientes del período y anteriores) más
+   * la foto operativa (pendientes por despachar, en ruta, rutas activas).
    *
    * @param {string} [vendedorId] - Solo tiene efecto si quien llama es
    * gerencia/soporte (el propio RPC ignora el filtro para otros roles); un
@@ -21,15 +23,10 @@ export const dashboardService = {
     }
 
     return {
-      totalPedidos: Number(data?.total_pedidos || 0),
+      hoy: normalizarResumenVentas(data?.hoy),
+      mes: normalizarResumenVentas(data?.mes),
       pedidosPendientes: Number(data?.pedidos_pendientes || 0),
       pedidosDespachados: Number(data?.pedidos_despachados || 0),
-      pedidosEntregados: Number(data?.pedidos_entregados || 0),
-      pedidosDevueltos: Number(data?.pedidos_devueltos || 0),
-      ventaRealDia: Number(data?.venta_real_dia || 0),
-      ventaRealMes: Number(data?.venta_real_mes || 0),
-      preventaDia: Number(data?.preventa_dia || 0),
-      preventaMes: Number(data?.preventa_mes || 0),
       despachosActivos: Number(data?.despachos_activos || 0),
     };
   },
@@ -74,9 +71,9 @@ export const dashboardService = {
   },
 
   /**
-   * Serie de ventas diarias (últimos 30 días) para el gráfico del
-   * dashboard, separada en venta real (entregado) y preventa (pendiente +
-   * despachado), calculada en el servidor vía `obtener_ventas_diarias`.
+   * Serie diaria (últimos 30 días) para el gráfico del dashboard: ventas
+   * (entregados, por fecha de entrega) y preventa (todos los pedidos, por
+   * fecha del pedido), calculada en el servidor vía `obtener_ventas_diarias`.
    * No es SECURITY DEFINER: respeta la misma RLS por rol que el resto de
    * `pedidos_cabecera` (un vendedor ve su propia curva, no la de todos).
    *

@@ -7,13 +7,11 @@ import { userService } from "../../users/services/userService";
 import { DashboardKpiCard } from "../components/DashboardKpiCard";
 import { DailySalesChart } from "../components/DailySalesChart";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
+import { SalesReportSummary } from "../../reports/components/SalesReportSummary";
+import { normalizarResumenVentas } from "../../reports/utils/salesReportFormat";
+import { obtenerCategoriasDetalle } from "../../reports/utils/salesReportPeriod";
 import {
-  ShoppingCart,
   Truck,
-  DollarSign,
-  Wallet,
-  CalendarDays,
-  CalendarClock,
   CheckCircle2,
   Clock,
   AlertCircle,
@@ -24,17 +22,17 @@ import {
 } from "lucide-react";
 
 const RESUMEN_INICIAL = {
-  totalPedidos: 0,
+  hoy: normalizarResumenVentas(),
+  mes: normalizarResumenVentas(),
   pedidosPendientes: 0,
   pedidosDespachados: 0,
-  pedidosEntregados: 0,
-  pedidosDevueltos: 0,
-  ventaRealDia: 0,
-  ventaRealMes: 0,
-  preventaDia: 0,
-  preventaMes: 0,
   despachosActivos: 0,
 };
+
+// Etiquetas de pendientes ("del día" / "del mes"): las mismas del informe
+// de ventas, para que ambas pantallas hablen igual.
+const CATEGORIAS_HOY = obtenerCategoriasDetalle("diario");
+const CATEGORIAS_MES = obtenerCategoriasDetalle("mensual");
 
 export const DashboardPage = () => {
   const { user } = useAuth();
@@ -206,82 +204,42 @@ export const DashboardPage = () => {
         </div>
       )}
 
-      {/* TARJETAS DE VENTAS: real (entregado, ingresa dinero) vs preventa
-          (pendiente/despachado, aún no genera ingreso), día y mes. */}
+      {/* RESUMEN DE VENTAS: mismos conceptos que el informe de ventas
+          (preventa por fecha de pedido, ventas por fecha de entrega,
+          anulados/devueltos y pendientes del período vs. anteriores). */}
       <div>
         <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">
-          Ventas
+          Hoy
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <DashboardKpiCard
-            label="Venta Real Hoy"
-            value={formatCurrency(resumen.ventaRealDia)}
-            icon={DollarSign}
-            color="emerald"
-          />
-          <DashboardKpiCard
-            label="Venta Real del Mes"
-            value={formatCurrency(resumen.ventaRealMes)}
-            icon={Wallet}
-            color="emerald"
-          />
-          <DashboardKpiCard
-            label="Preventa Hoy"
-            value={formatCurrency(resumen.preventaDia)}
-            icon={CalendarDays}
-            color="sky"
-          />
-          <DashboardKpiCard
-            label="Preventa del Mes"
-            value={formatCurrency(resumen.preventaMes)}
-            icon={CalendarClock}
-            color="sky"
-          />
-        </div>
+        <SalesReportSummary resumen={resumen.hoy} categorias={CATEGORIAS_HOY} />
       </div>
 
-      {/* TARJETAS DE PEDIDOS POR ESTADO */}
-      {/* Un vendedor no despacha ni tiene rutas: solo ve sus propios
-          pedidos (ya acotados por RLS), no rutas activas de toda la
-          empresa. */}
       <div>
         <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">
-          Pedidos
+          Este mes
         </h2>
-        <div
-          className={`grid grid-cols-2 gap-3 sm:gap-4 ${esVendedor ? "lg:grid-cols-5" : "lg:grid-cols-3 xl:grid-cols-6"}`}
-        >
+        <SalesReportSummary resumen={resumen.mes} categorias={CATEGORIAS_MES} />
+      </div>
+
+      {/* OPERACIÓN EN CURSO: foto actual, sin período. Un vendedor no
+          despacha ni tiene rutas: no ve las rutas activas de la empresa. */}
+      <div>
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">
+          Operación en curso
+        </h2>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 ${esVendedor ? "" : "lg:grid-cols-3"}`}>
           <DashboardKpiCard
-            label="Total Pedidos"
-            value={resumen.totalPedidos}
-            icon={ShoppingCart}
-            color="blue"
-          />
-          <DashboardKpiCard
-            label="Pendientes"
+            label="Por despachar"
             value={resumen.pedidosPendientes}
             icon={Clock}
             color="amber"
             valueClassName="text-amber-600"
           />
           <DashboardKpiCard
-            label="En Ruta"
+            label="En ruta"
             value={resumen.pedidosDespachados}
             icon={Truck}
             color="purple"
-          />
-          <DashboardKpiCard
-            label="Entregados"
-            value={resumen.pedidosEntregados}
-            icon={CheckCircle2}
-            color="emerald"
-          />
-          <DashboardKpiCard
-            label="Devueltos"
-            value={resumen.pedidosDevueltos}
-            icon={PackageX}
-            color="red"
-            valueClassName="text-red-600"
           />
           {!esVendedor && (
             <DashboardKpiCard

@@ -20,7 +20,7 @@ const formatFechaCorta = (fechaISO) =>
   });
 
 /**
- * Gráfico de barras agrupadas (venta real vs preventa) en SVG puro (sin
+ * Gráfico de barras agrupadas (ventas vs preventa) en SVG puro (sin
  * librería de charts nueva: la serie son 30 puntos x 2 series, no justifica
  * sumar una dependencia al proyecto).
  *
@@ -78,18 +78,18 @@ export const DailySalesChart = ({ datos, formatCurrency }) => {
         <div>
           <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-primary" />
-            Venta Real vs Preventa Diaria
+            Total Pedidos (Preventa) vs Ventas por Día
           </h3>
           <p className="text-xs text-slate-500">Últimos 30 días</p>
         </div>
         <div className="flex items-center gap-4 text-xs font-medium text-slate-600 shrink-0">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />
-            Venta Real
+            Ventas (entregados)
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm bg-sky-400 inline-block" />
-            Preventa
+            Total pedidos (preventa)
           </span>
         </div>
       </div>
@@ -97,14 +97,14 @@ export const DailySalesChart = ({ datos, formatCurrency }) => {
       <div className="p-4 sm:p-5">
         {sinDatos ? (
           <div className="py-10 text-center text-sm text-slate-500">
-            Sin ventas registradas en los últimos 30 días.
+            Sin pedidos ni ventas en los últimos 30 días.
           </div>
         ) : (
           <svg
             viewBox={`0 0 ${ANCHO} ${ALTO}`}
             className="w-full h-56"
             role="img"
-            aria-label="Venta real y preventa diaria de los últimos 30 días"
+            aria-label="Ventas y total de pedidos por día de los últimos 30 días"
           >
             <g transform={`translate(0 ${ALTO_ETIQUETAS_VALOR})`}>
               {datos.map((punto, i) => {

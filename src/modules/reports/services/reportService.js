@@ -1,5 +1,6 @@
 // src/modules/reports/services/reportService.js
 import { supabase } from "../../../config/supabase";
+import { normalizarResumenVentas } from "../utils/salesReportFormat";
 
 export const reportService = {
   /**
@@ -61,12 +62,7 @@ export const reportService = {
       throw new Error(error.message || "Error al generar el informe de ventas.");
     }
 
-    const resumen = Object.fromEntries(
-      Object.entries(data?.resumen || {}).map(([clave, { cantidad, monto }]) => [
-        clave,
-        { cantidad: Number(cantidad) || 0, monto: Number(monto) || 0 },
-      ]),
-    );
+    const resumen = normalizarResumenVentas(data?.resumen);
 
     const detalle = (data?.detalle || []).map((pedido) => ({
       ...pedido,

@@ -33,3 +33,22 @@ const ETIQUETAS_ESTADO = {
 };
 
 export const etiquetaEstado = (estado) => ETIQUETAS_ESTADO[estado] || estado;
+
+const CLAVES_RESUMEN = ["preventa", "ventas", "anulados", "devueltos", "pendientes_periodo", "pendientes_anteriores"];
+
+/**
+ * Normaliza el JSON de resumen_ventas_periodo (lo devuelven tanto
+ * obtener_informe_ventas como obtener_resumen_dashboard): NUMERIC llega
+ * como string vía PostgREST y un resumen ausente se completa en cero, para
+ * que ningún consumidor tenga que defenderse de eso.
+ */
+export const normalizarResumenVentas = (resumen) =>
+  Object.fromEntries(
+    CLAVES_RESUMEN.map((clave) => [
+      clave,
+      {
+        cantidad: Number(resumen?.[clave]?.cantidad) || 0,
+        monto: Number(resumen?.[clave]?.monto) || 0,
+      },
+    ]),
+  );
