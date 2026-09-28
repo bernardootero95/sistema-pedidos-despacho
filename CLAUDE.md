@@ -89,6 +89,29 @@ npm run preview   # preview del build
 
 ## Flujo de trabajo y Git
 
+### Ramas (obligatorio)
+
+- **Nunca trabajar ni hacer commit directamente sobre `main`.** `main` es
+  producción: cada push a `main` despliega automáticamente en Vercel a los
+  clientes reales (LA30).
+- Toda modificación nueva empieza en una rama propia creada desde `main`
+  actualizado (`git pull --ff-only` antes de crearla).
+- Nombre de la rama: `<tipo>/<descripcion-corta-en-kebab-case>`, en
+  español. Tipos: `feature/`, `fix/`, `refactor/`, `chore/`, `docs/`.
+  Ejemplos: `feature/informe-ventas`, `fix/dashboard-zona-horaria`.
+- Una rama por funcionalidad o corrección; no mezclar cambios no
+  relacionados en la misma rama.
+- Si al empezar una tarea la rama actual es `main`, crear la rama antes de
+  tocar cualquier archivo. Si la tarea continúa algo ya en curso, seguir en
+  su rama existente.
+- Se puede hacer push de la rama (Vercel genera un preview que no afecta
+  producción).
+- Integrar a `main` (merge o PR) **solo cuando el usuario lo pida**. En ese
+  momento se coordinan las migraciones y Edge Functions pendientes en los
+  proyectos Supabase de los clientes, antes o junto con el merge.
+
+### Commits
+
 - Después de cada respuesta que implique modificación de código, creación
   de un componente, cierre de una capa/funcionalidad, o corrección de un
   bug: **haz commit** de ese cambio antes de continuar con lo siguiente.
