@@ -39,4 +39,40 @@ export const reportService = {
       pedidos_count: Number(fila.pedidos_count),
     }));
   },
+
+  /**
+   * Informe de ventas de un período (día o mes): preventa por fecha de
+   * pedido, venta real por fecha de entrega, anulados/devueltos y
+   * pendientes del período vs. arrastrados de períodos anteriores. Todo el
+   * cálculo (incluido el corte de días en la zona horaria del negocio) vive
+   * en el RPC obtener_informe_ventas; acá solo se normalizan tipos.
+   *
+   * @param {{ fechaDesde: string, fechaHasta: string, vendedorId?: string }} filtros
+   * @returns {Promise<{ resumen: Record<string, {cantidad: number, monto: number}>, detalle: Array<Object> }>}
+   */
+  async obtenerInformeVentas({ fechaDesde, fechaHasta, vendedorId }) {
+    const { data, error } = await supabase.rpc("obtener_informe_ventas", {
+      p_fecha_desde: fechaDesde,
+      p_fecha_hasta: fechaHasta,
+      p_vendedor_id: vendedorId || null,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Error al generar el informe de ventas.");
+    }
+
+    const resumen = Object.fromEntries(
+      Object.entries(data?.resumen || {}).map(([clave, { cantidad, monto }]) => [
+        clave,
+        { cantidad: Number(cantidad) || 0, monto: Number(monto) || 0 },
+      ]),
+    );
+
+    const detalle = (data?.detalle || []).map((pedido) => ({
+      ...pedido,
+      total: Number(pedido.total) || 0,
+    }));
+
+    return { resumen, detalle };
+  },
 };

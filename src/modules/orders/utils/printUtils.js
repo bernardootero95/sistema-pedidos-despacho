@@ -152,8 +152,12 @@ export const construirComprobantePedidoHtml = (pedidoCompleto) => {
  * `optsOverride` reemplaza el formato térmico 80mm por defecto — lo usa el
  * informe de productos (reports/utils/reportPdfUtils.js) para generar un
  * PDF A4, en vez de duplicar todo el mecanismo de html2pdf solo por eso.
+ *
+ * `alturaAutomatica` ajusta el alto de la página térmica al contenido
+ * renderizado (un solo tiquete continuo, sin cortes ni papel en blanco);
+ * lo usa el tiquete del informe de ventas, cuyo largo varía.
  */
-export const generarPdfBlobUrl = async (html, filename, optsOverride = {}) => {
+export const generarPdfBlobUrl = async (html, filename, optsOverride = {}, { alturaAutomatica = false } = {}) => {
   const container = document.createElement("div");
   container.style.position = "fixed";
   container.style.left = "0";
@@ -173,6 +177,13 @@ export const generarPdfBlobUrl = async (html, filename, optsOverride = {}) => {
     jsPDF: { unit: "mm", format: [80, 200], orientation: "portrait" },
     ...optsOverride,
   };
+
+  if (alturaAutomatica) {
+    const MM_POR_PX = 25.4 / 96;
+    const [ancho] = opt.jsPDF.format;
+    const alto = Math.ceil(container.firstElementChild.offsetHeight * MM_POR_PX) + 2;
+    opt.jsPDF = { ...opt.jsPDF, format: [ancho, Math.max(alto, ancho)] };
+  }
 
   try {
     // Import dinámico: html2pdf.js (~900KB) solo se descarga cuando se

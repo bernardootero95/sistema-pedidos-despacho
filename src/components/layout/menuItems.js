@@ -13,6 +13,8 @@ import {
   Contact,
   Settings,
   SlidersHorizontal,
+  TrendingUp,
+  PackageSearch,
 } from "lucide-react";
 import { ROLES_MODULO } from "../../config/roles";
 
@@ -79,10 +81,23 @@ export const MENU_ITEMS = [
     ],
   },
   {
-    path: "/informes/productos",
+    key: "informes",
     label: "Informes",
     icon: FileBarChart,
-    roles: ROLES_MODULO.INFORMES,
+    children: [
+      {
+        path: "/informes/ventas",
+        label: "Ventas y Cierre",
+        icon: TrendingUp,
+        roles: ROLES_MODULO.INFORMES,
+      },
+      {
+        path: "/informes/productos",
+        label: "Productos por Pedido",
+        icon: PackageSearch,
+        roles: ROLES_MODULO.INFORMES,
+      },
+    ],
   },
   {
     key: "configuracion",

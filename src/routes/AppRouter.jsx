@@ -84,6 +84,11 @@ const ResetPasswordPage = lazy(() =>
     default: m.ResetPasswordPage,
   })),
 );
+const SalesReportPage = lazy(() =>
+  import("../modules/reports/pages/SalesReportPage").then((m) => ({
+    default: m.SalesReportPage,
+  })),
+);
 const ProductsReportPage = lazy(() =>
   import("../modules/reports/pages/ProductsReportPage").then((m) => ({
     default: m.ProductsReportPage,
@@ -219,6 +224,7 @@ export const AppRouter = () => {
 
             {/* Informes */}
             <Route element={<RoleGuard roles={ROLES_MODULO.INFORMES} />}>
+              <Route path="/informes/ventas" element={<SalesReportPage />} />
               <Route path="/informes/productos" element={<ProductsReportPage />} />
             </Route>
           </Route>
