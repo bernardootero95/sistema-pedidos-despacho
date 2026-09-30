@@ -89,6 +89,11 @@ const SalesReportPage = lazy(() =>
     default: m.SalesReportPage,
   })),
 );
+const ProfitReportPage = lazy(() =>
+  import("../modules/reports/pages/ProfitReportPage").then((m) => ({
+    default: m.ProfitReportPage,
+  })),
+);
 const ProductsReportPage = lazy(() =>
   import("../modules/reports/pages/ProductsReportPage").then((m) => ({
     default: m.ProductsReportPage,
@@ -225,6 +230,7 @@ export const AppRouter = () => {
             {/* Informes */}
             <Route element={<RoleGuard roles={ROLES_MODULO.INFORMES} />}>
               <Route path="/informes/ventas" element={<SalesReportPage />} />
+              <Route path="/informes/utilidad" element={<ProfitReportPage />} />
               <Route path="/informes/productos" element={<ProductsReportPage />} />
             </Route>
           </Route>
