@@ -15,6 +15,7 @@ import {
   SlidersHorizontal,
   TrendingUp,
   PackageSearch,
+  PiggyBank,
 } from "lucide-react";
 import { ROLES_MODULO } from "../../config/roles";
 
@@ -89,6 +90,12 @@ export const MENU_ITEMS = [
         path: "/informes/ventas",
         label: "Ventas y Cierre",
         icon: TrendingUp,
+        roles: ROLES_MODULO.INFORMES,
+      },
+      {
+        path: "/informes/utilidad",
+        label: "Utilidad del Mes",
+        icon: PiggyBank,
         roles: ROLES_MODULO.INFORMES,
       },
       {

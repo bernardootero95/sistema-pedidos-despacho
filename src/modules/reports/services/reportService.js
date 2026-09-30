@@ -71,4 +71,51 @@ export const reportService = {
 
     return { resumen, detalle };
   },
+
+  /**
+   * Informe de utilidad bruta de un período: ventas entregadas (por fecha
+   * de entrega) menos el costo de lo vendido, con el costo capturado en
+   * cada línea del pedido al momento de registrarla. Todo el cálculo vive
+   * en el RPC obtener_informe_utilidad; acá solo se normalizan tipos.
+   *
+   * @param {{ fechaDesde: string, fechaHasta: string }} filtros
+   */
+  async obtenerInformeUtilidad({ fechaDesde, fechaHasta }) {
+    const { data, error } = await supabase.rpc("obtener_informe_utilidad", {
+      p_fecha_desde: fechaDesde,
+      p_fecha_hasta: fechaHasta,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Error al generar el informe de utilidad.");
+    }
+
+    const r = data?.resumen || {};
+    const resumen = {
+      ventas: Number(r.ventas) || 0,
+      ventasConCosto: Number(r.ventas_con_costo) || 0,
+      costo: Number(r.costo) || 0,
+      utilidad: Number(r.utilidad) || 0,
+      pedidos: Number(r.pedidos) || 0,
+      sinCosto: {
+        monto: Number(r.sin_costo?.monto) || 0,
+        productos: Number(r.sin_costo?.productos) || 0,
+      },
+    };
+
+    const detalle = (data?.detalle || []).map((fila) => ({
+      productoId: fila.producto_id,
+      codigo: fila.codigo,
+      nombre: fila.nombre,
+      cantidad: Number(fila.cantidad) || 0,
+      ventas: Number(fila.ventas) || 0,
+      ventasConCosto: Number(fila.ventas_con_costo) || 0,
+      costo: Number(fila.costo) || 0,
+      utilidad: Number(fila.utilidad) || 0,
+      ventasSinCosto: Number(fila.ventas_sin_costo) || 0,
+      pedidos: Number(fila.pedidos) || 0,
+    }));
+
+    return { resumen, detalle };
+  },
 };
