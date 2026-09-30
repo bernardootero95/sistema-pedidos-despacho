@@ -12,10 +12,19 @@ const normalizarProducto = (producto) =>
     ? {
         ...producto,
         disponible: Number(producto.disponible),
-        ultimo_costo:
-          producto.ultimo_costo != null ? Number(producto.ultimo_costo) : null,
       }
     : producto;
+
+/**
+ * El costo de compra vive en `productos_costos` (RLS: solo soporte/gerencia/
+ * despachador), no en `productos`, para que el catálogo que leen vendedor/
+ * cajera/repartidor no lo exponga. Se embebe solo donde se muestra y se
+ * aplana a `ultimo_costo`; a un rol sin acceso el embed le llega en null.
+ */
+const normalizarProductoConCosto = ({ costo, ...producto }) => ({
+  ...normalizarProducto(producto),
+  ultimo_costo: costo?.ultimo_costo != null ? Number(costo.ultimo_costo) : null,
+});
 
 export const productService = {
   /**
@@ -27,7 +36,7 @@ export const productService = {
 
     let query = supabase
       .from("productos")
-      .select("*", { count: "exact" })
+      .select("*, costo:productos_costos(ultimo_costo)", { count: "exact" })
       .is("eliminado", null)
       .order("creado", { ascending: false });
 
@@ -46,7 +55,7 @@ export const productService = {
       );
 
     return {
-      data: (data || []).map(normalizarProducto),
+      data: (data || []).map(normalizarProductoConCosto),
       total: count,
       totalPages: Math.ceil(count / limit),
     };
