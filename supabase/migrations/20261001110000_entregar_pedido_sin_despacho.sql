@@ -32,7 +32,10 @@ AS $$
 DECLARE
   v_estado TEXT;
 BEGIN
-  IF obtener_rol_actual() NOT IN ('soporte', 'gerencia', 'despachador') THEN
+  -- COALESCE: obtener_rol_actual() es NULL para un usuario desactivado o
+  -- sin perfil, y `NULL NOT IN (...)` no es verdadero -- sin él lo dejaría
+  -- pasar.
+  IF COALESCE(obtener_rol_actual(), '') NOT IN ('soporte', 'gerencia', 'despachador') THEN
     RAISE EXCEPTION 'No tienes permiso para entregar pedidos sin despacho.';
   END IF;
 
