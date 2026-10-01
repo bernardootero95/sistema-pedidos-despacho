@@ -1,13 +1,14 @@
 import { supabase } from "../../../config/supabase";
 
 const COLUMNAS =
-  "metodos_pago_activo, abonos_pedidos_activo, abonos_compras_activo";
+  "metodos_pago_activo, abonos_pedidos_activo, abonos_compras_activo, facturacion_automatica_activo";
 
 // Clave camelCase de la configuración en la app -> columna en la base.
 const COLUMNAS_POR_CAMPO = {
   metodosPagoActivo: "metodos_pago_activo",
   abonosPedidosActivo: "abonos_pedidos_activo",
   abonosComprasActivo: "abonos_compras_activo",
+  facturacionAutomaticaActivo: "facturacion_automatica_activo",
 };
 
 /**
@@ -29,6 +30,7 @@ export const settingsService = {
       metodosPagoActivo: data.metodos_pago_activo,
       abonosPedidosActivo: data.abonos_pedidos_activo,
       abonosComprasActivo: data.abonos_compras_activo,
+      facturacionAutomaticaActivo: data.facturacion_automatica_activo,
     };
   },
 

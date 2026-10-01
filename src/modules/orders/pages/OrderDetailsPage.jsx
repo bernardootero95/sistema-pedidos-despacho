@@ -9,9 +9,10 @@ import { OrderDeliveryDate } from "../components/OrderDeliveryDate";
 import { OrderHistoryTimeline } from "../components/OrderHistoryTimeline";
 import { OrderDispatchInfo } from "../components/OrderDispatchInfo";
 import { etiquetaTipoPrecio } from "../utils/tipoPrecioDisplay";
-import { EnviarFacturaButton } from "../components/EnviarFacturaButton";
+import { FacturaIngefactControl } from "../components/FacturaIngefactControl";
 import { OrderPaymentsCard } from "../components/OrderPaymentsCard";
 import { ROLES_MODULO } from "../../../config/roles";
+import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -59,6 +60,15 @@ export const OrderDetailsPage = () => {
       showError(err.message);
     }
   }, [id, showError]);
+
+  // La factura automática (y su anulación) la resuelve una Edge Function
+  // segundos después del cambio de estado, fuera de esta pantalla: se
+  // escucha el pedido para mostrar el resultado sin recargar a mano.
+  useRealtimeSubscription("pedidos_cabecera", recargarPedido, {
+    filter: `id=eq.${id}`,
+    event: "UPDATE",
+    enabled: puedeFacturar && !!id,
+  });
 
   // Filtros/búsqueda que el usuario tenía activos en el listado, propagados
   // por la URL para que "siguiente/anterior" recorra el mismo subconjunto
@@ -294,7 +304,7 @@ export const OrderDetailsPage = () => {
             Imprimir Tiquete
           </button>
           {puedeFacturar && (
-            <EnviarFacturaButton pedido={pedido} onEnviada={recargarPedido} />
+            <FacturaIngefactControl pedido={pedido} onActualizado={recargarPedido} />
           )}
         </div>
       </div>
