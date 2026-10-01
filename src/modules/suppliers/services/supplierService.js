@@ -1,4 +1,5 @@
 import { supabase } from "../../../config/supabase";
+import { obtenerTodasLasFilas } from "../../../utils/obtenerTodasLasFilas";
 
 export const supplierService = {
   /**
@@ -41,12 +42,15 @@ export const supplierService = {
    * getProveedoresPaginados.
    */
   async getProveedoresActivos() {
-    const { data, error } = await supabase
-      .from("proveedores")
-      .select("id, nombre_comercial, numero_identificacion")
-      .eq("estado", true)
-      .is("eliminado", null)
-      .order("nombre_comercial", { ascending: true });
+    const { data, error } = await obtenerTodasLasFilas(() =>
+      supabase
+        .from("proveedores")
+        .select("id, nombre_comercial, numero_identificacion")
+        .eq("estado", true)
+        .is("eliminado", null)
+        .order("nombre_comercial", { ascending: true })
+        .order("id", { ascending: true }),
+    );
 
     if (error)
       throw new Error(

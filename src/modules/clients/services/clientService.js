@@ -1,4 +1,5 @@
 import { supabase } from "../../../config/supabase";
+import { obtenerTodasLasFilas } from "../../../utils/obtenerTodasLasFilas";
 
 export const clientService = {
   /**
@@ -39,13 +40,16 @@ export const clientService = {
    * para eso está getClientesPaginados.
    */
   async getClientesActivos() {
-    const { data, error } = await supabase
-      .from("clientes")
-      .select(
-        "id, razon_social, primer_nombre, primer_apellido, numero_identificacion",
-      )
-      .is("eliminado", null)
-      .order("creado", { ascending: false });
+    const { data, error } = await obtenerTodasLasFilas(() =>
+      supabase
+        .from("clientes")
+        .select(
+          "id, razon_social, primer_nombre, primer_apellido, numero_identificacion",
+        )
+        .is("eliminado", null)
+        .order("creado", { ascending: false })
+        .order("id", { ascending: true }),
+    );
 
     if (error)
       throw new Error("Error al cargar la lista de clientes: " + error.message);
