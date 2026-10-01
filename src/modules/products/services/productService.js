@@ -1,4 +1,5 @@
 import { supabase } from "../../../config/supabase";
+import { obtenerTodasLasFilas } from "../../../utils/obtenerTodasLasFilas";
 
 /**
  * productos.disponible es NUMERIC: PostgREST lo serializa como string para
@@ -67,11 +68,14 @@ export const productService = {
    * tabla: para eso está getProductosPaginados.
    */
   async getProductosActivos() {
-    const { data, error } = await supabase
-      .from("productos")
-      .select("id, nombre, codigo, precio_venta, iva, inc, disponible")
-      .is("eliminado", null)
-      .order("codigo", { ascending: true });
+    const { data, error } = await obtenerTodasLasFilas(() =>
+      supabase
+        .from("productos")
+        .select("id, nombre, codigo, precio_venta, iva, inc, disponible")
+        .is("eliminado", null)
+        .order("codigo", { ascending: true })
+        .order("id", { ascending: true }),
+    );
 
     if (error)
       throw new Error(
@@ -87,12 +91,15 @@ export const productService = {
    * memoria; agrupar acá sería una vuelta extra por cada producto.
    */
   async getTodosPreciosMayoristas() {
-    const { data, error } = await supabase
-      .from("productos_precios_mayoristas")
-      .select("producto_id, cantidad_minima, precio")
-      .eq("estado", true)
-      .is("eliminado", null)
-      .order("cantidad_minima", { ascending: true });
+    const { data, error } = await obtenerTodasLasFilas(() =>
+      supabase
+        .from("productos_precios_mayoristas")
+        .select("producto_id, cantidad_minima, precio")
+        .eq("estado", true)
+        .is("eliminado", null)
+        .order("cantidad_minima", { ascending: true })
+        .order("id", { ascending: true }),
+    );
 
     if (error)
       throw new Error(
@@ -166,13 +173,16 @@ export const productService = {
    * getTodosPreciosMayoristas: el catálogo ya está completo en memoria.
    */
   async getTodosPreciosPersonalizados() {
-    const { data, error } = await supabase
-      .from("productos_precios")
-      .select(
-        "producto_id, tipo_precio_id, precio, tipo:tipos_precio(nombre, roles_permitidos, estado, eliminado)",
-      )
-      .eq("estado", true)
-      .is("eliminado", null);
+    const { data, error } = await obtenerTodasLasFilas(() =>
+      supabase
+        .from("productos_precios")
+        .select(
+          "producto_id, tipo_precio_id, precio, tipo:tipos_precio(nombre, roles_permitidos, estado, eliminado)",
+        )
+        .eq("estado", true)
+        .is("eliminado", null)
+        .order("id", { ascending: true }),
+    );
 
     if (error)
       throw new Error(
