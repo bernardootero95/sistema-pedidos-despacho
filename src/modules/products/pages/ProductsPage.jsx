@@ -10,6 +10,7 @@ import { usePaginatedList } from "../../../hooks/usePaginatedList";
 import {
   Package,
   Search,
+  PlusCircle,
   CheckCircle2,
   XCircle,
   Loader2,
@@ -408,6 +409,15 @@ export const ProductsPage = () => {
             >
               <FileSpreadsheet className="w-4 h-4 shrink-0" />
               <span>Cargar Excel</span>
+            </button>
+          )}
+          {puedeGestionCompleta && (
+            <button
+              onClick={() => handleOpenForm()}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white text-sm font-bold rounded-xl sm:rounded-lg shadow-sm transition-all"
+            >
+              <PlusCircle className="w-4 h-4 shrink-0" />
+              <span>Nuevo Producto</span>
             </button>
           )}
         </div>
