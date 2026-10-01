@@ -3,6 +3,7 @@ import {
   esFraccionValida,
   redondearACantidadValida,
   puedeAnularPedido,
+  puedeEntregarSinDespacho,
   validators,
 } from "./orderValidations";
 
@@ -101,4 +102,24 @@ describe("puedeAnularPedido", () => {
     const user = { id: "otro", rol: "repartidor" };
     expect(puedeAnularPedido(pedidoPendientePropio, user)).toBe(false);
   });
+});
+
+describe("puedeEntregarSinDespacho", () => {
+  it.each(["soporte", "gerencia", "despachador"])(
+    "%s puede entregar un pedido pendiente",
+    (rol) => {
+      expect(puedeEntregarSinDespacho({ estado: "pendiente" }, { rol })).toBe(true);
+    },
+  );
+
+  it.each(["vendedor", "cajera", "repartidor"])("%s no puede", (rol) => {
+    expect(puedeEntregarSinDespacho({ estado: "pendiente" }, { rol })).toBe(false);
+  });
+
+  it.each(["despachado", "entregado", "anulado", "devuelto"])(
+    "no aplica a un pedido %s",
+    (estado) => {
+      expect(puedeEntregarSinDespacho({ estado }, { rol: "soporte" })).toBe(false);
+    },
+  );
 });

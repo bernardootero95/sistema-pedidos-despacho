@@ -53,6 +53,22 @@ export const puedeAnularPedido = (pedido, user) => {
   );
 };
 
+const ROLES_ENTREGAR_SIN_DESPACHO = ["soporte", "gerencia", "despachador"];
+
+/**
+ * Replica en el cliente la regla de `entregar_pedido_sin_despacho` (la
+ * fuente de verdad es el RPC): solo soporte/gerencia/despachador, y solo
+ * pedidos 'pendiente' (uno 'despachado' se entrega desde su ruta).
+ *
+ * @param {{ estado: string }} pedido
+ * @param {{ rol: string }} user
+ */
+export const puedeEntregarSinDespacho = (pedido, user) =>
+  !!pedido &&
+  !!user &&
+  pedido.estado === "pendiente" &&
+  ROLES_ENTREGAR_SIN_DESPACHO.includes(user.rol);
+
 /**
  * Diccionario de reglas de validación para la Cabecera y el Detalle del Pedido.
  */
