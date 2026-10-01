@@ -10,6 +10,8 @@ import { OrderHistoryTimeline } from "../components/OrderHistoryTimeline";
 import { OrderDispatchInfo } from "../components/OrderDispatchInfo";
 import { etiquetaTipoPrecio } from "../utils/tipoPrecioDisplay";
 import { FacturaIngefactControl } from "../components/FacturaIngefactControl";
+import { EntregarSinDespachoButton } from "../components/EntregarSinDespachoButton";
+import { puedeEntregarSinDespacho } from "../utils/orderValidations";
 import { OrderPaymentsCard } from "../components/OrderPaymentsCard";
 import { ROLES_MODULO } from "../../../config/roles";
 import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
@@ -303,6 +305,9 @@ export const OrderDetailsPage = () => {
             )}
             Imprimir Tiquete
           </button>
+          {puedeEntregarSinDespacho(pedido, user) && (
+            <EntregarSinDespachoButton pedido={pedido} onEntregado={recargarPedido} />
+          )}
           {puedeFacturar && (
             <FacturaIngefactControl pedido={pedido} onActualizado={recargarPedido} />
           )}

@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
 import { userService } from "../../users/services/userService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
-import { puedeAnularPedido } from "../utils/orderValidations";
+import { puedeAnularPedido, puedeEntregarSinDespacho } from "../utils/orderValidations";
+import { CobroEntregaModal } from "../../dispatches/components/CobroEntregaModal";
+import { requiereCobroAlEntregar } from "../../dispatches/utils/cobroEntrega";
 import { ESTADOS_PEDIDO, CAMPOS_FECHA } from "../utils/orderConstants";
 import { useToast } from "../../../context/useToast";
 import { useAuth } from "../../../context/useAuth";
@@ -21,6 +23,7 @@ import {
   Eye,
   Edit,
   Ban,
+  PackageCheck,
   Printer,
   Loader2,
   User,
@@ -33,7 +36,8 @@ export const OrdersPage = () => {
   const navigate = useNavigate();
   const { showError } = useToast();
   const { user } = useAuth();
-  const { abonosPedidosActivo } = useSettings();
+  const settings = useSettings();
+  const { abonosPedidosActivo } = settings;
 
   const {
     items: pedidos,
@@ -57,6 +61,11 @@ export const OrdersPage = () => {
     { pageSize: 20 },
   );
   const [printingId, setPrintingId] = useState(null);
+  const [entregandoId, setEntregandoId] = useState(null);
+  // A nivel de página (no dentro de ActionButtons, que se vuelve a crear en
+  // cada render): así el diálogo de cobro sobrevive a los refrescos en vivo
+  // de la lista.
+  const [pedidoACobrar, setPedidoACobrar] = useState(null);
   const [vendedores, setVendedores] = useState([]);
 
   // Si un vendedor crea un pedido o cambia de estado desde otra sesión,
@@ -166,6 +175,44 @@ export const OrdersPage = () => {
     }
   };
 
+  // Entrega sin despacho (cliente que recoge, entrega sin ruta). Con saldo
+  // por cobrar y métodos de pago/abonos activos abre el diálogo de cobro; si
+  // no, confirma como "Anular" en esta misma lista. Tras entregar se recarga:
+  // pagos, fecha de entrega y factura cambian en el servidor.
+  const entregar = async (pedido, pagos = null) => {
+    setEntregandoId(pedido.id);
+    try {
+      await orderService.entregarSinDespacho(pedido.id, pagos);
+      cargarPedidos();
+    } finally {
+      setEntregandoId(null);
+    }
+  };
+
+  const handleEntregar = async (pedido) => {
+    if (requiereCobroAlEntregar(pedido, settings)) {
+      setPedidoACobrar(pedido);
+      return;
+    }
+    if (
+      !window.confirm(
+        `¿Marcar el pedido ${pedido.numero_pedido} como entregado sin despacho?`,
+      )
+    )
+      return;
+    try {
+      await entregar(pedido);
+    } catch (err) {
+      showError("Error al entregar: " + err.message);
+    }
+  };
+
+  // PaymentModal muestra el error del servidor dentro del diálogo.
+  const handleCobrarYEntregar = async (pagos) => {
+    await entregar(pedidoACobrar, pagos);
+    setPedidoACobrar(null);
+  };
+
   // El estado de pago solo aporta información si la empresa usa abonos: con
   // la funcionalidad apagada todo pedido entregado está pagado y el listado
   // queda igual que antes.
@@ -219,6 +266,21 @@ export const OrdersPage = () => {
         </button>
       )}
 
+      {puedeEntregarSinDespacho(pedido, user) && (
+        <button
+          onClick={() => handleEntregar(pedido)}
+          disabled={entregandoId === pedido.id}
+          className="p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg transition-colors disabled:opacity-50"
+          title="Marcar entregado (sin despacho)"
+        >
+          {entregandoId === pedido.id ? (
+            <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+          ) : (
+            <PackageCheck className="h-5 w-5" />
+          )}
+        </button>
+      )}
+
       {puedeAnularPedido(pedido, user) && (
         <button
           onClick={() => handleAnular(pedido)}
@@ -233,6 +295,13 @@ export const OrdersPage = () => {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 md:bg-slate-50">
+      {pedidoACobrar && (
+        <CobroEntregaModal
+          pedido={pedidoACobrar}
+          onConfirm={handleCobrarYEntregar}
+          onCancel={() => setPedidoACobrar(null)}
+        />
+      )}
       {/* HEADER DE LA PÁGINA */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-6 bg-white border-b border-slate-200 gap-4">
         <div>
