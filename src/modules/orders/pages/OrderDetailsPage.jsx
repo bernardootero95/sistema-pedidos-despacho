@@ -10,6 +10,7 @@ import { OrderHistoryTimeline } from "../components/OrderHistoryTimeline";
 import { OrderDispatchInfo } from "../components/OrderDispatchInfo";
 import { etiquetaTipoPrecio } from "../utils/tipoPrecioDisplay";
 import { FacturaIngefactControl } from "../components/FacturaIngefactControl";
+import { EntregarSinDespachoButton } from "../components/EntregarSinDespachoButton";
 import { OrderPaymentsCard } from "../components/OrderPaymentsCard";
 import { ROLES_MODULO } from "../../../config/roles";
 import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
@@ -40,6 +41,7 @@ export const OrderDetailsPage = () => {
   const puedeVerHistorial = ["gerencia", "soporte"].includes(user?.rol);
   const puedeVerDespacho = ROLES_MODULO.DESPACHOS.includes(user?.rol);
   const puedeFacturar = user?.rol === "soporte";
+  const puedeEntregarSinDespacho = ["soporte", "gerencia", "despachador"].includes(user?.rol);
 
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -303,6 +305,9 @@ export const OrderDetailsPage = () => {
             )}
             Imprimir Tiquete
           </button>
+          {puedeEntregarSinDespacho && pedido.estado === "pendiente" && (
+            <EntregarSinDespachoButton pedido={pedido} onEntregado={recargarPedido} />
+          )}
           {puedeFacturar && (
             <FacturaIngefactControl pedido={pedido} onActualizado={recargarPedido} />
           )}

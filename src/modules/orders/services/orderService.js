@@ -346,6 +346,30 @@ export const orderService = {
   },
 
   /**
+   * Entrega un pedido pendiente sin pasarlo por un despacho (cliente que
+   * recoge, entrega sin ruta), vía RPC `entregar_pedido_sin_despacho`. Igual
+   * que una entrega en ruta: el servidor cobra el saldo (exacto) y marca la
+   * fecha de entrega; la factura automática la dispara el trigger del pedido.
+   *
+   * @param {string} pedidoId
+   * @param {Array<{metodo_pago_id: string|null, monto: number}>|null} [pagos]
+   *   cobro del saldo; null = el servidor lo cobra en efectivo si la empresa
+   *   no usa métodos de pago.
+   */
+  async entregarSinDespacho(pedidoId, pagos = null) {
+    const { data, error } = await supabase.rpc("entregar_pedido_sin_despacho", {
+      p_pedido_id: pedidoId,
+      ...(pagos && { p_pagos: pagos }),
+    });
+
+    if (error) {
+      throw new Error(error.message || "Error al entregar el pedido.");
+    }
+
+    return data;
+  },
+
+  /**
    * Factura un pedido entregado en IngeFact (DIAN), o anula su factura con
    * una nota crédito, vía la Edge Function enviar-factura-ingefact. Es la
    * vía manual (soporte) para facturar con la opción automática apagada o
