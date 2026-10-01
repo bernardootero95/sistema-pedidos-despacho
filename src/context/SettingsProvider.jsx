@@ -8,6 +8,7 @@ const CONFIG_INICIAL = {
   metodosPagoActivo: false,
   abonosPedidosActivo: false,
   abonosComprasActivo: false,
+  facturacionAutomaticaActivo: false,
 };
 
 /**

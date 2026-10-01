@@ -346,17 +346,21 @@ export const orderService = {
   },
 
   /**
-   * Envía un pedido entregado a IngeFact para generar su factura
-   * electrónica ante la DIAN, vía la Edge Function
-   * enviar-factura-ingefact. La llamada a la API externa (con su propia
-   * API key) vive solo ahí, nunca en el frontend; esta función solo
-   * dispara la acción y propaga el mensaje de negocio si falla (pedido no
-   * entregado, ya facturado, cliente sin correo, etc.).
+   * Factura un pedido entregado en IngeFact (DIAN), o anula su factura con
+   * una nota crédito, vía la Edge Function enviar-factura-ingefact. Es la
+   * vía manual (soporte) para facturar con la opción automática apagada o
+   * reintentar una operación automática que falló. La llamada a la API
+   * externa (con su propia API key) vive solo ahí, nunca en el frontend;
+   * esta función solo dispara la acción y propaga el mensaje de negocio si
+   * falla (pedido no entregado, ya facturado, cliente sin correo, etc.).
+   *
+   * @param {string} pedidoId
+   * @param {"facturar"|"anular"} [accion]
    */
-  async enviarFacturaIngefact(pedidoId) {
+  async enviarFacturaIngefact(pedidoId, accion = "facturar") {
     const { data, error } = await supabase.functions.invoke(
       "enviar-factura-ingefact",
-      { body: { pedido_id: pedidoId } },
+      { body: { pedido_id: pedidoId, accion } },
     );
 
     if (error)

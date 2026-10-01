@@ -4,7 +4,7 @@ import { FeatureToggleCard } from "../components/FeatureToggleCard";
 import { PaymentMethodsSection } from "../components/PaymentMethodsSection";
 import { useSettings } from "../../../context/useSettings";
 import { useToast } from "../../../context/useToast";
-import { SlidersHorizontal, CreditCard, Wallet, ShoppingBag } from "lucide-react";
+import { SlidersHorizontal, CreditCard, Wallet, ShoppingBag, Receipt } from "lucide-react";
 
 const OPCIONES = [
   {
@@ -27,6 +27,13 @@ const OPCIONES = [
     titulo: "Abonos a compras",
     descripcion:
       "Permite registrar una compra con pago parcial y abonar al proveedor después. Apagado, toda compra se paga completa al registrarla.",
+  },
+  {
+    campo: "facturacionAutomaticaActivo",
+    icon: Receipt,
+    titulo: "Facturación electrónica automática",
+    descripcion:
+      "Emite la factura electrónica ante la DIAN (IngeFact) en cuanto un pedido queda entregado. Si un pedido facturado se anula, se devuelve o se revierte su entrega, la factura se anula con una nota crédito, esté o no encendida esta opción.",
   },
 ];
 
