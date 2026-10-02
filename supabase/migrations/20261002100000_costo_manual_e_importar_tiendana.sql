@@ -21,6 +21,11 @@
 --        `iva` = 0 crea el producto como excluido.
 --    El formato del ERP (siempre con `codigo`, sin el resto) se comporta
 --    exactamente igual que antes.
+--
+-- Seguridad: la versión anterior chequeaba `obtener_rol_actual() <> 'soporte'`;
+-- sin perfil activo (anon o usuario desactivado) el rol es NULL, la
+-- comparación da NULL y el IF no lanzaba. Ahora se usa IS DISTINCT FROM /
+-- COALESCE, y se le quita EXECUTE a anon.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -36,7 +41,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF obtener_rol_actual() NOT IN ('soporte', 'gerencia', 'despachador') THEN
+  IF COALESCE(obtener_rol_actual(), '') NOT IN ('soporte', 'gerencia', 'despachador') THEN
     RAISE EXCEPTION 'No tienes permiso para asignar el costo del producto.';
   END IF;
 
@@ -84,7 +89,7 @@ DECLARE
   v_creados INTEGER := 0;
   v_actualizados INTEGER := 0;
 BEGIN
-  IF obtener_rol_actual() <> 'soporte' THEN
+  IF obtener_rol_actual() IS DISTINCT FROM 'soporte' THEN
     RAISE EXCEPTION 'No tienes permiso para importar productos.';
   END IF;
 
@@ -196,3 +201,6 @@ BEGIN
   RETURN jsonb_build_object('creados', v_creados, 'actualizados', v_actualizados);
 END;
 $$;
+
+REVOKE ALL ON FUNCTION importar_productos_excel(JSONB) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION importar_productos_excel(JSONB) TO authenticated;
