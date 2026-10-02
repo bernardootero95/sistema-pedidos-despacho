@@ -79,7 +79,7 @@ const OPCIONES_PDF_CARTA = {
 
 /**
  * Genera el PDF de un pedido con el diseño que corresponde: tamaño carta o
- * tirilla según Opciones, y como factura electrónica si el pedido tiene una
+ * tirilla según Datos Empresa, y como factura electrónica si el pedido tiene una
  * vigente. `contexto` (printService.obtenerContexto) se pasa desde afuera
  * para que un lote lo consulte una sola vez.
  */

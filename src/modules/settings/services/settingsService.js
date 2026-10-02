@@ -13,9 +13,10 @@ const COLUMNAS_POR_CAMPO = {
 const COLUMNAS = Object.values(COLUMNAS_POR_CAMPO).join(", ");
 
 /**
- * Configuración funcional de la empresa (interruptores de la pantalla
- * "Opciones"). Vive en la fila única de `configuracion_sistema`: cada empresa
- * tiene su propio proyecto Supabase, así que no hace falta filtrar por tenant.
+ * Configuración funcional de la empresa (interruptores de las pantallas
+ * "Pagos y Facturación" y "Datos Empresa"). Vive en la fila única de
+ * `configuracion_sistema`: cada empresa tiene su propio proyecto Supabase,
+ * así que no hace falta filtrar por tenant.
  */
 export const settingsService = {
   async getConfiguracion() {

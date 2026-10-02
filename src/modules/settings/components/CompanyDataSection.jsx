@@ -115,7 +115,7 @@ export const CompanyDataSection = () => {
           <Building2 className="w-5 h-5" />
         </div>
         <div>
-          <p className="font-bold text-slate-900">Datos de la empresa</p>
+          <p className="font-bold text-slate-900">Información y logo</p>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Encabezado de los pedidos y facturas impresos (tirilla y carta).
           </p>

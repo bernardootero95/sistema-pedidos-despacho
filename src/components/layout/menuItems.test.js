@@ -18,7 +18,8 @@ describe("getMenuVisible", () => {
       "Gestión de Personal",
       "Flota de Vehículos",
       "Tipos de Precio",
-      "Opciones",
+      "Pagos y Facturación",
+      "Datos Empresa",
     ]);
   });
 

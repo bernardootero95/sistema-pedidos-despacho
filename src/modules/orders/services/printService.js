@@ -27,7 +27,7 @@ const imagenComoDataUrl = async (url) => {
 export const printService = {
   /**
    * Lo que necesitan las plantillas además del pedido: formato elegido en
-   * Opciones, datos del emisor y logo (solo si está cargado y la opción de
+   * Datos Empresa, datos del emisor y logo (solo si está cargado y la opción de
    * imprimirlo está encendida). Se consulta en cada impresión (o una vez
    * por lote) para no imprimir con datos viejos.
    */
