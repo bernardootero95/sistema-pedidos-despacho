@@ -113,6 +113,12 @@ export const MENU_ITEMS = [
     icon: Settings,
     children: [
       {
+        path: "/datos-empresa",
+        label: "Datos Empresa",
+        icon: Building2,
+        roles: ROLES_MODULO.DATOS_EMPRESA,
+      },
+      {
         path: "/usuarios",
         label: "Gestión de Personal",
         icon: UserCog,
@@ -135,12 +141,6 @@ export const MENU_ITEMS = [
         label: "Pagos y Facturación",
         icon: Wallet,
         roles: ROLES_MODULO.OPCIONES,
-      },
-      {
-        path: "/datos-empresa",
-        label: "Datos Empresa",
-        icon: Building2,
-        roles: ROLES_MODULO.DATOS_EMPRESA,
       },
     ],
   },
