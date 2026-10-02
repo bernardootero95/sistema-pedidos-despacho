@@ -298,6 +298,20 @@ export const productService = {
   },
 
   /**
+   * Fija el costo de compra de un producto en `productos_costos` (tabla con
+   * RLS propia, sin escritura directa). La próxima compra registrada lo
+   * sobrescribe, igual que cualquier "último costo".
+   */
+  async asignarCostoProducto(productoId, costo) {
+    const { error } = await supabase.rpc("asignar_costo_producto", {
+      p_producto_id: productoId,
+      p_costo: costo,
+    });
+
+    if (error) throw new Error("Error al guardar el costo: " + error.message);
+  },
+
+  /**
    * Actualiza solo el precio de venta de un producto. Usado por roles con
    * acceso restringido (despachador): la RPC nunca toca stock ni el resto
    * de la ficha, sin importar qué se le mande. Los precios diferenciados
@@ -378,8 +392,10 @@ export const productService = {
   /**
    * Carga masiva desde el Excel del ERP (sincronización manual mientras no
    * esté lista la automática). Vía RPC transaccional `importar_productos_excel`,
-   * restringida a soporte en el servidor: si el código ya existe solo
-   * actualiza `disponible`, si no existe lo crea como gravado con IVA 19%.
+   * restringida a soporte en el servidor: si el producto ya existe solo
+   * actualiza precio y `disponible` (y el costo si viene); si no existe lo
+   * crea. Sin `codigo` (Excel de Tiendana) busca por nombre y, si es nuevo,
+   * le asigna el siguiente consecutivo numérico.
    */
   async importarProductosExcel(productos) {
     const { data, error } = await supabase.rpc("importar_productos_excel", {
