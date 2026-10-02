@@ -4,7 +4,8 @@
  */
 export const tenantConfig = {
   name: import.meta.env.VITE_COMPANY_NAME || "Sistema de Pedidos y Despacho",
-  logoUrl: import.meta.env.VITE_COMPANY_LOGO || "/vite.svg",
+  // Sin logo configurado, TenantLogo muestra un ícono genérico.
+  logoUrl: import.meta.env.VITE_COMPANY_LOGO || null,
   colors: {
     primary: import.meta.env.VITE_COLOR_PRIMARY || "#2563eb",
     primaryHover: import.meta.env.VITE_COLOR_PRIMARY_HOVER || "#1d4ed8",

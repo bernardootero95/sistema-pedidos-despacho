@@ -1,10 +1,11 @@
 import { useState, useRef } from "react";
 import { useAuth } from "../../../context/useAuth";
 import { tenantConfig } from "../../../config/tenant";
+import { TenantLogo } from "../../../components/brand/TenantLogo";
 import { authService } from "../services/authService";
 import { CaptchaWidget } from "../../../components/ui/CaptchaWidget";
 import { captchaEnabled } from "../../../config/captcha";
-import { ShieldAlert, LogIn, Building2, KeyRound, ArrowLeft } from "lucide-react";
+import { ShieldAlert, LogIn, KeyRound, ArrowLeft } from "lucide-react";
 
 export const LoginPage = () => {
   const { login } = useAuth();
@@ -154,7 +155,7 @@ export const LoginPage = () => {
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center items-center gap-2 text-primary">
-          <Building2 className="w-12 h-12" />
+          <TenantLogo className="h-20 max-w-[220px]" iconClassName="w-12 h-12" />
         </div>
         <h2 className="mt-4 text-center text-3xl font-extrabold text-slate-900">
           {tenantConfig.name}
