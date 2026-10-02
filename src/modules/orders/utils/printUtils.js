@@ -1,146 +1,10 @@
 // src/modules/orders/utils/printUtils.js
-import { getNombreCliente } from "../../clients/utils/clienteDisplay";
-import { resumirPagosParaTicket } from "../../payments/utils/ticketPagos";
+import { construirTirillaHtml } from "./print/plantillaTirilla";
+import { construirCartaHtml } from "./print/plantillaCarta";
+import { esFacturaElectronica } from "./print/comprobanteDatos";
+import { printService } from "../services/printService";
 
-export const formatCurrencyPdf = (amount) =>
-  new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  }).format(amount || 0);
-
-export const formatDatePdf = (dateString) =>
-  new Date(dateString).toLocaleDateString("es-CO", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-/**
- * Arma el HTML del comprobante térmico 80mm de un pedido individual.
- * Separado de imprimirPedidoPdf para poder reutilizarlo en el lote de
- * comprobantes de un despacho (dispatches/utils/dispatchPrintUtils.js)
- * sin duplicar esta plantilla.
- */
-export const construirComprobantePedidoHtml = (pedidoCompleto) => {
-  const companyName =
-    import.meta.env.VITE_COMPANY_NAME || "SISTEMA DE PEDIDOS";
-
-  let subtotalGeneral = 0;
-  let acumIva19 = 0;
-  let acumIva5 = 0;
-  let acumInc8 = 0;
-
-  pedidoCompleto.detalles?.forEach((item) => {
-    const subtotalLinea = Number(item.subtotal_linea) || 0;
-    const porcIva = Math.round(Number(item.iva_porcentaje) || 0);
-    const porcInc = Math.round(Number(item.inc_porcentaje) || 0);
-
-    const factor = 1 + (porcIva + porcInc) / 100;
-    const baseLinea = subtotalLinea / factor;
-
-    subtotalGeneral += baseLinea;
-
-    if (porcIva === 19) acumIva19 += baseLinea * (19 / 100);
-    else if (porcIva === 5) acumIva5 += baseLinea * (5 / 100);
-    if (porcInc === 8) acumInc8 += baseLinea * (8 / 100);
-  });
-
-  const clienteNombre = getNombreCliente(pedidoCompleto.clientes);
-  const resumenPagos = resumirPagosParaTicket(pedidoCompleto);
-
-  return `
-    <div style="background-color: #ffffff; color: #000000; width: 72mm; padding: 12px; font-family: monospace; font-size: 11px; display: flex; flex-direction: column; gap: 10px;">
-      <div style="text-align: center; padding-bottom: 8px; border-bottom: 1px dashed #000000;">
-        <h3 style="font-weight: bold; font-size: 14px; text-transform: uppercase; margin: 0;">${companyName}</h3>
-        <p style="font-weight: bold; font-size: 11px; text-transform: uppercase; margin: 2px 0;">COMPROBANTE DE DESPACHO</p>
-        <p style="font-weight: bold; font-size: 13px; margin: 4px 0;">Pedido N°: ${pedidoCompleto.numero_pedido}</p>
-        <p style="font-size: 10px; font-weight: 600; color: #000000; margin: 0;">Fecha: ${formatDatePdf(pedidoCompleto.fecha_pedido)}</p>
-      </div>
-
-      <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; font-size: 10px; font-weight: 600; color: #000000; display: flex; flex-direction: column; gap: 2px;">
-        <p style="margin: 0;"><strong>Cliente:</strong> ${clienteNombre}</p>
-        <p style="margin: 0;"><strong>Tipo ID:</strong> ${pedidoCompleto.clientes?.tipo_identificacion || "NIT / CC"}</p>
-        <p style="margin: 0;"><strong>N° Identificación:</strong> ${pedidoCompleto.clientes?.numero_identificacion}</p>
-        <p style="margin: 0;"><strong>Dirección:</strong> ${pedidoCompleto.clientes?.direccion || "No registrada"}</p>
-        <p style="margin: 0;"><strong>Vendedor:</strong> ${pedidoCompleto.vendedor?.nombre_completo}</p>
-      </div>
-
-      <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000;">
-        <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); font-weight: bold; border-bottom: 1px solid #000000; padding-bottom: 4px; margin-bottom: 4px; font-size: 10px;">
-          <span style="grid-column: span 2 / span 2; text-align: center;">CANT</span>
-          <span style="grid-column: span 6 / span 6;">PRODUCTO</span>
-          <span style="grid-column: span 4 / span 4; text-align: right;">TOTAL</span>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 6px;">
-          ${pedidoCompleto.detalles
-            ?.map(
-              (item) => `
-            <div style="display: flex; flex-direction: column; border-bottom: 1px solid #eeeeee; padding-bottom: 4px;">
-              <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); font-size: 10px; font-weight: 600; color: #000000;">
-                <span style="grid-column: span 2 / span 2; text-align: center; font-weight: bold;">${item.cantidad}</span>
-                <span style="grid-column: span 6 / span 6; font-weight: bold;">${item.producto?.nombre}</span>
-                <span style="grid-column: span 4 / span 4; text-align: right;">${formatCurrencyPdf(item.subtotal_linea)}</span>
-              </div>
-              <div style="font-size: 9px; font-weight: 600; padding-left: 8px; color: #000000;">V. Unit: ${formatCurrencyPdf(item.precio_unitario)}</div>
-            </div>
-          `,
-            )
-            .join("")}
-        </div>
-      </div>
-
-      <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; display: flex; flex-direction: column; gap: 4px; font-size: 10px; font-weight: 600; color: #000000;">
-        <div style="display: flex; justify-content: space-between;"><span>SUBTOTAL:</span><span>${formatCurrencyPdf(subtotalGeneral)}</span></div>
-        <div style="display: flex; justify-content: space-between;"><span>IVA 19%:</span><span>${formatCurrencyPdf(acumIva19)}</span></div>
-        <div style="display: flex; justify-content: space-between;"><span>IVA 5%:</span><span>${formatCurrencyPdf(acumIva5)}</span></div>
-        <div style="display: flex; justify-content: space-between;"><span>INC 8%:</span><span>${formatCurrencyPdf(acumInc8)}</span></div>
-        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; border-top: 1px solid #000000; padding-top: 4px; margin-top: 2px;">
-          <span>TOTAL:</span><span>${formatCurrencyPdf(pedidoCompleto.total)}</span>
-        </div>
-      </div>
-
-      ${
-        resumenPagos
-          ? `
-        <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; display: flex; flex-direction: column; gap: 4px; font-size: 10px; font-weight: 600; color: #000000;">
-          <strong>PAGOS:</strong>
-          ${resumenPagos.lineas
-            .map(
-              (linea) =>
-                `<div style="display: flex; justify-content: space-between;"><span>${linea.nombre}:</span><span>${formatCurrencyPdf(linea.monto)}</span></div>`,
-            )
-            .join("")}
-          ${
-            resumenPagos.saldo > 0
-              ? `<div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px; border-top: 1px solid #000000; padding-top: 4px;"><span>SALDO POR COBRAR:</span><span>${formatCurrencyPdf(resumenPagos.saldo)}</span></div>`
-              : ""
-          }
-        </div>
-      `
-          : ""
-      }
-
-      ${
-        pedidoCompleto.notas
-          ? `
-        <div style="padding-bottom: 8px; border-bottom: 1px dashed #000000; font-size: 10px; color: #000000;">
-          <strong style="display: block;">Notas:</strong>
-          <p style="margin: 0; font-weight: 600; font-style: italic;">${pedidoCompleto.notas}</p>
-        </div>
-      `
-          : ""
-      }
-
-      <div style="text-align: center; font-size: 9px; font-weight: 600; color: #000000; display: flex; flex-direction: column; gap: 2px;">
-        <p style="font-weight: bold; color: #000000; margin: 0;">¡Gracias por su compra!</p>
-        <p style="font-size: 9px; font-weight: 600; margin: 0;">Sistema de pedidos y despacho desarrollado por TecnoIngenieria B.O.</p>
-      </div>
-    </div>
-  `;
-};
+export { formatCurrencyPdf, formatDatePdf } from "./print/formato";
 
 /**
  * Convierte un fragmento HTML (string, ya armado por construirXHtml) en un
@@ -205,18 +69,58 @@ export const generarPdfBlobUrl = async (html, filename, optsOverride = {}, { alt
   }
 };
 
+// Hoja carta: márgenes en mm [arriba, izquierda, abajo, derecha]; el ancho
+// útil coincide con ANCHO_CARTA_MM de la plantilla.
+const OPCIONES_PDF_CARTA = {
+  margin: [10, 10, 12, 10],
+  jsPDF: { unit: "mm", format: "letter", orientation: "portrait" },
+  pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".evitar-corte"] },
+};
+
+/**
+ * Genera el PDF de un pedido con el diseño que corresponde: tamaño carta o
+ * tirilla según Datos Empresa, y como factura electrónica si el pedido tiene una
+ * vigente. `contexto` (printService.obtenerContexto) se pasa desde afuera
+ * para que un lote lo consulte una sola vez.
+ */
+export const generarComprobantePdf = async (pedidoCompleto, contexto) => {
+  const electronica = esFacturaElectronica(pedidoCompleto);
+  const contextoPedido = electronica
+    ? {
+        ...contexto,
+        qrDataUrl: await printService.generarQrFactura(pedidoCompleto),
+      }
+    : contexto;
+
+  const nombreArchivo = electronica
+    ? `factura-${pedidoCompleto.ingefact_numero_factura}.pdf`
+    : `pedido-${pedidoCompleto.numero_pedido}.pdf`;
+
+  const url = contexto.formatoCarta
+    ? await generarPdfBlobUrl(
+        construirCartaHtml(pedidoCompleto, contextoPedido),
+        nombreArchivo,
+        OPCIONES_PDF_CARTA,
+      )
+    : await generarPdfBlobUrl(
+        construirTirillaHtml(pedidoCompleto, contextoPedido),
+        nombreArchivo,
+        {},
+        { alturaAutomatica: true },
+      );
+
+  return { url, nombreArchivo };
+};
+
 export const imprimirPedidoPdf = async (pedidoCompleto) => {
   if (!pedidoCompleto) return;
 
   try {
-    const html = construirComprobantePedidoHtml(pedidoCompleto);
-    const pdfUrl = await generarPdfBlobUrl(
-      html,
-      `comprobante-pedido-${pedidoCompleto.numero_pedido}.pdf`,
-    );
-    window.open(pdfUrl, "_blank");
+    const contexto = await printService.obtenerContexto();
+    const { url } = await generarComprobantePdf(pedidoCompleto, contexto);
+    window.open(url, "_blank");
   } catch (error) {
-    console.error("Error al generar el PDF térmico:", error);
+    console.error("Error al generar el PDF del pedido:", error);
     throw new Error("No se pudo generar el comprobante PDF.", {
       cause: error,
     });

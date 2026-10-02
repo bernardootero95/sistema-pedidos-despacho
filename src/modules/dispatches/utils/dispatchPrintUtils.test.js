@@ -10,8 +10,13 @@ vi.mock("../../orders/utils/printUtils", async () => {
   return {
     ...actual,
     generarPdfBlobUrl: vi.fn(),
+    generarComprobantePdf: vi.fn(),
   };
 });
+
+vi.mock("../../orders/services/printService", () => ({
+  printService: { obtenerContexto: vi.fn().mockResolvedValue({}) },
+}));
 
 const despacho = {
   codigo_despacho: "DES-0001",
@@ -104,6 +109,10 @@ describe("imprimirTiqueteYFacturasDespacho", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     printUtils.generarPdfBlobUrl.mockResolvedValue("blob:mock-url");
+    printUtils.generarComprobantePdf.mockImplementation(async (pedido) => ({
+      url: "blob:mock-url",
+      nombreArchivo: `pedido-${pedido.numero_pedido}.pdf`,
+    }));
     window.open = vi.fn();
 
     clickSpy = vi.fn();
@@ -125,6 +134,7 @@ describe("imprimirTiqueteYFacturasDespacho", () => {
     await imprimirTiqueteYFacturasDespacho(despacho, []);
 
     expect(printUtils.generarPdfBlobUrl).not.toHaveBeenCalled();
+    expect(printUtils.generarComprobantePdf).not.toHaveBeenCalled();
     expect(window.open).not.toHaveBeenCalled();
   });
 
@@ -137,8 +147,9 @@ describe("imprimirTiqueteYFacturasDespacho", () => {
   it("genera un PDF por cada pedido y fuerza su descarga en vez de abrir pestañas", async () => {
     await imprimirTiqueteYFacturasDespacho(despacho, [pedidoA, pedidoB]);
 
-    // 1 tiquete + 2 comprobantes = 3 llamadas a generarPdfBlobUrl
-    expect(printUtils.generarPdfBlobUrl).toHaveBeenCalledTimes(3);
+    // 1 tiquete + 2 comprobantes
+    expect(printUtils.generarPdfBlobUrl).toHaveBeenCalledTimes(1);
+    expect(printUtils.generarComprobantePdf).toHaveBeenCalledTimes(2);
     // Solo se abre 1 pestaña (el tiquete); los comprobantes se descargan
     expect(window.open).toHaveBeenCalledTimes(1);
     expect(clickSpy).toHaveBeenCalledTimes(2);
@@ -147,12 +158,14 @@ describe("imprimirTiqueteYFacturasDespacho", () => {
   it("nombra cada archivo con el código de despacho o el número de pedido correspondiente", async () => {
     await imprimirTiqueteYFacturasDespacho(despacho, [pedidoA, pedidoB]);
 
-    const nombresArchivo = printUtils.generarPdfBlobUrl.mock.calls.map(
-      (call) => call[1],
+    expect(printUtils.generarPdfBlobUrl.mock.calls[0][1]).toBe(
+      "tiquete-despacho-DES-0001.pdf",
     );
-    expect(nombresArchivo).toContain("tiquete-despacho-DES-0001.pdf");
-    expect(nombresArchivo).toContain("comprobante-pedido-10.pdf");
-    expect(nombresArchivo).toContain("comprobante-pedido-11.pdf");
+    const descargados = createElementSpy.mock.results
+      .map((r) => r.value)
+      .filter((el) => el.tagName === "A")
+      .map((a) => a.download);
+    expect(descargados).toEqual(["pedido-10.pdf", "pedido-11.pdf"]);
   });
 });
 

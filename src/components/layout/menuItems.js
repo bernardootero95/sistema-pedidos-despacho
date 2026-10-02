@@ -12,10 +12,11 @@ import {
   Tag,
   Contact,
   Settings,
-  SlidersHorizontal,
+  Wallet,
   TrendingUp,
   PackageSearch,
   PiggyBank,
+  Building2,
 } from "lucide-react";
 import { ROLES_MODULO } from "../../config/roles";
 
@@ -112,6 +113,12 @@ export const MENU_ITEMS = [
     icon: Settings,
     children: [
       {
+        path: "/datos-empresa",
+        label: "Datos Empresa",
+        icon: Building2,
+        roles: ROLES_MODULO.DATOS_EMPRESA,
+      },
+      {
         path: "/usuarios",
         label: "Gestión de Personal",
         icon: UserCog,
@@ -131,8 +138,8 @@ export const MENU_ITEMS = [
       },
       {
         path: "/opciones",
-        label: "Opciones",
-        icon: SlidersHorizontal,
+        label: "Pagos y Facturación",
+        icon: Wallet,
         roles: ROLES_MODULO.OPCIONES,
       },
     ],

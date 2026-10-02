@@ -15,10 +15,11 @@ describe("getMenuVisible", () => {
 
     expect(hijos(menu, "terceros")).toEqual(["Clientes", "Proveedores"]);
     expect(hijos(menu, "configuracion")).toEqual([
+      "Datos Empresa",
       "Gestión de Personal",
       "Flota de Vehículos",
       "Tipos de Precio",
-      "Opciones",
+      "Pagos y Facturación",
     ]);
   });
 

@@ -223,6 +223,8 @@ async function facturar(supabaseAdmin: SupabaseClient, pedidoId: string) {
     .update({
       ingefact_factura_id: enviada.id,
       ingefact_numero_factura: enviada.numero_completo,
+      // Para el QR de consulta DIAN en la factura impresa.
+      ingefact_cufe: enviada.cufe ?? null,
       ingefact_enviado_en: new Date().toISOString(),
       ingefact_nota_credito_id: null,
       ingefact_numero_nota_credito: null,

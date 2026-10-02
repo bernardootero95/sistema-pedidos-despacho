@@ -9,6 +9,8 @@ const CONFIG_INICIAL = {
   abonosPedidosActivo: false,
   abonosComprasActivo: false,
   facturacionAutomaticaActivo: false,
+  impresionCartaActivo: false,
+  imprimirLogoActivo: false,
 };
 
 /**

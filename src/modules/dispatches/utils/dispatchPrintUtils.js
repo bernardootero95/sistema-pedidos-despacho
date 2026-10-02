@@ -1,12 +1,13 @@
 // src/modules/dispatches/utils/dispatchPrintUtils.js
 import {
-  construirComprobantePedidoHtml,
+  generarComprobantePdf,
   generarPdfBlobUrl,
   formatCurrencyPdf,
   formatDatePdf,
 } from "../../orders/utils/printUtils";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { calcularSaldo } from "./cobroEntrega";
+import { printService } from "../../orders/services/printService";
 
 /**
  * Agrega las líneas de todos los pedidos del despacho en un mapa
@@ -172,10 +173,10 @@ export const imprimirTiqueteYFacturasDespacho = async (
   // Secuencial a propósito: cada conversión manipula el mismo DOM temporal
   // (ver generarPdfBlobUrl) y ejecutarlas en paralelo no aporta velocidad
   // real, html2canvas ya satura el hilo principal.
+  // Contexto (formato, empresa, logo) una sola vez para todo el lote.
+  const contexto = await printService.obtenerContexto();
   for (const pedido of pedidosCompletos) {
-    const comprobanteHtml = construirComprobantePedidoHtml(pedido);
-    const filename = `comprobante-pedido-${pedido.numero_pedido}.pdf`;
-    const comprobanteUrl = await generarPdfBlobUrl(comprobanteHtml, filename);
-    descargarArchivo(comprobanteUrl, filename);
+    const { url, nombreArchivo } = await generarComprobantePdf(pedido, contexto);
+    descargarArchivo(url, nombreArchivo);
   }
 };

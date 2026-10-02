@@ -109,6 +109,11 @@ const SettingsPage = lazy(() =>
     default: m.SettingsPage,
   })),
 );
+const CompanyPage = lazy(() =>
+  import("../modules/settings/pages/CompanyPage").then((m) => ({
+    default: m.CompanyPage,
+  })),
+);
 const SuppliersPage = lazy(() =>
   import("../modules/suppliers/pages/SuppliersPage").then((m) => ({
     default: m.SuppliersPage,
@@ -186,6 +191,9 @@ export const AppRouter = () => {
             </Route>
             <Route element={<RoleGuard roles={ROLES_MODULO.OPCIONES} />}>
               <Route path="/opciones" element={<SettingsPage />} />
+            </Route>
+            <Route element={<RoleGuard roles={ROLES_MODULO.DATOS_EMPRESA} />}>
+              <Route path="/datos-empresa" element={<CompanyPage />} />
             </Route>
 
             {/* Módulos de Vehículos */}
