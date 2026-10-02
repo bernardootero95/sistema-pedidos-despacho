@@ -34,4 +34,26 @@ await writeXlsxFile(dataSinColumna).toFile(
   ),
 );
 
+// Reporte de productos de Tiendana: banner arriba, encabezados en la fila 3,
+// "-" como celda vacía, un producto repetido por nombre y uno sin precio.
+const TIENDANA_HEADER = [
+  "Id", "Nombre", "Precio", "Cantidad", "Código (SKU)", "Código de barras",
+  "Categoría", "Costo del producto", "IVA", "INC",
+];
+const filasTiendana = [
+  ["", "Reporte de productos", "", "", "", "", "", "", "", ""],
+  ["", "", "", "", "", "", "", "", "", ""],
+  TIENDANA_HEADER,
+  [101, "Nevera Uno", 1500000, 2, "NEV1", "7701", "NEVERAS", 1200000, 0, 0],
+  [102, "Base TV", 30000, 10, "-", "-", "-", 14000, 0, 0],
+  [103, "Sin Precio", "-", 1, "-", "-", "-", 1000, 0, 0],
+  [104, "nevera uno", 1600000, 3, "NEV1", "7701", "NEVERAS", 1250000, 0, 0],
+];
+const dataTiendana = filasTiendana.map((fila) =>
+  fila.map((valor) => ({ value: valor === "" ? undefined : valor })),
+);
+await writeXlsxFile(dataTiendana).toFile(
+  fileURLToPath(new URL("./fixtures/productos-tiendana.xlsx", import.meta.url)),
+);
+
 console.log("Fixtures generados.");

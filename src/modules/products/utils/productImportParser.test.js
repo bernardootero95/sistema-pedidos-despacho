@@ -59,6 +59,43 @@ describe("parseProductosExcel", () => {
     ).toBe(true);
   });
 
+  it("detecta el reporte de Tiendana con encabezados fuera de la fila 1", async () => {
+    const { formato, productos, errores } = await parseProductosExcel(
+      cargarFixture("productos-tiendana.xlsx"),
+    );
+
+    expect(formato).toBe("Tiendana");
+    expect(productos.find((p) => p.nombre === "Base TV")).toEqual({
+      nombre: "Base TV",
+      precio_venta: 30000,
+      disponible: 10,
+      costo: 14000,
+      iva: 0,
+      inc: 0,
+      codigo_barra: null,
+      categoria: null,
+      descripcion: null,
+    });
+    expect(productos.every((p) => p.codigo === undefined)).toBe(true);
+    expect(errores).toEqual([{ fila: 6, motivo: 'Precio inválido: "-".' }]);
+  });
+
+  it("en Tiendana se queda con la última fila cuando el nombre se repite", async () => {
+    const { productos } = await parseProductosExcel(
+      cargarFixture("productos-tiendana.xlsx"),
+    );
+    const neveras = productos.filter((p) => p.nombre.toLowerCase() === "nevera uno");
+    expect(neveras).toHaveLength(1);
+    expect(neveras[0]).toMatchObject({
+      precio_venta: 1600000,
+      disponible: 3,
+      costo: 1250000,
+      codigo_barra: "7701",
+      categoria: "NEVERAS",
+      descripcion: "SKU: NEV1",
+    });
+  });
+
   it("lanza un error claro si falta una columna requerida", async () => {
     await expect(
       parseProductosExcel(

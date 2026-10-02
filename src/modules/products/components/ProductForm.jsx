@@ -35,6 +35,8 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
     inc: productToEdit?.inc ?? "0",
     clasificacion: productToEdit?.clasificacion || "",
     disponible: productToEdit?.disponible ?? "0",
+    // Vive en productos_costos, no en `productos`: se guarda aparte.
+    costo: productToEdit?.ultimo_costo ?? "",
   });
 
   // Precios diferenciados (frío, crédito, etc.): filas de productos_precios,
@@ -192,6 +194,11 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
       );
 
       await precios.guardar(productoGuardado.id);
+
+      const costo = formData.costo === "" ? null : parseFloat(formData.costo);
+      if (costo !== null && costo !== productToEdit?.ultimo_costo) {
+        await productService.asignarCostoProducto(productoGuardado.id, costo);
+      }
 
       onSuccess();
     } catch (error) {
@@ -458,7 +465,37 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
                     </p>
                   )}
                 </div>
-                <div className="sm:col-span-2 lg:col-span-5">
+                <div className="sm:col-span-1 lg:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Precio de Costo
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      name="costo"
+                      value={formData.costo}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="Opcional"
+                      className={`w-full pl-8 p-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors.costo ? "border-red-400 focus:ring-red-200" : "border-slate-300 focus:ring-primary/20"}`}
+                    />
+                  </div>
+                  {errors.costo ? (
+                    <p className="mt-1 text-xs text-red-500 font-bold">
+                      {errors.costo}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-400">
+                      Las compras registradas lo actualizan.
+                    </p>
+                  )}
+                </div>
+                <div className="sm:col-span-1 lg:col-span-3">
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Precio Venta (Base) *
                   </label>

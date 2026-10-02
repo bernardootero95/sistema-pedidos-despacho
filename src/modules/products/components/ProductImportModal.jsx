@@ -18,6 +18,7 @@ export const ProductImportModal = ({ onSuccess, onCancel }) => {
   const [productos, setProductos] = useState([]);
   const [erroresFilas, setErroresFilas] = useState([]);
   const [totalFilas, setTotalFilas] = useState(0);
+  const [formato, setFormato] = useState("");
   const [isParsing, setIsParsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorArchivo, setErrorArchivo] = useState("");
@@ -42,8 +43,13 @@ export const ProductImportModal = ({ onSuccess, onCancel }) => {
     setArchivo(file);
     setIsParsing(true);
     try {
-      const { productos: filasValidas, errores, totalFilas: total } =
-        await parseProductosExcel(file);
+      const {
+        productos: filasValidas,
+        errores,
+        totalFilas: total,
+        formato: formatoDetectado,
+      } = await parseProductosExcel(file);
+      setFormato(formatoDetectado);
       setProductos(filasValidas);
       setErroresFilas(errores);
       setTotalFilas(total);
@@ -111,14 +117,18 @@ export const ProductImportModal = ({ onSuccess, onCancel }) => {
             <>
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600 space-y-1">
                 <p>
-                  El archivo debe tener las columnas{" "}
+                  <strong>Excel del ERP:</strong> columnas{" "}
                   <strong>cod_inv, nom_inv, existencia, vtotal</strong> (puede
-                  traer otras, se ignoran).
+                  traer otras, se ignoran). Si el código ya existe se
+                  actualiza el precio y la cantidad disponible; si no, se
+                  crea como producto <strong>gravado con IVA 19%</strong>.
                 </p>
                 <p>
-                  Si el código ya existe en el catálogo, se actualiza el
-                  precio y la cantidad disponible. Si no existe, se crea
-                  como producto <strong>gravado con IVA 19%</strong>.
+                  <strong>Reporte de productos de Tiendana:</strong> también
+                  carga costo, categoría, código de barras e impuestos. Los
+                  productos nuevos reciben el siguiente código consecutivo
+                  (00001, 00002...); si ya existe uno con el mismo nombre, se
+                  actualizan su precio, cantidad y costo.
                 </p>
               </div>
 
@@ -155,7 +165,7 @@ export const ProductImportModal = ({ onSuccess, onCancel }) => {
                   <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     {productos.length} de {totalFilas} fila(s) listas para
-                    importar.
+                    importar (formato {formato}).
                   </div>
 
                   {erroresFilas.length > 0 && (

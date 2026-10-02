@@ -16,6 +16,14 @@ const validators = {
     return "";
   },
 
+  // Opcional: vacío = no se toca el costo actual.
+  costo: (value) => {
+    if (value === "" || value === null) return "";
+    if (isNaN(Number(value))) return "Ingresa un número válido.";
+    if (Number(value) < 0) return "El costo no puede ser negativo.";
+    return "";
+  },
+
   iva: (value) => {
     if (value === "" || value === null)
       return "El IVA es obligatorio (ingresa 0 si no aplica).";
