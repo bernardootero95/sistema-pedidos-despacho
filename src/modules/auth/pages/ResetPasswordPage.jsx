@@ -7,8 +7,8 @@ import {
   validatePasswordField,
 } from "../utils/passwordValidations";
 import { tenantConfig } from "../../../config/tenant";
+import { TenantLogo } from "../../../components/brand/TenantLogo";
 import {
-  Building2,
   KeyRound,
   ShieldAlert,
   CheckCircle2,
@@ -112,7 +112,7 @@ export const ResetPasswordPage = () => {
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center items-center gap-2 text-primary">
-          <Building2 className="w-12 h-12" />
+          <TenantLogo className="h-20 max-w-[220px]" iconClassName="w-12 h-12" />
         </div>
         <h2 className="mt-4 text-center text-3xl font-extrabold text-slate-900">
           {tenantConfig.name}

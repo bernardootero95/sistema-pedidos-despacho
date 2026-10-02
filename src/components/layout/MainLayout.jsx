@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
 import { tenantConfig } from "../../config/tenant";
+import { TenantLogo } from "../brand/TenantLogo";
 import { Footer } from "./Footer"; // <-- Asegúrate de ajustar esta ruta donde hayas guardado Footer.jsx
 import { ProfileMenu } from "./ProfileMenu";
 import { SidebarMenu } from "./SidebarMenu";
 import { MENU_ITEMS, getMenuVisible } from "./menuItems";
-import { LogOut, Building2, Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 
 export const MainLayout = () => {
   const { user, logout } = useAuth();
@@ -41,8 +42,10 @@ export const MainLayout = () => {
       >
         <div className="p-4 flex items-center justify-between bg-slate-950/50 border-b border-slate-800">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="p-2 bg-primary/20 text-primary rounded-lg shrink-0">
-              <Building2 className="w-6 h-6" />
+            {/* Fondo blanco: los logos suelen estar pensados para fondo claro
+                y el sidebar es oscuro. */}
+            <div className="w-10 h-10 p-1 bg-white text-primary rounded-lg shrink-0 flex items-center justify-center overflow-hidden">
+              <TenantLogo className="w-full h-full" iconClassName="w-6 h-6" />
             </div>
             <div className="overflow-hidden">
               <h1 className="font-bold text-white text-sm truncate">
