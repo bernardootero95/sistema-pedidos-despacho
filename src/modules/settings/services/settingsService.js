@@ -1,15 +1,16 @@
 import { supabase } from "../../../config/supabase";
 
-const COLUMNAS =
-  "metodos_pago_activo, abonos_pedidos_activo, abonos_compras_activo, facturacion_automatica_activo";
-
 // Clave camelCase de la configuración en la app -> columna en la base.
 const COLUMNAS_POR_CAMPO = {
   metodosPagoActivo: "metodos_pago_activo",
   abonosPedidosActivo: "abonos_pedidos_activo",
   abonosComprasActivo: "abonos_compras_activo",
   facturacionAutomaticaActivo: "facturacion_automatica_activo",
+  impresionCartaActivo: "impresion_carta_activo",
+  imprimirLogoActivo: "imprimir_logo_activo",
 };
+
+const COLUMNAS = Object.values(COLUMNAS_POR_CAMPO).join(", ");
 
 /**
  * Configuración funcional de la empresa (interruptores de la pantalla
@@ -26,12 +27,12 @@ export const settingsService = {
     if (error)
       throw new Error("Error al cargar la configuración: " + error.message);
 
-    return {
-      metodosPagoActivo: data.metodos_pago_activo,
-      abonosPedidosActivo: data.abonos_pedidos_activo,
-      abonosComprasActivo: data.abonos_compras_activo,
-      facturacionAutomaticaActivo: data.facturacion_automatica_activo,
-    };
+    return Object.fromEntries(
+      Object.entries(COLUMNAS_POR_CAMPO).map(([campo, columna]) => [
+        campo,
+        data[columna],
+      ]),
+    );
   },
 
   /**

@@ -2,9 +2,18 @@ import { useState } from "react";
 import { settingsService } from "../services/settingsService";
 import { FeatureToggleCard } from "../components/FeatureToggleCard";
 import { PaymentMethodsSection } from "../components/PaymentMethodsSection";
+import { CompanyDataSection } from "../components/CompanyDataSection";
 import { useSettings } from "../../../context/useSettings";
 import { useToast } from "../../../context/useToast";
-import { SlidersHorizontal, CreditCard, Wallet, ShoppingBag, Receipt } from "lucide-react";
+import {
+  SlidersHorizontal,
+  CreditCard,
+  Wallet,
+  ShoppingBag,
+  Receipt,
+  FileText,
+  ImageIcon,
+} from "lucide-react";
 
 const OPCIONES = [
   {
@@ -34,6 +43,20 @@ const OPCIONES = [
     titulo: "Facturación electrónica automática",
     descripcion:
       "Emite la factura electrónica ante la DIAN (IngeFact) en cuanto un pedido queda entregado. Si un pedido facturado se anula, se devuelve o se revierte su entrega, la factura se anula con una nota crédito, esté o no encendida esta opción.",
+  },
+  {
+    campo: "impresionCartaActivo",
+    icon: FileText,
+    titulo: "Impresión en tamaño carta",
+    descripcion:
+      "Imprime pedidos y facturas electrónicas en hoja carta. Apagado, se imprimen en tirilla POS de 80 mm. Los pedidos con factura electrónica vigente salen siempre como factura, con CUFE y QR.",
+  },
+  {
+    campo: "imprimirLogoActivo",
+    icon: ImageIcon,
+    titulo: "Imprimir logo",
+    descripcion:
+      "Incluye el logo de la empresa en pedidos y facturas (tirilla y carta). Si no hay un logo cargado en Datos de la empresa, se imprimen sin logo.",
   },
 ];
 
@@ -78,6 +101,8 @@ export const SettingsPage = () => {
           />
         ))}
       </div>
+
+      <CompanyDataSection />
 
       {settings.metodosPagoActivo && <PaymentMethodsSection />}
     </div>
