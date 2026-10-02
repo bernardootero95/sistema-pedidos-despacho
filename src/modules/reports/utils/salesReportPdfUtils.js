@@ -7,7 +7,7 @@ import { formatFechaHora, formatMoneda, etiquetaEstado } from "./salesReportForm
  *   - carta:   hoja tamaño carta con resumen + detalle de pedidos por categoría.
  *   - tiquete: impresora térmica 80mm, solo el resumen (para cuadre de caja).
  *
- * El HTML se arma como string (igual que construirComprobantePedidoHtml) y
+ * El HTML se arma como string (igual que construirTirillaHtml) y
  * los textos que vienen de la base (cliente, vendedor) se escapan antes de
  * interpolarlos: el fragmento se inyecta con innerHTML en generarPdfBlobUrl.
  *

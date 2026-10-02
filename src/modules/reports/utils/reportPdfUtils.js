@@ -12,7 +12,7 @@ const ETIQUETAS_CAMPO_FECHA = {
 /**
  * Arma el HTML tabular (A4) del informe de productos: encabezado con los
  * filtros aplicados, tabla de resultados y fila de totales. A diferencia de
- * construirComprobantePedidoHtml (recibo térmico 80mm de un solo pedido),
+ * construirTirillaHtml (recibo térmico 80mm de un solo pedido),
  * esto es un listado — usa generarPdfBlobUrl con formato "a4" en vez del
  * formato térmico.
  *

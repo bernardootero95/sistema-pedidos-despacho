@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { formatCurrencyPdf, construirComprobantePedidoHtml } from "./printUtils";
+import { formatCurrencyPdf } from "./printUtils";
+import { construirTirillaHtml } from "./print/plantillaTirilla";
 
 describe("formatCurrencyPdf", () => {
   it("formatea un monto como pesos colombianos", () => {
@@ -12,7 +13,7 @@ describe("formatCurrencyPdf", () => {
   });
 });
 
-describe("construirComprobantePedidoHtml", () => {
+describe("construirTirillaHtml (pedido)", () => {
   const pedidoCompleto = {
     numero_pedido: "42",
     fecha_pedido: "2026-08-16T10:00:00Z",
@@ -40,7 +41,7 @@ describe("construirComprobantePedidoHtml", () => {
   };
 
   it("incluye el número de pedido, el cliente y las líneas del pedido", () => {
-    const html = construirComprobantePedidoHtml(pedidoCompleto);
+    const html = construirTirillaHtml(pedidoCompleto);
 
     expect(html).toContain("42");
     expect(html).toContain("Ana Gómez");
@@ -49,7 +50,7 @@ describe("construirComprobantePedidoHtml", () => {
   });
 
   it("no agrega bloque de pagos si el pedido se pagó solo en efectivo", () => {
-    const html = construirComprobantePedidoHtml({
+    const html = construirTirillaHtml({
       ...pedidoCompleto,
       pagos: [
         { tipo: "entrega", monto: 11900, metodo: { nombre: "Efectivo", es_efectivo: true } },
@@ -59,7 +60,7 @@ describe("construirComprobantePedidoHtml", () => {
   });
 
   it("muestra los pagos por método y el saldo por cobrar cuando hay abonos", () => {
-    const html = construirComprobantePedidoHtml({
+    const html = construirTirillaHtml({
       ...pedidoCompleto,
       pagos: [
         { tipo: "abono", monto: 5000, metodo: { nombre: "Transferencia", es_efectivo: false } },
@@ -71,10 +72,10 @@ describe("construirComprobantePedidoHtml", () => {
   });
 
   it("incluye las notas solo cuando el pedido las tiene", () => {
-    const conNotas = construirComprobantePedidoHtml(pedidoCompleto);
+    const conNotas = construirTirillaHtml(pedidoCompleto);
     expect(conNotas).toContain("Entregar en la tarde");
 
-    const sinNotas = construirComprobantePedidoHtml({
+    const sinNotas = construirTirillaHtml({
       ...pedidoCompleto,
       notas: "",
     });
