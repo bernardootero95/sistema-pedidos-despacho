@@ -1,5 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { formatCurrencyPdf } from "./printUtils";
+
+// printUtils importa printService → servicios de Supabase; sin .env (CI) el
+// cliente de Supabase falla al crearse. Estos tests no lo usan.
+vi.mock("../services/printService", () => ({ printService: {} }));
 import { construirTirillaHtml } from "./print/plantillaTirilla";
 
 describe("formatCurrencyPdf", () => {
