@@ -18,8 +18,9 @@ export { formatCurrencyPdf, formatDatePdf } from "./print/formato";
  * PDF A4, en vez de duplicar todo el mecanismo de html2pdf solo por eso.
  *
  * `alturaAutomatica` ajusta el alto de la página térmica al contenido
- * renderizado (un solo tiquete continuo, sin cortes ni papel en blanco);
- * lo usa el tiquete del informe de ventas, cuyo largo varía.
+ * renderizado (un solo tiquete continuo, sin cortes ni papel en blanco) y
+ * marca el PDF para imprimirse a tamaño real; lo usan las tirillas de
+ * pedido/factura y el tiquete del informe de ventas, cuyo largo varía.
  */
 export const generarPdfBlobUrl = async (html, filename, optsOverride = {}, { alturaAutomatica = false } = {}) => {
   const container = document.createElement("div");
@@ -60,10 +61,16 @@ export const generarPdfBlobUrl = async (html, filename, optsOverride = {}, { alt
     // Damos un pequeño respiro de 250ms para garantizar que el DOM pinte el contenido antes de convertir a PDF
     await new Promise((resolve) => setTimeout(resolve, 250));
 
-    return await html2pdf()
-      .set(opt)
-      .from(container.firstElementChild)
-      .output("bloburl");
+    const worker = html2pdf().set(opt).from(container.firstElementChild);
+    if (!alturaAutomatica) return await worker.output("bloburl");
+
+    // El tiquete es una sola página tan larga como el contenido. Sin esto,
+    // el diálogo de impresión la "ajusta al área imprimible" del papel del
+    // driver y reduce todo el tiquete cuando el pedido trae muchos
+    // productos; PrintScaling /None hace que abra a tamaño real.
+    const pdf = await worker.toPdf().get("pdf");
+    pdf.viewerPreferences({ PrintScaling: "None" });
+    return pdf.output("bloburl");
   } finally {
     document.body.removeChild(container);
   }
