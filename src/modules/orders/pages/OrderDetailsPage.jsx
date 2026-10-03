@@ -12,6 +12,7 @@ import { etiquetaTipoPrecio } from "../utils/tipoPrecioDisplay";
 import { FacturaIngefactControl } from "../components/FacturaIngefactControl";
 import { EntregarSinDespachoButton } from "../components/EntregarSinDespachoButton";
 import { puedeEntregarSinDespacho } from "../utils/orderValidations";
+import { getEtiquetaEstadoPedido, getEstiloEstadoPedido } from "../utils/orderConstants";
 import { OrderPaymentsCard } from "../components/OrderPaymentsCard";
 import { ROLES_MODULO } from "../../../config/roles";
 import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
@@ -189,25 +190,13 @@ export const OrderDetailsPage = () => {
 
   const { subtotal, iva19, iva5, inc8 } = calcularDesglose();
 
-  const getStatusBadge = (estado) => {
-    const styles = {
-      pendiente: "bg-amber-100 text-amber-800 border-amber-200",
-      en_ruta: "bg-blue-100 text-blue-800 border-blue-200",
-      entregado: "bg-emerald-100 text-emerald-800 border-emerald-200",
-      anulado: "bg-red-100 text-red-800 border-red-200",
-    };
-    const currentStyle =
-      styles[estado?.toLowerCase()] ||
-      "bg-slate-100 text-slate-800 border-slate-200";
-
-    return (
-      <span
-        className={`px-3 py-1 rounded-full text-xs font-semibold border uppercase tracking-wider ${currentStyle}`}
-      >
-        {estado?.replace("_", " ")}
-      </span>
-    );
-  };
+  const getStatusBadge = (estado) => (
+    <span
+      className={`px-3 py-1 rounded-full text-xs font-semibold border uppercase tracking-wider ${getEstiloEstadoPedido(estado)}`}
+    >
+      {getEtiquetaEstadoPedido(estado)}
+    </span>
+  );
 
   if (loading) {
     return (

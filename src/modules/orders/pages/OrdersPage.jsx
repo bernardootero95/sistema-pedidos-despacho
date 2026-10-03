@@ -6,7 +6,12 @@ import { imprimirPedidoPdf } from "../utils/printUtils";
 import { puedeAnularPedido, puedeEntregarSinDespacho } from "../utils/orderValidations";
 import { CobroEntregaModal } from "../../dispatches/components/CobroEntregaModal";
 import { requiereCobroAlEntregar } from "../../dispatches/utils/cobroEntrega";
-import { ESTADOS_PEDIDO, CAMPOS_FECHA } from "../utils/orderConstants";
+import {
+  ESTADOS_PEDIDO,
+  CAMPOS_FECHA,
+  getEtiquetaEstadoPedido,
+  getEstiloEstadoPedido,
+} from "../utils/orderConstants";
 import { useToast } from "../../../context/useToast";
 import { useAuth } from "../../../context/useAuth";
 import { useSettings } from "../../../context/useSettings";
@@ -123,25 +128,13 @@ export const OrdersPage = () => {
   const formatFechaEntrega = (dateString) =>
     dateString ? formatDate(dateString) : "—";
 
-  const getStatusBadge = (estado) => {
-    const styles = {
-      pendiente: "bg-amber-100 text-amber-700 border-amber-200",
-      en_ruta: "bg-blue-100 text-blue-700 border-blue-200",
-      entregado: "bg-emerald-100 text-emerald-700 border-emerald-200",
-      anulado: "bg-red-100 text-red-700 border-red-200",
-    };
-    const currentStyle =
-      styles[estado?.toLowerCase()] ||
-      "bg-slate-100 text-slate-700 border-slate-200";
-
-    return (
-      <span
-        className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${currentStyle}`}
-      >
-        {estado?.charAt(0).toUpperCase() + estado?.slice(1).replace("_", " ")}
-      </span>
-    );
-  };
+  const getStatusBadge = (estado) => (
+    <span
+      className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstiloEstadoPedido(estado)}`}
+    >
+      {getEtiquetaEstadoPedido(estado)}
+    </span>
+  );
 
   // Con pagos registrados avisa antes de pedir el motivo: al anular, el
   // servidor registra automáticamente la devolución de lo pagado.
@@ -345,8 +338,7 @@ export const OrdersPage = () => {
               <option value="">Todos los estados</option>
               {ESTADOS_PEDIDO.map((estado) => (
                 <option key={estado} value={estado}>
-                  {estado.charAt(0).toUpperCase() +
-                    estado.slice(1).replace("_", " ")}
+                  {getEtiquetaEstadoPedido(estado)}
                 </option>
               ))}
             </select>
