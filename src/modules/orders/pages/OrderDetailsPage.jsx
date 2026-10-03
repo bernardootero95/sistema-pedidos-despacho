@@ -41,7 +41,8 @@ export const OrderDetailsPage = () => {
   const puedeEditarEntrega = ["gerencia", "soporte"].includes(user?.rol);
   const puedeVerHistorial = ["gerencia", "soporte"].includes(user?.rol);
   const puedeVerDespacho = ROLES_MODULO.DESPACHOS.includes(user?.rol);
-  const puedeFacturar = user?.rol === "soporte";
+  // Mismos roles que valida la Edge Function enviar-factura-ingefact.
+  const puedeFacturar = ["gerencia", "soporte"].includes(user?.rol);
 
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
