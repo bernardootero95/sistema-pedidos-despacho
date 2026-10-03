@@ -41,4 +41,7 @@ export const ROLES_MODULO = {
   // sin rol nuevo (acordado con el usuario).
   PROVEEDORES: ["soporte", "gerencia", "despachador"],
   COMPRAS: ["soporte", "gerencia", "despachador"],
+  // Instructivo: todos los roles; el contenido se filtra por rol dentro de
+  // la página (ver help/utils/helpContent.js).
+  AYUDA: ["soporte", "gerencia", "vendedor", "despachador", "repartidor", "cajera"],
 };

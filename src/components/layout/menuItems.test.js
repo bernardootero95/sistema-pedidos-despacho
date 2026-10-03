@@ -38,9 +38,9 @@ describe("getMenuVisible", () => {
     expect(etiquetas(menu)).toContain("Toma de Pedidos");
   });
 
-  it("repartidor solo ve su panel y su ruta", () => {
+  it("repartidor solo ve su panel, su ruta y el instructivo", () => {
     const menu = getMenuVisible(MENU_ITEMS, "repartidor");
 
-    expect(etiquetas(menu)).toEqual(["Panel Principal", "Mi Ruta de Hoy"]);
+    expect(etiquetas(menu)).toEqual(["Panel Principal", "Mi Ruta de Hoy", "Instructivo"]);
   });
 });

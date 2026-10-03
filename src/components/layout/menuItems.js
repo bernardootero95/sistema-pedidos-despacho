@@ -17,6 +17,7 @@ import {
   PackageSearch,
   PiggyBank,
   Building2,
+  BookOpen,
 } from "lucide-react";
 import { ROLES_MODULO } from "../../config/roles";
 
@@ -143,6 +144,12 @@ export const MENU_ITEMS = [
         roles: ROLES_MODULO.OPCIONES,
       },
     ],
+  },
+  {
+    path: "/ayuda",
+    label: "Instructivo",
+    icon: BookOpen,
+    roles: ROLES_MODULO.AYUDA,
   },
 ];
 

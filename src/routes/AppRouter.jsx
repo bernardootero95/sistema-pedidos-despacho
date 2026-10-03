@@ -135,6 +135,12 @@ const PurchaseDetailsPage = lazy(() =>
   })),
 );
 
+const HelpPage = lazy(() =>
+  import("../modules/help/pages/HelpPage").then((m) => ({
+    default: m.HelpPage,
+  })),
+);
+
 // Componente visual mientras carga el chunk del módulo
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-slate-50">
@@ -240,6 +246,11 @@ export const AppRouter = () => {
               <Route path="/informes/ventas" element={<SalesReportPage />} />
               <Route path="/informes/utilidad" element={<ProfitReportPage />} />
               <Route path="/informes/productos" element={<ProductsReportPage />} />
+            </Route>
+
+            {/* Instructivo */}
+            <Route element={<RoleGuard roles={ROLES_MODULO.AYUDA} />}>
+              <Route path="/ayuda" element={<HelpPage />} />
             </Route>
           </Route>
 
