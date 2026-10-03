@@ -78,7 +78,7 @@ export const generarPdfBlobUrl = async (html, filename, optsOverride = {}, { alt
 
 // Hoja carta: márgenes en mm [arriba, izquierda, abajo, derecha]; el ancho
 // útil coincide con ANCHO_CARTA_MM de la plantilla.
-const OPCIONES_PDF_CARTA = {
+export const OPCIONES_PDF_CARTA = {
   margin: [10, 10, 12, 10],
   jsPDF: { unit: "mm", format: "letter", orientation: "portrait" },
   pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".evitar-corte"] },

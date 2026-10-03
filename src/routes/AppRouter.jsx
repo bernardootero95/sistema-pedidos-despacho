@@ -59,6 +59,21 @@ const OrderEditPage = lazy(() =>
     default: m.OrderEditPage,
   })),
 );
+const QuotesPage = lazy(() =>
+  import("../modules/quotes/pages/QuotesPage").then((m) => ({
+    default: m.QuotesPage,
+  })),
+);
+const QuoteCreatePage = lazy(() =>
+  import("../modules/quotes/pages/QuoteCreatePage").then((m) => ({
+    default: m.QuoteCreatePage,
+  })),
+);
+const QuoteDetailsPage = lazy(() =>
+  import("../modules/quotes/pages/QuoteDetailsPage").then((m) => ({
+    default: m.QuoteDetailsPage,
+  })),
+);
 const DispatchesPage = lazy(() =>
   import("../modules/dispatches/pages/DispatchesPage").then((m) => ({
     default: m.DispatchesPage,
@@ -218,6 +233,11 @@ export const AppRouter = () => {
               <Route path="/orders/new" element={<OrderCreatePage />} />
               <Route path="/orders/:id" element={<OrderDetailsPage />} />
               <Route path="/orders/:id/editar" element={<OrderEditPage />} />
+            </Route>
+            <Route element={<RoleGuard roles={ROLES_MODULO.COTIZACIONES} />}>
+              <Route path="/cotizaciones" element={<QuotesPage />} />
+              <Route path="/cotizaciones/nueva" element={<QuoteCreatePage />} />
+              <Route path="/cotizaciones/:id" element={<QuoteDetailsPage />} />
             </Route>
             <Route element={<RoleGuard roles={ROLES_MODULO.DESPACHOS} />}>
               <Route path="/despachos" element={<DispatchesPage />} />

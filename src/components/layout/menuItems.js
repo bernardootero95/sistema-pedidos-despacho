@@ -18,6 +18,7 @@ import {
   PiggyBank,
   Building2,
   BookOpen,
+  FileText,
 } from "lucide-react";
 import { ROLES_MODULO } from "../../config/roles";
 
@@ -39,6 +40,12 @@ export const MENU_ITEMS = [
     label: "Toma de Pedidos",
     icon: ShoppingCart,
     roles: ROLES_MODULO.PEDIDOS,
+  },
+  {
+    path: "/cotizaciones",
+    label: "Cotizaciones",
+    icon: FileText,
+    roles: ROLES_MODULO.COTIZACIONES,
   },
   {
     path: "/despachos",

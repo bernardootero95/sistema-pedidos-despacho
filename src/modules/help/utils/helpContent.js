@@ -7,6 +7,7 @@ import {
   MapPin,
   Package,
   ShoppingBag,
+  FileText,
   Contact,
   FileBarChart,
   Settings,
@@ -350,6 +351,49 @@ export const SECCIONES_AYUDA = [
         titulo: "Historial de compras",
         notas: [
           "«Ver historial de compras» muestra a qué costo se compró el producto en cada compra.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "cotizaciones",
+    titulo: "Cotizaciones",
+    icono: FileText,
+    ruta: "/cotizaciones",
+    roles: ROLES_MODULO.COTIZACIONES,
+    resumen: "Ofrecer precios a un cliente, imprimirlos y convertirlos en pedido.",
+    bloques: [
+      {
+        titulo: "Crear una cotización",
+        pasos: [
+          "En Cotizaciones presiona «Nueva Cotización» y elige el cliente (o crea uno con «Cliente nuevo»).",
+          "Indica hasta qué fecha es válida; por defecto son 15 días.",
+          "Agrega los productos con su cantidad y, si aplica, el tipo de precio (normal, mayorista u otro).",
+          "Presiona «Guardar Cotización». No descuenta inventario.",
+        ],
+      },
+      {
+        titulo: "Imprimir o enviar al cliente",
+        notas: [
+          "En el detalle usa «Imprimir PDF»: se genera en tamaño carta con los datos de la empresa y la fecha de validez.",
+        ],
+      },
+      {
+        titulo: "Convertir en pedido",
+        pasos: [
+          "Cuando el cliente acepte, abre la cotización y presiona «Convertir en pedido» y confirma.",
+          "El sistema crea el pedido con los precios vigentes del catálogo y descuenta el stock.",
+        ],
+        notas: [
+          "Si algún precio cambió desde que cotizaste, el total del pedido puede diferir; el sistema te lo avisa.",
+          "Una cotización vencida o anulada no se puede convertir: crea una nueva.",
+        ],
+      },
+      {
+        titulo: "Estados y anulación",
+        notas: [
+          "Vigente, Vencida (pasó la fecha de validez), Convertida (ya tiene pedido) y Anulada.",
+          "Para anular una cotización vigente usa «Anular», escribe el motivo y confirma.",
         ],
       },
     ],

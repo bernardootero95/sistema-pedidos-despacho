@@ -95,8 +95,16 @@ const resolverLineaParaCantidad = (item, cantidad) => {
  * acá (ver OrderEditPage) — porque editar_pedido_transaccional devuelve
  * esas unidades al stock antes de re-validar, así que el vendedor debe
  * poder subir hasta ese techo, no solo hasta el disponible "crudo".
+ *
+ * `validarStock: false` es para documentos que no reservan inventario
+ * (cotizaciones): reutiliza las mismas reglas de precio por tipo y
+ * cantidad, sin tope por existencias.
  */
-export function useCarritoPedido(productos, itemsIniciales = []) {
+export function useCarritoPedido(
+  productos,
+  itemsIniciales = [],
+  { validarStock = true } = {},
+) {
   const [carrito, setCarrito] = useState(itemsIniciales);
   const [errorStock, setErrorStock] = useState("");
 
@@ -112,7 +120,9 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
     const cantidadEnCarrito =
       existeIndex >= 0 ? carrito[existeIndex].cantidad : 0;
 
-    const stockError = validarStockParaAgregar(producto, cantidadEnCarrito);
+    const stockError = validarStock
+      ? validarStockParaAgregar(producto, cantidadEnCarrito)
+      : "";
     if (stockError) {
       setErrorStock(stockError);
       return;
@@ -182,11 +192,9 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
       return;
     }
 
-    const stockError = validarStockParaCantidad(
-      nuevaCantidad,
-      item.disponible,
-      item.nombre,
-    );
+    const stockError = validarStock
+      ? validarStockParaCantidad(nuevaCantidad, item.disponible, item.nombre)
+      : "";
     if (stockError) {
       setErrorStock(stockError);
       return;
@@ -221,11 +229,9 @@ export function useCarritoPedido(productos, itemsIniciales = []) {
     const cantidad = redondearACantidadValida(cantidadEscrita);
     const item = carrito[index];
 
-    const stockError = validarStockParaCantidad(
-      cantidad,
-      item.disponible,
-      item.nombre,
-    );
+    const stockError = validarStock
+      ? validarStockParaCantidad(cantidad, item.disponible, item.nombre)
+      : "";
     const cantidadFinal = stockError ? item.disponible : cantidad;
     setErrorStock(stockError || "");
 

@@ -37,6 +37,9 @@ export const ROLES_MODULO = {
   DESPACHOS: ["soporte", "gerencia", "despachador"],
   MI_RUTA: ["repartidor"],
   INFORMES: ["soporte", "gerencia"],
+  // Cotizaciones: mismos roles que pueden escribirlas en el servidor
+  // (crear/anular/convertir_cotizacion_*). Ampliar aquí y en esos RPC/RLS.
+  COTIZACIONES: ["soporte", "gerencia"],
   // Módulo de compras (alimenta inventario): mismos 3 roles operativos,
   // sin rol nuevo (acordado con el usuario).
   PROVEEDORES: ["soporte", "gerencia", "despachador"],
