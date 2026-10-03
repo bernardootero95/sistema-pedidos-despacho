@@ -14,21 +14,25 @@ export const ProductSearchBar = ({
   onAgregar,
   error,
   formatCurrency,
+  mostrarStock = true,
+  etiqueta = "Agregar Productos",
 }) => {
   const opciones = useMemo(
     () =>
       productos.map((p) => ({
         value: p.id,
-        label: `${p.codigo} - ${p.nombre} (${formatCurrency(p.precio_venta)}) [Stock: ${p.disponible}]${p.disponible <= 0 ? " (AGOTADO)" : ""}`,
-        disabled: p.disponible <= 0,
+        label: mostrarStock
+          ? `${p.codigo} - ${p.nombre} (${formatCurrency(p.precio_venta)}) [Stock: ${p.disponible}]${p.disponible <= 0 ? " (AGOTADO)" : ""}`
+          : `${p.codigo} - ${p.nombre} (${formatCurrency(p.precio_venta)})`,
+        disabled: mostrarStock && p.disponible <= 0,
       })),
-    [productos, formatCurrency],
+    [productos, formatCurrency, mostrarStock],
   );
 
   return (
     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
       <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-        Agregar Productos
+        {etiqueta}
       </label>
       <div className="flex gap-2">
         <div className="flex-1">
@@ -44,7 +48,7 @@ export const ProductSearchBar = ({
           type="button"
           onClick={onAgregar}
           disabled={!productoSeleccionado}
-          aria-label="Agregar producto al pedido"
+          aria-label="Agregar producto"
           className="bg-blue-600 text-white px-5 py-3 rounded-xl flex items-center justify-center hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
         >
           <Plus className="h-6 w-6" />

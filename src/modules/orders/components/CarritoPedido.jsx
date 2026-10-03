@@ -60,11 +60,13 @@ export const CarritoPedido = ({
   error,
   puedeMayorista = false,
   rolActual = "",
+  titulo = "Productos en el Pedido",
+  mostrarStock = true,
 }) => {
   return (
     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-slate-700">
-        Productos en el Pedido ({carrito.length})
+        {titulo} ({carrito.length})
       </h2>
 
       {error && (
@@ -94,10 +96,15 @@ export const CarritoPedido = ({
                     {item.nombre}
                   </p>
                   <p className="text-xs text-slate-500 font-mono">
-                    Cod: {item.codigo} |{" "}
-                    <span className="text-emerald-600 font-medium">
-                      Stock: {item.disponible}
-                    </span>
+                    Cod: {item.codigo}
+                    {mostrarStock && (
+                      <>
+                        {" | "}
+                        <span className="text-emerald-600 font-medium">
+                          Stock: {item.disponible}
+                        </span>
+                      </>
+                    )}
                   </p>
                   <p className="text-xs font-semibold text-blue-600 mt-1">
                     {formatCurrency(item.precio_unitario)} c/u
