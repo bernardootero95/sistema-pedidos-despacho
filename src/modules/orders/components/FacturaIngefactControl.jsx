@@ -20,7 +20,7 @@ const Aviso = ({ tono, icon: Icon, children }) => (
 
 /**
  * Estado de la factura electrónica (IngeFact) de un pedido y acción manual
- * de soporte: emitirla con la opción automática apagada, o reintentar una
+ * de soporte/gerencia: emitirla con la opción automática apagada, o reintentar una
  * emisión/anulación automática que falló. Autónomo: llama al servicio y
  * avisa al padre vía onActualizado para que recargue el pedido -- mismo
  * patrón que DispatchStatusControl. Pide una segunda confirmación antes de

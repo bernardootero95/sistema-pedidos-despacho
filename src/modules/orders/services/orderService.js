@@ -372,7 +372,7 @@ export const orderService = {
   /**
    * Factura un pedido entregado en IngeFact (DIAN), o anula su factura con
    * una nota crédito, vía la Edge Function enviar-factura-ingefact. Es la
-   * vía manual (soporte) para facturar con la opción automática apagada o
+   * vía manual (soporte/gerencia) para facturar con la opción automática apagada o
    * reintentar una operación automática que falló. La llamada a la API
    * externa (con su propia API key) vive solo ahí, nunca en el frontend;
    * esta función solo dispara la acción y propaga el mensaje de negocio si

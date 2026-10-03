@@ -1,5 +1,5 @@
 // Mismo plazo que iniciar_operacion_ingefact: pasado este tiempo una
-// operación en curso se considera abandonada y soporte puede reintentarla.
+// operación en curso se considera abandonada y soporte/gerencia puede reintentarla.
 export const MINUTOS_OPERACION_ABANDONADA = 10;
 
 /**

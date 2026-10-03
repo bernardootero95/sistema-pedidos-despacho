@@ -21,6 +21,9 @@ const INGEFACT_CORREO_GENERICO = Deno.env.get('INGEFACT_CORREO_GENERICO') ?? ''
 
 type Accion = 'facturar' | 'anular'
 
+// Roles que pueden emitir/anular manualmente (botón en el detalle del pedido).
+const ROLES_FACTURACION_MANUAL = ['soporte', 'gerencia']
+
 class IngefactError extends Error {
   status: number
   constructor(status: number, message: string) {
@@ -372,9 +375,10 @@ serve(async (req) => {
     // Dos orígenes posibles (por eso verify_jwt = false en config.toml):
     //   - Automático: trg_encolar_operacion_ingefact vía pg_net, con el
     //     secreto de Vault en x-facturacion-secreto.
-    //   - Manual: botón de soporte, con el JWT del usuario. Emitir/anular un
-    //     documento ante la DIAN es sensible e irreversible: se restringe a
-    //     soporte, igual patrón que create-user/reset-user-password.
+    //   - Manual: botón de soporte/gerencia, con el JWT del usuario.
+    //     Emitir/anular un documento ante la DIAN es sensible e irreversible:
+    //     se restringe a esos roles (los mismos que configuran la facturación
+    //     automática), igual patrón que create-user/reset-user-password.
     const secreto = req.headers.get('x-facturacion-secreto')
     let esAutomatico = false
 
@@ -400,7 +404,9 @@ serve(async (req) => {
         .single()
 
       const autorizado =
-        !profileError && callerProfile?.estado === true && callerProfile?.roles?.nombre === 'soporte'
+        !profileError &&
+        callerProfile?.estado === true &&
+        ROLES_FACTURACION_MANUAL.includes(callerProfile?.roles?.nombre)
 
       if (!autorizado) {
         return responder({ error: 'No tienes permiso para facturar pedidos.' }, 403)
