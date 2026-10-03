@@ -1,6 +1,10 @@
 import { Search, X } from "lucide-react";
 import { SearchableSelect } from "../../../components/ui/SearchableSelect";
-import { ESTADOS_PEDIDO, CAMPOS_FECHA } from "../../orders/utils/orderConstants";
+import {
+  ESTADOS_PEDIDO,
+  CAMPOS_FECHA,
+  getEtiquetaEstadoPedido,
+} from "../../orders/utils/orderConstants";
 
 const inputClass = (hasError) =>
   `w-full px-3 py-2.5 border rounded-xl outline-none text-sm transition-all bg-white ${
@@ -112,7 +116,7 @@ export const ReportFiltersForm = ({
             <option value="">Todos los estados</option>
             {ESTADOS_PEDIDO.map((estado) => (
               <option key={estado} value={estado}>
-                {estado.charAt(0).toUpperCase() + estado.slice(1).replace("_", " ")}
+                {getEtiquetaEstadoPedido(estado)}
               </option>
             ))}
           </select>
