@@ -118,4 +118,62 @@ export const reportService = {
 
     return { resumen, detalle };
   },
+
+  /**
+   * Informe de inventario de un rango: inicial, compras, ventas (entregados),
+   * ajustes de toma física, preventa (pedidos por entregar) y disponible por
+   * producto. La reconstrucción hacia atrás vive en el RPC
+   * obtener_informe_inventario; acá solo se normalizan tipos.
+   *
+   * @param {{ fechaDesde: string, fechaHasta: string }} filtros
+   */
+  async obtenerInformeInventario({ fechaDesde, fechaHasta }) {
+    const { data, error } = await supabase.rpc("obtener_informe_inventario", {
+      p_fecha_desde: fechaDesde,
+      p_fecha_hasta: fechaHasta,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Error al generar el informe de inventario.");
+    }
+
+    return (data || []).map((fila) => ({
+      productoId: fila.producto_id,
+      codigo: fila.codigo,
+      nombre: fila.nombre,
+      inicial: Number(fila.inicial) || 0,
+      compras: Number(fila.compras) || 0,
+      ventas: Number(fila.ventas) || 0,
+      ajustes: Number(fila.ajustes) || 0,
+      fisicoFinal: Number(fila.fisico_final) || 0,
+      preventa: Number(fila.preventa) || 0,
+      disponible: Number(fila.disponible) || 0,
+      costoUnitario: fila.costo_unitario == null ? null : Number(fila.costo_unitario),
+      precioVenta: Number(fila.precio_venta) || 0,
+    }));
+  },
+
+  /**
+   * Inventario real de la bodega hoy: disponible + pendiente por entregar,
+   * con lo necesario para valorarlo a costo y a venta. Lo calcula el RPC
+   * obtener_inventario_actual.
+   */
+  async obtenerInventarioActual() {
+    const { data, error } = await supabase.rpc("obtener_inventario_actual");
+
+    if (error) {
+      throw new Error(error.message || "Error al generar el informe de inventario actual.");
+    }
+
+    return (data || []).map((fila) => ({
+      productoId: fila.producto_id,
+      codigo: fila.codigo,
+      nombre: fila.nombre,
+      disponible: Number(fila.disponible) || 0,
+      pendiente: Number(fila.pendiente) || 0,
+      ventaPendiente: Number(fila.venta_pendiente) || 0,
+      costoUnitario: fila.costo_unitario == null ? null : Number(fila.costo_unitario),
+      precioVenta: Number(fila.precio_venta) || 0,
+    }));
+  },
 };
