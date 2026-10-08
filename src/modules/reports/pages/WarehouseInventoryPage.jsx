@@ -10,9 +10,10 @@ import { resumirBodega } from "../utils/inventoryValuation";
 import { exportarBodegaExcel } from "../utils/inventoryReportExcelUtils";
 import { WarehouseInventorySummary } from "../components/WarehouseInventorySummary";
 import { WarehouseInventoryTable } from "../components/WarehouseInventoryTable";
+import { MissingCostModal } from "../components/MissingCostModal";
 
 export const WarehouseInventoryPage = () => {
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
 
   const [filas, setFilas] = useState([]);
   const [fecha, setFecha] = useState("");
@@ -20,6 +21,7 @@ export const WarehouseInventoryPage = () => {
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [exportando, setExportando] = useState(false);
+  const [asignandoCostos, setAsignandoCostos] = useState(false);
 
   useEffect(() => {
     reportService
@@ -43,6 +45,18 @@ export const WarehouseInventoryPage = () => {
   }, [filas, busqueda]);
 
   const paginacion = useClientPagination(filasVisibles, { resetKey: busqueda });
+
+  const productosSinCosto = useMemo(() => filas.filter((f) => f.costoUnitario === null), [filas]);
+
+  // El costo no tiene efectos en cascada: se actualizan las filas en pantalla
+  // sin volver a consultar el informe.
+  const handleCostosGuardados = (costos) => {
+    setFilas((prev) =>
+      prev.map((f) => (costos.has(f.productoId) ? { ...f, costoUnitario: costos.get(f.productoId) } : f)),
+    );
+    setAsignandoCostos(false);
+    showSuccess(`Costo asignado a ${costos.size} ${costos.size === 1 ? "producto" : "productos"}.`);
+  };
 
   const handleExportar = async () => {
     try {
@@ -104,7 +118,7 @@ export const WarehouseInventoryPage = () => {
 
         {!loading && !error && (
           <>
-            <WarehouseInventorySummary resumen={resumen} />
+            <WarehouseInventorySummary resumen={resumen} onAsignarCostos={() => setAsignandoCostos(true)} />
 
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -131,6 +145,14 @@ export const WarehouseInventoryPage = () => {
           </>
         )}
       </div>
+
+      {asignandoCostos && (
+        <MissingCostModal
+          productos={productosSinCosto}
+          onGuardado={handleCostosGuardados}
+          onCancel={() => setAsignandoCostos(false)}
+        />
+      )}
     </div>
   );
 };

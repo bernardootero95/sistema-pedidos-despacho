@@ -503,6 +503,7 @@ export const SECCIONES_AYUDA = [
         notas: [
           "Muestra lo que hay físicamente hoy: mercancía disponible más la pendiente por entregar, con su valor a costo, a venta y la ganancia posible.",
           "Los productos marcados con ⚠ no tienen costo registrado y no entran en la ganancia posible.",
+          "Si hay productos sin costo, el aviso amarillo (en este informe y en Inventario por Rango) tiene el botón «Asignar costos»: digita el costo de los que quieras y guárdalos juntos. Los que dejes vacíos no cambian, y la próxima compra actualiza el costo.",
         ],
       },
     ],

@@ -22,7 +22,7 @@ const Tarjeta = ({ icon: Icon, color, titulo, nota, cantidad, valor }) => (
  * Tarjetas con el valor del inventario del rango y aviso de productos sin
  * costo. Presentación pura: los totales vienen de resumirRango.
  */
-export const InventoryReportSummary = ({ totales, sinCosto, base }) => (
+export const InventoryReportSummary = ({ totales, sinCosto, base, onAsignarCostos }) => (
   <div className="flex flex-col gap-3">
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
       <Tarjeta
@@ -67,8 +67,17 @@ export const InventoryReportSummary = ({ totales, sinCosto, base }) => (
         <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
         <p>
           {sinCosto} {sinCosto === 1 ? "producto no tiene" : "productos no tienen"} costo registrado y valen $0 a precio
-          de costo. Registra una compra o asigna el costo en el catálogo para valorarlos.
+          de costo. Registra una compra o asigna el costo para valorarlos.
         </p>
+        {onAsignarCostos && (
+          <button
+            type="button"
+            onClick={onAsignarCostos}
+            className="ml-auto shrink-0 px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-amber-800 font-semibold hover:bg-amber-100 transition-colors"
+          >
+            Asignar costos
+          </button>
+        )}
       </div>
     )}
   </div>

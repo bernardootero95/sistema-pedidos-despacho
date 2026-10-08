@@ -19,7 +19,7 @@ const Fila = ({ titulo, unidades, costo, venta, ganancia, destacada = false }) =
  * unidades, costo, venta y ganancia posible. Presentación pura: los totales
  * vienen de resumirBodega.
  */
-export const WarehouseInventorySummary = ({ resumen }) => (
+export const WarehouseInventorySummary = ({ resumen, onAsignarCostos }) => (
   <div className="flex flex-col gap-3">
     <div className="overflow-x-auto bg-white border border-slate-200 rounded-xl">
       <table className="w-full text-left border-collapse text-sm">
@@ -67,6 +67,15 @@ export const WarehouseInventorySummary = ({ resumen }) => (
           costo registrado ({formatMoneda(resumen.ventaSinCosto)} a venta): valen $0 a costo y no se incluyen en la
           ganancia posible.
         </p>
+        {onAsignarCostos && (
+          <button
+            type="button"
+            onClick={onAsignarCostos}
+            className="ml-auto shrink-0 px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-amber-800 font-semibold hover:bg-amber-100 transition-colors"
+          >
+            Asignar costos
+          </button>
+        )}
       </div>
     )}
   </div>

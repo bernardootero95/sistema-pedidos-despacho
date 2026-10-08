@@ -12,6 +12,7 @@ import { InventoryReportFiltersForm } from "../components/InventoryReportFilters
 import { InventoryReportSummary } from "../components/InventoryReportSummary";
 import { InventoryReportTable } from "../components/InventoryReportTable";
 import { ValuationBaseSelector } from "../components/ValuationBaseSelector";
+import { MissingCostModal } from "../components/MissingCostModal";
 
 const filtrosIniciales = () => {
   const hoy = fechaLocalISO();
@@ -25,7 +26,7 @@ const consultarInforme = async (filtros) => {
 };
 
 export const InventoryReportPage = () => {
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
 
   const [filtros, setFiltros] = useState(filtrosIniciales);
   const [errors, setErrors] = useState({});
@@ -38,6 +39,7 @@ export const InventoryReportPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [exportando, setExportando] = useState(false);
+  const [asignandoCostos, setAsignandoCostos] = useState(false);
 
   const handleChange = (campo, valor) => {
     const siguiente = { ...filtros, [campo]: valor };
@@ -90,6 +92,19 @@ export const InventoryReportPage = () => {
   // Los totales se calculan sobre todas las filas; la paginación solo acota lo que se dibuja.
   const { totales, sinCosto } = useMemo(() => resumirRango(informe?.filas || [], base), [informe, base]);
   const paginacion = useClientPagination(informe?.filas || [], { resetKey: informe });
+
+  const productosSinCosto = useMemo(() => (informe?.filas || []).filter((f) => f.costoUnitario === null), [informe]);
+
+  // El costo no tiene efectos en cascada: se actualizan las filas en pantalla
+  // sin volver a consultar el informe.
+  const handleCostosGuardados = (costos) => {
+    setInforme((prev) => ({
+      ...prev,
+      filas: prev.filas.map((f) => (costos.has(f.productoId) ? { ...f, costoUnitario: costos.get(f.productoId) } : f)),
+    }));
+    setAsignandoCostos(false);
+    showSuccess(`Costo asignado a ${costos.size} ${costos.size === 1 ? "producto" : "productos"}.`);
+  };
 
   const handleExportar = async () => {
     try {
@@ -164,7 +179,12 @@ export const InventoryReportPage = () => {
             <h2 className="text-sm font-semibold text-slate-600">
               Inventario · {informe.fechaDesde} a {informe.fechaHasta}
             </h2>
-            <InventoryReportSummary totales={totales} sinCosto={sinCosto} base={base} />
+            <InventoryReportSummary
+              totales={totales}
+              sinCosto={sinCosto}
+              base={base}
+              onAsignarCostos={() => setAsignandoCostos(true)}
+            />
             <InventoryReportTable filas={paginacion.pageItems} totales={totales} base={base} />
             <Pagination
               currentPage={paginacion.currentPage}
@@ -187,6 +207,14 @@ export const InventoryReportPage = () => {
           </>
         )}
       </div>
+
+      {asignandoCostos && (
+        <MissingCostModal
+          productos={productosSinCosto}
+          onGuardado={handleCostosGuardados}
+          onCancel={() => setAsignandoCostos(false)}
+        />
+      )}
     </div>
   );
 };
