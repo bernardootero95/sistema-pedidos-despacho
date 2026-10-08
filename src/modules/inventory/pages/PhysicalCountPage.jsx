@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronLeft, ChevronRight, ClipboardCheck, Info, Loader2, Search } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, Info, Loader2, Search } from "lucide-react";
 import { usePhysicalCount } from "../hooks/usePhysicalCount";
+import { useClientPagination } from "../../../hooks/useClientPagination";
+import { Pagination } from "../../../components/ui/Pagination";
 import { useToast } from "../../../context/useToast";
 import { diferenciaFila } from "../utils/physicalCountCalc";
 import { exportarHojaConteo } from "../utils/physicalCountExcel";
@@ -9,8 +11,6 @@ import { ESTILOS_ESTADO_TOMA, ETIQUETAS_ESTADO_TOMA } from "../utils/physicalCou
 import { PhysicalCountActions } from "../components/PhysicalCountActions";
 import { PhysicalCountSummary } from "../components/PhysicalCountSummary";
 import { PhysicalCountTable } from "../components/PhysicalCountTable";
-
-const FILAS_POR_PAGINA = 50;
 
 const FILTROS = [
   { valor: "todos", etiqueta: "Todos" },
@@ -38,17 +38,6 @@ export const PhysicalCountPage = () => {
 
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState("todos");
-  const [pagina, setPagina] = useState(1);
-
-  // Cambiar de filtro o búsqueda vuelve a la primera página.
-  const cambiarBusqueda = (texto) => {
-    setBusqueda(texto);
-    setPagina(1);
-  };
-  const cambiarFiltro = (valor) => {
-    setFiltro(valor);
-    setPagina(1);
-  };
 
   const lineasFiltradas = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
@@ -65,9 +54,8 @@ export const PhysicalCountPage = () => {
     });
   }, [lineas, contados, busqueda, filtro, editable]);
 
-  const totalPaginas = Math.max(1, Math.ceil(lineasFiltradas.length / FILAS_POR_PAGINA));
-  const paginaActual = Math.min(pagina, totalPaginas);
-  const lineasPagina = lineasFiltradas.slice((paginaActual - 1) * FILAS_POR_PAGINA, paginaActual * FILAS_POR_PAGINA);
+  // Cambiar de filtro o búsqueda vuelve a la primera página.
+  const paginacion = useClientPagination(lineasFiltradas, { resetKey: `${busqueda}|${filtro}` });
 
   const handleGuardar = async () => {
     try {
@@ -185,7 +173,7 @@ export const PhysicalCountPage = () => {
             <input
               type="search"
               value={busqueda}
-              onChange={(e) => cambiarBusqueda(e.target.value)}
+              onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar por código o nombre"
               aria-label="Buscar producto"
               className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl outline-none text-sm bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -196,7 +184,7 @@ export const PhysicalCountPage = () => {
               <button
                 key={f.valor}
                 type="button"
-                onClick={() => cambiarFiltro(f.valor)}
+                onClick={() => setFiltro(f.valor)}
                 aria-pressed={filtro === f.valor}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   filtro === f.valor ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50"
@@ -209,7 +197,7 @@ export const PhysicalCountPage = () => {
         </div>
 
         <PhysicalCountTable
-          lineas={lineasPagina}
+          lineas={paginacion.pageItems}
           digitados={conteo.digitados}
           contados={contados}
           errors={conteo.errors}
@@ -218,33 +206,15 @@ export const PhysicalCountPage = () => {
           onBlur={conteo.validarCampo}
         />
 
-        {totalPaginas > 1 && (
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-500 font-medium">
-              Página {paginaActual} de {totalPaginas} ({lineasFiltradas.length} productos)
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPagina(Math.max(1, paginaActual - 1))}
-                disabled={paginaActual === 1}
-                aria-label="Página anterior"
-                className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors shadow-sm"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setPagina(Math.min(totalPaginas, paginaActual + 1))}
-                disabled={paginaActual === totalPaginas}
-                aria-label="Página siguiente"
-                className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors shadow-sm"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={paginacion.currentPage}
+          totalPages={paginacion.totalPages}
+          onPageChange={paginacion.setCurrentPage}
+          pageSize={paginacion.pageSize}
+          onPageSizeChange={paginacion.setPageSize}
+          pageSizeOptions={[25, 50, 100, 200]}
+          totalItems={paginacion.totalItems}
+        />
       </div>
     </div>
   );

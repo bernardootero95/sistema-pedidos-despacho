@@ -45,7 +45,9 @@ export const PhysicalCountTable = ({ lineas, digitados, contados, errors, editab
             return (
               <tr key={linea.productoId} className="hover:bg-slate-50 transition-colors">
                 <td className="p-4 text-slate-600">{linea.codigo}</td>
-                <td className="p-4 font-medium text-slate-800">{linea.nombre}</td>
+                <td className="p-4 font-medium text-slate-800 max-w-xs truncate" title={linea.nombre}>
+                  {linea.nombre}
+                </td>
                 <td className="p-4 text-right text-slate-700">{formatCantidad(linea.cantidadSistema)}</td>
                 <td className="p-3 text-right">
                   {editable ? (

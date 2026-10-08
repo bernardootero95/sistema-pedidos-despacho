@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useClientPagination } from "../../../hooks/useClientPagination";
+import { Pagination } from "../../../components/ui/Pagination";
 import { FileSpreadsheet, Info, Loader2, Boxes } from "lucide-react";
 import { reportService } from "../services/reportService";
 import { useToast } from "../../../context/useToast";
@@ -85,7 +87,9 @@ export const InventoryReportPage = () => {
     aplicarResultado(consultarInforme(filtros));
   };
 
+  // Los totales se calculan sobre todas las filas; la paginación solo acota lo que se dibuja.
   const { totales, sinCosto } = useMemo(() => resumirRango(informe?.filas || [], base), [informe, base]);
+  const paginacion = useClientPagination(informe?.filas || [], { resetKey: informe });
 
   const handleExportar = async () => {
     try {
@@ -161,7 +165,16 @@ export const InventoryReportPage = () => {
               Inventario · {informe.fechaDesde} a {informe.fechaHasta}
             </h2>
             <InventoryReportSummary totales={totales} sinCosto={sinCosto} base={base} />
-            <InventoryReportTable filas={informe.filas} totales={totales} base={base} />
+            <InventoryReportTable filas={paginacion.pageItems} totales={totales} base={base} />
+            <Pagination
+              currentPage={paginacion.currentPage}
+              totalPages={paginacion.totalPages}
+              onPageChange={paginacion.setCurrentPage}
+              pageSize={paginacion.pageSize}
+              onPageSizeChange={paginacion.setPageSize}
+              pageSizeOptions={[25, 50, 100, 200]}
+              totalItems={paginacion.totalItems}
+            />
             <div className="flex items-start gap-2 text-xs text-slate-500">
               <Info className="h-4 w-4 shrink-0 mt-0.5" />
               <p>

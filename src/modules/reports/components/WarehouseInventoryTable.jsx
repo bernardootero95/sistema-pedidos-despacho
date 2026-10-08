@@ -38,9 +38,11 @@ export const WarehouseInventoryTable = ({ filas }) => {
             return (
               <tr key={fila.productoId} className="hover:bg-slate-50 transition-colors">
                 <td className="p-4 text-slate-600">{fila.codigo}</td>
-                <td className="p-4 font-medium text-slate-800">
+                <td className="p-4 font-medium text-slate-800 max-w-xs">
                   <span className="flex items-center gap-1.5">
-                    {fila.nombre}
+                    <span className="truncate" title={fila.nombre}>
+                      {fila.nombre}
+                    </span>
                     {!v.conCosto && (
                       <span title="Sin costo registrado">
                         <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" aria-label="Sin costo" />

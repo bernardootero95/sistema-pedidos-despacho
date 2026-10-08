@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useClientPagination } from "../../../hooks/useClientPagination";
+import { Pagination } from "../../../components/ui/Pagination";
 import { Link } from "react-router-dom";
 import { ClipboardCheck, FileSpreadsheet, Loader2, Search, Warehouse } from "lucide-react";
 import { reportService } from "../services/reportService";
@@ -39,6 +41,8 @@ export const WarehouseInventoryPage = () => {
     if (!texto) return filas;
     return filas.filter((f) => f.nombre.toLowerCase().includes(texto) || f.codigo.toLowerCase().includes(texto));
   }, [filas, busqueda]);
+
+  const paginacion = useClientPagination(filasVisibles, { resetKey: busqueda });
 
   const handleExportar = async () => {
     try {
@@ -114,7 +118,16 @@ export const WarehouseInventoryPage = () => {
               />
             </div>
 
-            <WarehouseInventoryTable filas={filasVisibles} />
+            <WarehouseInventoryTable filas={paginacion.pageItems} />
+            <Pagination
+              currentPage={paginacion.currentPage}
+              totalPages={paginacion.totalPages}
+              onPageChange={paginacion.setCurrentPage}
+              pageSize={paginacion.pageSize}
+              onPageSizeChange={paginacion.setPageSize}
+              pageSizeOptions={[25, 50, 100, 200]}
+              totalItems={paginacion.totalItems}
+            />
           </>
         )}
       </div>

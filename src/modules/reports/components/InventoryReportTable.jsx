@@ -37,7 +37,9 @@ export const InventoryReportTable = ({ filas, totales, base }) => {
           {filas.map((fila) => (
             <tr key={fila.productoId} className="hover:bg-slate-50 transition-colors">
               <td className="p-4 text-slate-600">{fila.codigo}</td>
-              <td className="p-4 font-medium text-slate-800">{fila.nombre}</td>
+              <td className="p-4 font-medium text-slate-800 max-w-xs truncate" title={fila.nombre}>
+                {fila.nombre}
+              </td>
               {COLUMNAS_RANGO.map(({ clave }) => (
                 <td key={clave} className="p-4 text-right text-slate-700">
                   {formatCantidad(fila[clave])}
