@@ -75,12 +75,6 @@ export const MENU_ITEMS = [
     roles: ROLES_MODULO.COMPRAS,
   },
   {
-    path: "/toma-fisica",
-    label: "Toma Física",
-    icon: ClipboardCheck,
-    roles: ROLES_MODULO.TOMA_FISICA,
-  },
-  {
     key: "terceros",
     label: "Terceros",
     icon: Contact,
@@ -133,6 +127,12 @@ export const MENU_ITEMS = [
         label: "Inventario de Bodega",
         icon: Warehouse,
         roles: ROLES_MODULO.INFORMES,
+      },
+      {
+        path: "/toma-fisica",
+        label: "Toma Física",
+        icon: ClipboardCheck,
+        roles: ROLES_MODULO.TOMA_FISICA,
       },
     ],
   },
