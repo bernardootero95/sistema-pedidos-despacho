@@ -312,6 +312,19 @@ export const productService = {
   },
 
   /**
+   * Fija el costo de varios productos en una sola transacción (todos o
+   * ninguno). `costos` es un array de { productoId, costo }.
+   */
+  async asignarCostosProductos(costos) {
+    const { data, error } = await supabase.rpc("asignar_costos_productos", {
+      p_costos: costos.map((c) => ({ producto_id: c.productoId, costo: c.costo })),
+    });
+
+    if (error) throw new Error("Error al guardar los costos: " + error.message);
+    return data;
+  },
+
+  /**
    * Actualiza solo el precio de venta de un producto. Usado por roles con
    * acceso restringido (despachador): la RPC nunca toca stock ni el resto
    * de la ficha, sin importar qué se le mande. Los precios diferenciados
