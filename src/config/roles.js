@@ -44,6 +44,9 @@ export const ROLES_MODULO = {
   // sin rol nuevo (acordado con el usuario).
   PROVEEDORES: ["soporte", "gerencia", "despachador"],
   COMPRAS: ["soporte", "gerencia", "despachador"],
+  // Toma física: ajusta el stock y ve costos, igual que los informes de
+  // inventario. Ampliar aquí y en los RPC/RLS de tomas_fisicas.
+  TOMA_FISICA: ["soporte", "gerencia"],
   // Instructivo: todos los roles; el contenido se filtra por rol dentro de
   // la página (ver help/utils/helpContent.js).
   AYUDA: ["soporte", "gerencia", "vendedor", "despachador", "repartidor", "cajera"],
