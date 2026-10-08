@@ -11,6 +11,7 @@ import {
   Contact,
   FileBarChart,
   Settings,
+  ClipboardCheck,
 } from "lucide-react";
 import { ROLES_MODULO } from "../../../config/roles";
 
@@ -463,7 +464,7 @@ export const SECCIONES_AYUDA = [
     icono: FileBarChart,
     ruta: "/informes/ventas",
     roles: ROLES_MODULO.INFORMES,
-    resumen: "Ventas, cierre de mes, utilidad y productos vendidos.",
+    resumen: "Ventas, cierre de mes, utilidad, productos vendidos e inventario.",
     bloques: [
       {
         titulo: "Ventas y Cierre",
@@ -483,6 +484,49 @@ export const SECCIONES_AYUDA = [
         titulo: "Productos por Pedido",
         notas: [
           "Lista los productos vendidos filtrando por fechas, estado, vendedor o cliente. Se puede exportar a Excel o PDF.",
+        ],
+      },
+      {
+        titulo: "Inventario por Rango",
+        pasos: [
+          "Elige las fechas «Desde» y «Hasta» y presiona «Generar informe».",
+          "Verás por producto el inventario inicial, las compras, las ventas (pedidos entregados), la preventa (pedidos por entregar) y lo disponible al cierre.",
+          "Con el selector «Precio de costo / Precio de venta» cambias la valoración del inventario. Expórtalo a Excel.",
+        ],
+        notas: [
+          "El inicial se calcula hacia atrás desde el inventario actual. Los cambios manuales de stock (carga de Excel o edición del producto) no quedan registrados y pueden desajustarlo; las tomas físicas sí cuentan.",
+          "El costo es el último costo conocido de cada producto, no el de la fecha.",
+        ],
+      },
+      {
+        titulo: "Inventario de Bodega",
+        notas: [
+          "Muestra lo que hay físicamente hoy: mercancía disponible más la pendiente por entregar, con su valor a costo, a venta y la ganancia posible.",
+          "Los productos marcados con ⚠ no tienen costo registrado y no entran en la ganancia posible.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "toma-fisica",
+    titulo: "Toma Física",
+    icono: ClipboardCheck,
+    ruta: "/toma-fisica",
+    roles: ROLES_MODULO.TOMA_FISICA,
+    resumen: "Cuenta la bodega y ajusta el inventario con las diferencias.",
+    bloques: [
+      {
+        titulo: "Hacer una toma física",
+        pasos: [
+          "Presiona «Nueva toma física»: se guarda una foto de lo que dice el sistema (disponible más pendiente por entregar).",
+          "Cuenta la bodega. Digita la cantidad contada de cada producto, o descarga la «Hoja de conteo», llénala y cárgala con «Importar conteo» (columnas codigo y contado).",
+          "Presiona «Guardar conteo». Puedes salir y continuar después; solo hay una toma en curso a la vez.",
+          "Revisa los faltantes y sobrantes, valorados a costo, y presiona «Aplicar toma» para confirmar.",
+        ],
+        notas: [
+          "Cuenta todo lo que hay en la bodega, incluso lo reservado para pedidos pendientes.",
+          "Los productos sin contar no se modifican. Aplicar la toma no se puede deshacer, y queda registrado quién la hizo y cuándo.",
+          "Si el conteo de un producto es menor que lo ya comprometido en pedidos pendientes, el sistema no deja aplicar: revisa el conteo o los pedidos.",
         ],
       },
     ],
