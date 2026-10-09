@@ -11,6 +11,8 @@ const CONFIG_INICIAL = {
   facturacionAutomaticaActivo: false,
   impresionCartaActivo: false,
   imprimirLogoActivo: false,
+  precioManualActivo: false,
+  precioManualRoles: [],
 };
 
 /**

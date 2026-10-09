@@ -398,6 +398,11 @@ export const OrderDetailsPage = () => {
                       <Layers className="h-3 w-3" /> Precio mayorista
                     </span>
                   )}
+                  {item.tipo_precio === "manual" && (
+                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                      <Tag className="h-3 w-3" /> Precio manual
+                    </span>
+                  )}
                   {item.tipo_precio === "personalizado" && (
                     <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 max-w-full bg-cyan-50 text-cyan-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
                       <Tag className="h-3 w-3 shrink-0" />

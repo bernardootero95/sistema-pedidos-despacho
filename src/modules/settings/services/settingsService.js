@@ -8,6 +8,10 @@ const COLUMNAS_POR_CAMPO = {
   facturacionAutomaticaActivo: "facturacion_automatica_activo",
   impresionCartaActivo: "impresion_carta_activo",
   imprimirLogoActivo: "imprimir_logo_activo",
+  precioManualActivo: "precio_manual_activo",
+  // Lista de perfiles (TEXT[]): se guarda con actualizarInterruptor igual que
+  // los booleanos, solo cambia el tipo del valor.
+  precioManualRoles: "precio_manual_roles",
 };
 
 const COLUMNAS = Object.values(COLUMNAS_POR_CAMPO).join(", ");

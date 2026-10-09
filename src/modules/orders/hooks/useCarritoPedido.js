@@ -45,6 +45,16 @@ const resolverPrecioMayoristaPreview = (tiersMayoristas, cantidad) => {
  * de perder el forzado silenciosamente.
  */
 const resolverLineaParaCantidad = (item, cantidad) => {
+  // El precio manual lo escribió una persona con permiso: no depende de la
+  // cantidad y se mantiene tal cual hasta que se cambie el tipo de precio.
+  if (item.tipo_precio === "manual") {
+    return {
+      tipo_precio: "manual",
+      tipo_precio_id: null,
+      precio_unitario: item.precio_unitario,
+    };
+  }
+
   if (item.tipo_precio === "personalizado") {
     return {
       tipo_precio: "personalizado",
@@ -292,6 +302,27 @@ export function useCarritoPedido(
     });
   };
 
+  /**
+   * Fija a mano el precio unitario de una línea (tipo "manual"). Solo se
+   * ofrece a los perfiles autorizados en Pagos y Facturación; el servidor
+   * vuelve a validar el permiso y el valor al guardar.
+   */
+  const cambiarPrecioManual = (index, precio) => {
+    setCarrito((prev) => {
+      const item = prev[index];
+      const nuevo = [...prev];
+      nuevo[index] = {
+        ...item,
+        tipo_precio: "manual",
+        tipo_precio_id: null,
+        precio_unitario: precio,
+        subtotal_linea: item.cantidad * precio,
+        mayoristaForzado: false,
+      };
+      return nuevo;
+    });
+  };
+
   const eliminarDelCarrito = (index) => {
     setCarrito((prev) => prev.filter((_, i) => i !== index));
   };
@@ -310,6 +341,7 @@ export function useCarritoPedido(
     modificarCantidad,
     actualizarCantidadInput,
     cambiarTipoPrecio,
+    cambiarPrecioManual,
     eliminarDelCarrito,
     totalPedido,
   };

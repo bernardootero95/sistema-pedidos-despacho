@@ -166,6 +166,18 @@ export const SECCIONES_AYUDA = [
         ],
       },
       {
+        titulo: "Cambiar el precio al vender",
+        opcion: "precioManualActivo",
+        pasos: [
+          "Si tu perfil tiene el permiso, verás un lápiz junto al precio de cada línea del carrito.",
+          "Presiónalo, escribe el nuevo precio unitario y confirma con Enter o con el ✓ (Escape cancela).",
+        ],
+        notas: [
+          "La línea queda marcada como «Precio manual» y muestra el precio de lista. Para volver al precio del catálogo elige «Normal» en esa línea.",
+          "El precio manual no cambia al variar la cantidad, y se conserva al editar el pedido aunque tu perfil no tenga el permiso.",
+        ],
+      },
+      {
         titulo: "Buscar y filtrar",
         pasos: [
           "Busca por número de pedido o filtra por estado, vendedor y rango de fechas (de pedido o de entrega).",
@@ -374,6 +386,14 @@ export const SECCIONES_AYUDA = [
         ],
       },
       {
+        titulo: "Cambiar el precio al cotizar",
+        opcion: "precioManualActivo",
+        notas: [
+          "Si tu perfil tiene el permiso, usa el lápiz junto al precio de la línea para ofrecer un precio distinto al del catálogo (funciona igual que en Toma de Pedidos).",
+          "Al convertir la cotización en pedido, ese precio se conserva tal como lo cotizaste.",
+        ],
+      },
+      {
         titulo: "Imprimir o enviar al cliente",
         notas: [
           "En el detalle usa «Imprimir PDF»: se genera en tamaño carta con los datos de la empresa y la fecha de validez.",
@@ -386,7 +406,7 @@ export const SECCIONES_AYUDA = [
           "El sistema crea el pedido con los precios vigentes del catálogo y descuenta el stock.",
         ],
         notas: [
-          "Si algún precio cambió desde que cotizaste, el total del pedido puede diferir; el sistema te lo avisa.",
+          "Si algún precio del catálogo cambió desde que cotizaste, el total del pedido puede diferir; el sistema te lo avisa. Los precios que cambiaste a mano se mantienen.",
           "Una cotización vencida o anulada no se puede convertir: crea una nueva.",
         ],
       },
@@ -575,6 +595,7 @@ export const SECCIONES_AYUDA = [
         notas: [
           "Métodos de pago: pide cómo se paga (efectivo, transferencia, etc.) y permite dividir un pago. Apagado, todo se registra en efectivo.",
           "Abonos a pedidos y abonos a compras: permiten pagos parciales.",
+          "Cambiar el precio al vender: permite modificar a mano el precio de una línea al tomar o editar un pedido. Al activarla eliges qué perfiles pueden hacerlo (por defecto soporte y gerencia).",
           "Facturación electrónica automática: emite la factura ante la DIAN en cuanto un pedido queda entregado.",
         ],
       },

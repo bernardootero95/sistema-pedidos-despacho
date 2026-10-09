@@ -70,9 +70,31 @@ export const puedeEntregarSinDespacho = (pedido, user) =>
   ROLES_ENTREGAR_SIN_DESPACHO.includes(user.rol);
 
 /**
+ * Convierte lo escrito en el campo de precio manual a número: acepta coma
+ * decimal (como se escribe en Colombia). Devuelve NaN si no es un precio válido.
+ */
+export const parsePrecioManual = (texto) => {
+  const limpio = String(texto ?? "").trim().replace(",", ".");
+  return /^\d+(\.\d{1,2})?$/.test(limpio) ? Number(limpio) : Number.NaN;
+};
+
+// Mismo tope que valida crear/editar_pedido_transaccional en el servidor.
+const PRECIO_MANUAL_MAXIMO = 9999999999;
+
+/**
  * Diccionario de reglas de validación para la Cabecera y el Detalle del Pedido.
  */
 export const validators = {
+  // --- VALIDACIÓN DEL PRECIO MANUAL DE UNA LÍNEA ---
+  // 0 es válido (obsequio); el servidor aplica las mismas reglas.
+  precioManual: (value) => {
+    if (String(value ?? "").trim() === "") return "Escribe el precio.";
+    const precio = parsePrecioManual(value);
+    if (Number.isNaN(precio)) return "Digita un precio válido (hasta 2 decimales).";
+    if (precio > PRECIO_MANUAL_MAXIMO) return "El precio es demasiado grande.";
+    return "";
+  },
+
   // --- VALIDACIONES DE CABECERA ---
   cliente_id: (value) => {
     if (!value) return "Debes seleccionar un cliente.";

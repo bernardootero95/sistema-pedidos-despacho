@@ -34,7 +34,10 @@ export const OrderCreatePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const puedeMayorista = ROLES_MAYORISTA.includes(user?.rol);
-  const { metodosPagoActivo } = useSettings();
+  const { metodosPagoActivo, precioManualActivo, precioManualRoles } = useSettings();
+  // Cambiar el precio al vender es opcional por empresa y por perfil (Pagos y
+  // Facturación); el servidor valida lo mismo al guardar.
+  const puedeEditarPrecio = precioManualActivo && precioManualRoles.includes(user?.rol);
   // La cajera hace venta directa: el pedido nace entregado y se cobra en el
   // acto, así que con métodos de pago activos se pide cómo se paga antes de
   // crearlo (los demás roles crean pedidos pendientes que se cobran al entregar).
@@ -60,6 +63,7 @@ export const OrderCreatePage = () => {
     modificarCantidad,
     actualizarCantidadInput,
     cambiarTipoPrecio,
+    cambiarPrecioManual,
     eliminarDelCarrito,
     totalPedido,
   } = useCarritoPedido(productos);
@@ -314,10 +318,12 @@ export const OrderCreatePage = () => {
           onModificarCantidad={modificarCantidad}
           onActualizarCantidadInput={actualizarCantidadInput}
           onCambiarTipoPrecio={cambiarTipoPrecio}
+          onCambiarPrecioManual={cambiarPrecioManual}
           onEliminar={eliminarDelCarrito}
           formatCurrency={formatCurrency}
           error={errorStock || errors.carrito}
           puedeMayorista={puedeMayorista}
+          puedeEditarPrecio={puedeEditarPrecio}
           rolActual={user?.rol}
         />
 

@@ -1,7 +1,8 @@
 import { FeatureToggleCard } from "../components/FeatureToggleCard";
 import { PaymentMethodsSection } from "../components/PaymentMethodsSection";
+import { PrecioManualRolesSelector } from "../components/PrecioManualRolesSelector";
 import { useGuardarOpcion } from "../hooks/useGuardarOpcion";
-import { CreditCard, Wallet, ShoppingBag, Receipt } from "lucide-react";
+import { CreditCard, Wallet, ShoppingBag, Receipt, PencilLine } from "lucide-react";
 
 const OPCIONES = [
   {
@@ -32,6 +33,13 @@ const OPCIONES = [
     descripcion:
       "Emite la factura electrónica ante la DIAN (IngeFact) en cuanto un pedido queda entregado. Si un pedido facturado se anula, se devuelve o se revierte su entrega, la factura se anula con una nota crédito, esté o no encendida esta opción.",
   },
+  {
+    campo: "precioManualActivo",
+    icon: PencilLine,
+    titulo: "Cambiar el precio al vender",
+    descripcion:
+      "Permite cambiar a mano el precio unitario de un producto al tomar o editar un pedido. Tú eliges abajo qué perfiles pueden hacerlo. Un precio ya cambiado se conserva aunque apagues esta opción.",
+  },
 ];
 
 export const SettingsPage = () => {
@@ -60,6 +68,14 @@ export const SettingsPage = () => {
           />
         ))}
       </div>
+
+      {settings.precioManualActivo && (
+        <PrecioManualRolesSelector
+          roles={settings.precioManualRoles}
+          guardando={guardando === "precioManualRoles"}
+          onChange={(roles) => guardarOpcion("precioManualRoles", roles)}
+        />
+      )}
 
       {settings.metodosPagoActivo && <PaymentMethodsSection />}
     </div>

@@ -11,6 +11,10 @@ describe("etiquetaTipoPrecio", () => {
     expect(etiquetaTipoPrecio({ tipo_precio: "mayorista" })).toBe("Mayorista");
   });
 
+  it("identifica el precio manual", () => {
+    expect(etiquetaTipoPrecio({ tipo_precio: "manual" })).toBe("Precio manual");
+  });
+
   it("usa el nombre del tipo del catálogo para los personalizados", () => {
     expect(
       etiquetaTipoPrecio({

@@ -24,6 +24,7 @@ import { CarritoPedido } from "../../orders/components/CarritoPedido";
 import { ClientForm } from "../../clients/components/ClientForm";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { useAuth } from "../../../context/useAuth";
+import { useSettings } from "../../../context/useSettings";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("es-CO", {
@@ -39,6 +40,10 @@ const PUEDE_MAYORISTA = true;
 export const QuoteCreatePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  // Cambiar el precio al cotizar es opcional por empresa y por perfil (Pagos y
+  // Facturación); el servidor valida lo mismo al guardar.
+  const { precioManualActivo, precioManualRoles } = useSettings();
+  const puedeEditarPrecio = precioManualActivo && precioManualRoles.includes(user?.rol);
 
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
@@ -59,6 +64,7 @@ export const QuoteCreatePage = () => {
     modificarCantidad,
     actualizarCantidadInput,
     cambiarTipoPrecio,
+    cambiarPrecioManual,
     eliminarDelCarrito,
     totalPedido: total,
   } = useCarritoPedido(productos, [], { validarStock: false });
@@ -267,9 +273,11 @@ export const QuoteCreatePage = () => {
           onModificarCantidad={modificarCantidad}
           onActualizarCantidadInput={actualizarCantidadInput}
           onCambiarTipoPrecio={cambiarTipoPrecio}
+          onCambiarPrecioManual={cambiarPrecioManual}
           onEliminar={eliminarDelCarrito}
           formatCurrency={formatCurrency}
           puedeMayorista={PUEDE_MAYORISTA}
+          puedeEditarPrecio={puedeEditarPrecio}
           rolActual={user?.rol}
           titulo="Productos en la Cotización"
           mostrarStock={false}

@@ -17,6 +17,7 @@ import { CarritoPedido } from "../components/CarritoPedido";
 import { DevolucionConfirmModal } from "../components/DevolucionConfirmModal";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { useAuth } from "../../../context/useAuth";
+import { useSettings } from "../../../context/useSettings";
 
 // Mismos roles que resolver_precio_pedido valida en el servidor para el
 // precio al por mayor. Los personalizados traen sus propios
@@ -34,6 +35,11 @@ export const OrderEditPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const puedeMayorista = ROLES_MAYORISTA.includes(user?.rol);
+  // Cambiar el precio al vender es opcional por empresa y por perfil (Pagos y
+  // Facturación). Quien no tenga el permiso igual conserva un precio manual
+  // que ya trae el pedido: el servidor lo acepta si no cambia.
+  const { precioManualActivo, precioManualRoles } = useSettings();
+  const puedeEditarPrecio = precioManualActivo && precioManualRoles.includes(user?.rol);
 
   const [pedido, setPedido] = useState(null);
   const [productos, setProductos] = useState([]);
@@ -57,6 +63,7 @@ export const OrderEditPage = () => {
     modificarCantidad,
     actualizarCantidadInput,
     cambiarTipoPrecio,
+    cambiarPrecioManual,
     eliminarDelCarrito,
     totalPedido,
   } = useCarritoPedido(productos);
@@ -160,6 +167,8 @@ export const OrderEditPage = () => {
       cantidad: item.cantidad,
       tipo_precio: item.tipo_precio,
       tipo_precio_id: item.tipo_precio_id,
+      // Solo lo usa el servidor en líneas de precio manual.
+      precio_unitario: item.precio_unitario,
     }));
 
     try {
@@ -309,10 +318,12 @@ export const OrderEditPage = () => {
           onModificarCantidad={modificarCantidad}
           onActualizarCantidadInput={actualizarCantidadInput}
           onCambiarTipoPrecio={cambiarTipoPrecio}
+          onCambiarPrecioManual={cambiarPrecioManual}
           onEliminar={eliminarDelCarrito}
           formatCurrency={formatCurrency}
           error={errorStock || carritoError}
           puedeMayorista={puedeMayorista}
+          puedeEditarPrecio={puedeEditarPrecio}
           rolActual={user?.rol}
         />
 
