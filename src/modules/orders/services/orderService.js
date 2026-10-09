@@ -1,5 +1,6 @@
 // src/modules/orders/services/orderService.js
 import { supabase } from "../../../config/supabase";
+import { armarDetalleRpc } from "../utils/detalleRpc";
 
 /**
  * Aplica al query los filtros de estado, rango de fechas y vendedor
@@ -26,21 +27,6 @@ function aplicarFiltrosPedidos(query, filtros = {}) {
 // SQLSTATE con que editar_pedido_transaccional pide confirmar la devolución
 // del exceso abonado cuando el nuevo total baja de lo pagado.
 const CODIGO_REQUIERE_CONFIRMACION_DEVOLUCION = "PD001";
-
-/**
- * Línea del carrito -> línea que reciben crear/editar_pedido_transaccional.
- * El precio solo viaja en las líneas de tipo "manual" (el servidor lo acepta
- * únicamente de los perfiles autorizados); en las demás lo resuelve él.
- */
-const armarDetalleRpc = (item) => ({
-  producto_id: item.producto_id,
-  cantidad: Number(item.cantidad),
-  tipo_precio: item.tipo_precio || "normal",
-  tipo_precio_id: item.tipo_precio_id ?? null,
-  ...(item.tipo_precio === "manual" && {
-    precio_manual: Number(item.precio_unitario),
-  }),
-});
 
 export const orderService = {
   async getPedidosPaginados(page = 1, limit = 10, searchTerm = "", filtros = {}) {

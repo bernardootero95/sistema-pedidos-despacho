@@ -1,4 +1,5 @@
 import { supabase } from "../../../config/supabase";
+import { armarDetalleRpc } from "../../orders/utils/detalleRpc";
 
 const CAMPOS_CLIENTE =
   "razon_social, primer_nombre, primer_apellido, tipo_identificacion, numero_identificacion, digito_verificacion, direccion, telefono, correo";
@@ -82,19 +83,15 @@ export const quoteService = {
    * resuelve los precios (normal/mayorista/personalizado) y valida todo.
    *
    * @param {{cliente_id: string, fecha_vencimiento: string, notas?: string}} cabeceraData
-   * @param {Array<{producto_id: string, cantidad: number, tipo_precio?: string, tipo_precio_id?: string|null}>} detalles
+   * @param {Array<{producto_id: string, cantidad: number, tipo_precio?: string, tipo_precio_id?: string|null, precio_unitario?: number}>} detalles
+   *   `precio_unitario` solo se usa en líneas de tipo "manual".
    */
   async crearCotizacion(cabeceraData, detalles) {
     const { data, error } = await supabase.rpc("crear_cotizacion_transaccional", {
       p_cliente_id: cabeceraData.cliente_id,
       p_fecha_vencimiento: cabeceraData.fecha_vencimiento,
       p_notas: cabeceraData.notas || null,
-      p_detalles: detalles.map((item) => ({
-        producto_id: item.producto_id,
-        cantidad: Number(item.cantidad),
-        tipo_precio: item.tipo_precio || "normal",
-        tipo_precio_id: item.tipo_precio_id ?? null,
-      })),
+      p_detalles: detalles.map(armarDetalleRpc),
     });
 
     if (error) {
