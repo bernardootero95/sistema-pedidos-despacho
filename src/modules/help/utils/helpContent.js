@@ -166,6 +166,18 @@ export const SECCIONES_AYUDA = [
         ],
       },
       {
+        titulo: "Cambiar el precio al vender",
+        opcion: "precioManualActivo",
+        pasos: [
+          "Si tu perfil tiene el permiso, verás un lápiz junto al precio de cada línea del carrito.",
+          "Presiónalo, escribe el nuevo precio unitario y confirma con Enter o con el ✓ (Escape cancela).",
+        ],
+        notas: [
+          "La línea queda marcada como «Precio manual» y muestra el precio de lista. Para volver al precio del catálogo elige «Normal» en esa línea.",
+          "El precio manual no cambia al variar la cantidad, y se conserva al editar el pedido aunque tu perfil no tenga el permiso.",
+        ],
+      },
+      {
         titulo: "Buscar y filtrar",
         pasos: [
           "Busca por número de pedido o filtra por estado, vendedor y rango de fechas (de pedido o de entrega).",
@@ -575,6 +587,7 @@ export const SECCIONES_AYUDA = [
         notas: [
           "Métodos de pago: pide cómo se paga (efectivo, transferencia, etc.) y permite dividir un pago. Apagado, todo se registra en efectivo.",
           "Abonos a pedidos y abonos a compras: permiten pagos parciales.",
+          "Cambiar el precio al vender: permite modificar a mano el precio de una línea al tomar o editar un pedido. Al activarla eliges qué perfiles pueden hacerlo (por defecto soporte y gerencia).",
           "Facturación electrónica automática: emite la factura ante la DIAN en cuanto un pedido queda entregado.",
         ],
       },
