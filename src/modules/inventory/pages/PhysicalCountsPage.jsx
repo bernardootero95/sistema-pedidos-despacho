@@ -40,7 +40,7 @@ export const PhysicalCountsPage = () => {
     setCreando(true);
     try {
       const { id } = await physicalCountService.crearToma();
-      navigate(`/toma-fisica/${id}`);
+      navigate(`/bodega/toma-fisica/${id}`);
     } catch (err) {
       showError(err.message);
       setCreando(false);
@@ -61,15 +61,15 @@ export const PhysicalCountsPage = () => {
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <Link
-            to="/informes/bodega"
+            to="/bodega/inventario-actual"
             className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-xl sm:rounded-lg transition-colors"
           >
             <Warehouse className="w-4 h-4 shrink-0" />
-            <span>Ver bodega</span>
+            <span>Ver inventario actual</span>
           </Link>
           {enCurso ? (
             <button
-              onClick={() => navigate(`/toma-fisica/${enCurso.id}`)}
+              onClick={() => navigate(`/bodega/toma-fisica/${enCurso.id}`)}
               className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-primary hover:bg-primary-hover active:scale-95 text-white text-sm font-bold rounded-xl sm:rounded-lg shadow-sm transition-all"
             >
               <ClipboardCheck className="w-4 h-4 shrink-0" />
@@ -143,7 +143,7 @@ export const PhysicalCountsPage = () => {
                     </td>
                     <td className="py-4 px-6 text-right">
                       <button
-                        onClick={() => navigate(`/toma-fisica/${toma.id}`)}
+                        onClick={() => navigate(`/bodega/toma-fisica/${toma.id}`)}
                         title="Ver toma"
                         className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                       >
