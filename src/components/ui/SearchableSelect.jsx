@@ -17,6 +17,15 @@ const normalizar = (texto) =>
  *
  * Componente de presentación puro (SRP): recibe opciones ya cargadas y
  * delega la selección al padre vía onChange, igual que un <select> nativo.
+ *
+ * Con `creatable` el campo además deja AGREGAR un valor nuevo (para
+ * catálogos abiertos como tipo/departamento/línea/categoría de un producto):
+ * si lo escrito no coincide con ninguna opción —sin distinguir mayúsculas,
+ * tildes ni espacios— aparece "Crear «texto»" al final de la lista; si
+ * coincide, se usa la opción existente tal cual está escrita, para no
+ * generar duplicados como "Bebidas" y "bebidas". Dejar el campo vacío lo
+ * limpia, y al salir con un texto sin elegir opción se conserva como valor
+ * nuevo (en vez de perderlo). `maxLength` limita lo que se puede escribir.
  */
 export const SearchableSelect = ({
   options,
@@ -27,6 +36,9 @@ export const SearchableSelect = ({
   error = false,
   disabled = false,
   noOptionsMessage = "Sin resultados.",
+  creatable = false,
+  crearMensaje = "Crear",
+  maxLength,
 }) => {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -34,10 +46,13 @@ export const SearchableSelect = ({
   const containerRef = useRef(null);
   const inputRef = useRef(null);
 
-  const selectedOption = useMemo(
-    () => options.find((o) => o.value === value) || null,
-    [options, value],
-  );
+  // En modo creatable el valor actual puede no estar en la lista (uno nuevo
+  // o heredado): se muestra tal cual en vez de dejar el campo en blanco.
+  const selectedOption = useMemo(() => {
+    const encontrada = options.find((o) => o.value === value);
+    if (encontrada) return encontrada;
+    return creatable && value ? { value, label: value } : null;
+  }, [options, value, creatable]);
 
   // Mientras no se está buscando activamente, el texto mostrado se deriva
   // directamente de la opción seleccionada (controlada por el padre) en
@@ -48,10 +63,29 @@ export const SearchableSelect = ({
 
   const opcionesFiltradas = useMemo(() => {
     if (!isOpen) return options;
-    const q = normalizar(query);
+    const q = normalizar(query.trim());
     if (!q || query === selectedOption?.label) return options;
-    return options.filter((o) => normalizar(o.label).includes(q));
-  }, [options, query, selectedOption, isOpen]);
+
+    const coincidentes = options.filter((o) => normalizar(o.label).includes(q));
+    const existeIgual = options.some((o) => normalizar(o.label).trim() === q);
+    if (creatable && !existeIgual) {
+      return [
+        ...coincidentes,
+        { value: query.trim(), label: `${crearMensaje} "${query.trim()}"`, esNueva: true },
+      ];
+    }
+    return coincidentes;
+  }, [options, query, selectedOption, isOpen, creatable, crearMensaje]);
+
+  // Valor que se conserva al salir del campo sin elegir una opción (solo
+  // creatable): vacío limpia; una coincidencia exacta usa la opción ya
+  // existente; cualquier otro texto queda como valor nuevo.
+  const resolverTextoAlSalir = () => {
+    const texto = query.trim();
+    if (!texto) return "";
+    const existente = options.find((o) => normalizar(o.label).trim() === normalizar(texto));
+    return existente ? existente.value : texto;
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -77,7 +111,12 @@ export const SearchableSelect = ({
   const handleBlur = () => {
     // El mousedown de la opción (más abajo) ya resuelve la selección antes
     // de que este blur corra, así que si llegamos aquí sin seleccionar,
-    // se revierte a lo último válido en vez de dejar texto suelto.
+    // se revierte a lo último válido en vez de dejar texto suelto — salvo en
+    // modo creatable, donde lo escrito se conserva (ver resolverTextoAlSalir).
+    if (creatable && isOpen) {
+      const resuelto = resolverTextoAlSalir();
+      if (resuelto !== (value || "")) onChange(resuelto);
+    }
     setIsOpen(false);
     onBlur?.();
   };
@@ -116,6 +155,7 @@ export const SearchableSelect = ({
         type="text"
         value={displayValue}
         disabled={disabled}
+        maxLength={maxLength}
         placeholder={placeholder}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -141,7 +181,7 @@ export const SearchableSelect = ({
           ) : (
             opcionesFiltradas.map((option, index) => (
               <li
-                key={option.value}
+                key={option.esNueva ? `__nueva__${option.value}` : option.value}
                 // onMouseDown (no onClick) para resolver antes del onBlur del input
                 onMouseDown={(e) => {
                   e.preventDefault();
