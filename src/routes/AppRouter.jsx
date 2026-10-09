@@ -1,176 +1,177 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { LoginPage } from "../modules/auth/pages/LoginPage";
 import { MainLayout } from "../components/layout/MainLayout";
 import { RoleGuard } from "./RoleGuard";
 import { ROLES_MODULO } from "../config/roles";
+import { lazyPagina } from "../config/lazyPagina";
 import { Loader2 } from "lucide-react";
 
 // Carga perezosa (Lazy Loading) de las páginas
-const DashboardPage = lazy(() =>
+const DashboardPage = lazyPagina(() =>
   import("../modules/dashboard/pages/DashboardPage").then((m) => ({
     default: m.DashboardPage,
   })),
 );
-const UsersPage = lazy(() =>
+const UsersPage = lazyPagina(() =>
   import("../modules/users/pages/UsersPage").then((m) => ({
     default: m.UsersPage,
   })),
 );
-const ClientsPage = lazy(() =>
+const ClientsPage = lazyPagina(() =>
   import("../modules/clients/pages/ClientsPage").then((m) => ({
     default: m.ClientsPage,
   })),
 );
-const ProductsPage = lazy(() =>
+const ProductsPage = lazyPagina(() =>
   import("../modules/products/pages/ProductsPage").then((m) => ({
     default: m.ProductsPage,
   })),
 );
-const VehiclesPage = lazy(() =>
+const VehiclesPage = lazyPagina(() =>
   import("../modules/vehicles/pages/VehiclesPage").then((m) => ({
     default: m.VehiclesPage,
   })),
 );
 // Importación del nuevo formulario de vehículos
-const VehicleFormPage = lazy(() =>
+const VehicleFormPage = lazyPagina(() =>
   import("../modules/vehicles/pages/VehicleFormPage").then((m) => ({
     default: m.VehicleFormPage,
   })),
 );
-const OrdersPage = lazy(() =>
+const OrdersPage = lazyPagina(() =>
   import("../modules/orders/pages/OrdersPage").then((m) => ({
     default: m.OrdersPage,
   })),
 );
-const OrderCreatePage = lazy(() =>
+const OrderCreatePage = lazyPagina(() =>
   import("../modules/orders/pages/OrderCreatePage").then((m) => ({
     default: m.OrderCreatePage,
   })),
 );
-const OrderDetailsPage = lazy(() =>
+const OrderDetailsPage = lazyPagina(() =>
   import("../modules/orders/pages/OrderDetailsPage").then((m) => ({
     default: m.OrderDetailsPage,
   })),
 );
-const OrderEditPage = lazy(() =>
+const OrderEditPage = lazyPagina(() =>
   import("../modules/orders/pages/OrderEditPage").then((m) => ({
     default: m.OrderEditPage,
   })),
 );
-const QuotesPage = lazy(() =>
+const QuotesPage = lazyPagina(() =>
   import("../modules/quotes/pages/QuotesPage").then((m) => ({
     default: m.QuotesPage,
   })),
 );
-const QuoteCreatePage = lazy(() =>
+const QuoteCreatePage = lazyPagina(() =>
   import("../modules/quotes/pages/QuoteCreatePage").then((m) => ({
     default: m.QuoteCreatePage,
   })),
 );
-const QuoteDetailsPage = lazy(() =>
+const QuoteDetailsPage = lazyPagina(() =>
   import("../modules/quotes/pages/QuoteDetailsPage").then((m) => ({
     default: m.QuoteDetailsPage,
   })),
 );
-const DispatchesPage = lazy(() =>
+const DispatchesPage = lazyPagina(() =>
   import("../modules/dispatches/pages/DispatchesPage").then((m) => ({
     default: m.DispatchesPage,
   })),
 );
-const DispatchCreatePage = lazy(() =>
+const DispatchCreatePage = lazyPagina(() =>
   import("../modules/dispatches/pages/DispatchCreatePage").then((m) => ({
     default: m.DispatchCreatePage,
   })),
 );
-const DispatchDetailsPage = lazy(() =>
+const DispatchDetailsPage = lazyPagina(() =>
   import("../modules/dispatches/pages/DispatchDetailsPage").then((m) => ({
     default: m.DispatchDetailsPage,
   })),
 );
-const RepartidorRoutePage = lazy(() =>
+const RepartidorRoutePage = lazyPagina(() =>
   import("../modules/dispatches/pages/RepartidorRoutePage").then((m) => ({
     default: m.RepartidorRoutePage,
   })),
 );
-const ResetPasswordPage = lazy(() =>
+const ResetPasswordPage = lazyPagina(() =>
   import("../modules/auth/pages/ResetPasswordPage").then((m) => ({
     default: m.ResetPasswordPage,
   })),
 );
-const SalesReportPage = lazy(() =>
+const SalesReportPage = lazyPagina(() =>
   import("../modules/reports/pages/SalesReportPage").then((m) => ({
     default: m.SalesReportPage,
   })),
 );
-const ProfitReportPage = lazy(() =>
+const ProfitReportPage = lazyPagina(() =>
   import("../modules/reports/pages/ProfitReportPage").then((m) => ({
     default: m.ProfitReportPage,
   })),
 );
-const ProductsReportPage = lazy(() =>
+const ProductsReportPage = lazyPagina(() =>
   import("../modules/reports/pages/ProductsReportPage").then((m) => ({
     default: m.ProductsReportPage,
   })),
 );
-const InventoryReportPage = lazy(() =>
+const InventoryReportPage = lazyPagina(() =>
   import("../modules/reports/pages/InventoryReportPage").then((m) => ({
     default: m.InventoryReportPage,
   })),
 );
-const WarehouseInventoryPage = lazy(() =>
+const WarehouseInventoryPage = lazyPagina(() =>
   import("../modules/reports/pages/WarehouseInventoryPage").then((m) => ({
     default: m.WarehouseInventoryPage,
   })),
 );
-const PhysicalCountsPage = lazy(() =>
+const PhysicalCountsPage = lazyPagina(() =>
   import("../modules/inventory/pages/PhysicalCountsPage").then((m) => ({
     default: m.PhysicalCountsPage,
   })),
 );
-const PhysicalCountPage = lazy(() =>
+const PhysicalCountPage = lazyPagina(() =>
   import("../modules/inventory/pages/PhysicalCountPage").then((m) => ({
     default: m.PhysicalCountPage,
   })),
 );
-const PriceTypesPage = lazy(() =>
+const PriceTypesPage = lazyPagina(() =>
   import("../modules/priceTypes/pages/PriceTypesPage").then((m) => ({
     default: m.PriceTypesPage,
   })),
 );
-const SettingsPage = lazy(() =>
+const SettingsPage = lazyPagina(() =>
   import("../modules/settings/pages/SettingsPage").then((m) => ({
     default: m.SettingsPage,
   })),
 );
-const CompanyPage = lazy(() =>
+const CompanyPage = lazyPagina(() =>
   import("../modules/settings/pages/CompanyPage").then((m) => ({
     default: m.CompanyPage,
   })),
 );
-const SuppliersPage = lazy(() =>
+const SuppliersPage = lazyPagina(() =>
   import("../modules/suppliers/pages/SuppliersPage").then((m) => ({
     default: m.SuppliersPage,
   })),
 );
-const PurchasesPage = lazy(() =>
+const PurchasesPage = lazyPagina(() =>
   import("../modules/purchases/pages/PurchasesPage").then((m) => ({
     default: m.PurchasesPage,
   })),
 );
-const PurchaseCreatePage = lazy(() =>
+const PurchaseCreatePage = lazyPagina(() =>
   import("../modules/purchases/pages/PurchaseCreatePage").then((m) => ({
     default: m.PurchaseCreatePage,
   })),
 );
-const PurchaseDetailsPage = lazy(() =>
+const PurchaseDetailsPage = lazyPagina(() =>
   import("../modules/purchases/pages/PurchaseDetailsPage").then((m) => ({
     default: m.PurchaseDetailsPage,
   })),
 );
 
-const HelpPage = lazy(() =>
+const HelpPage = lazyPagina(() =>
   import("../modules/help/pages/HelpPage").then((m) => ({
     default: m.HelpPage,
   })),

@@ -34,7 +34,10 @@ export const recargarPorChunkDesactualizado = ({
 export const initChunkReload = () => {
   window.addEventListener("vite:preloadError", (event) => {
     // preventDefault solo si recargamos; si no, el error se propaga al
-    // ErrorBoundary y a Sentry como hasta ahora.
+    // ErrorBoundary y a Sentry como hasta ahora. Con preventDefault Vite
+    // resuelve el import con `undefined`: las páginas del router lo absorben
+    // con lazyPagina (lazyPagina.js) para que React no falle antes de que la
+    // recarga surta efecto.
     if (recargarPorChunkDesactualizado()) event.preventDefault();
   });
 };
