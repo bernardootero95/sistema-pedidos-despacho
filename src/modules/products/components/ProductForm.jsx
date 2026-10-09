@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { productService } from "../services/productService";
 import { usePreciosPersonalizados } from "../hooks/usePreciosPersonalizados";
+import { useClasificacionesProducto } from "../hooks/useClasificacionesProducto";
 import { PreciosDiferenciadosSection } from "./PreciosDiferenciadosSection";
+import { SearchableSelect } from "../../../components/ui/SearchableSelect";
 import {
+  LONGITUD_MAXIMA_CLASIFICACION,
   validateProductField,
   validateProductForm,
   validateTierMayorista,
@@ -17,6 +20,15 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
+
+// Campos de la jerarquía del producto: cada uno deja escoger entre los valores
+// ya usados (obtener_clasificaciones_productos) o agregar uno nuevo.
+const CAMPOS_CLASIFICACION = [
+  { name: "tipo", label: "Tipo", fuente: "tipos" },
+  { name: "departamento", label: "Departamento", fuente: "departamentos" },
+  { name: "linea", label: "Línea", fuente: "lineas" },
+  { name: "categoria", label: "Categoría", fuente: "categorias" },
+];
 
 export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
   const isEditing = !!productToEdit;
@@ -54,6 +66,18 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
+
+  const { clasificaciones } = useClasificacionesProducto();
+  const opcionesClasificacion = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(clasificaciones).map(([fuente, valores]) => [
+          fuente,
+          valores.map((valor) => ({ value: valor, label: valor })),
+        ]),
+      ),
+    [clasificaciones],
+  );
 
   // Precarga el siguiente código consecutivo solo al crear: es una
   // sugerencia editable, no reemplaza la unicidad que ya garantiza
@@ -123,6 +147,29 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
         [name]: validateProductField(name, value, newFormState),
       }));
     }
+  };
+
+  // Los selectores de clasificación no son inputs nativos con `name`: reciben
+  // el valor directo y se validan igual que el resto (al cambiar si ya se tocó
+  // el campo, y al salir).
+  const handleClasificacionChange = (name, value) => {
+    const newFormState = { ...formData, [name]: value };
+    setFormData(newFormState);
+
+    if (touched[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: validateProductField(name, value, newFormState),
+      }));
+    }
+  };
+
+  const handleClasificacionBlur = (name) => {
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateProductField(name, formData[name], formData),
+    }));
   };
 
   const handleBlur = (e) => {
@@ -326,54 +373,28 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
                 Jerarquía (Datos Externos)
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Tipo
-                  </label>
-                  <input
-                    type="text"
-                    name="tipo"
-                    value={formData.tipo}
-                    onChange={handleChange}
-                    className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Departamento
-                  </label>
-                  <input
-                    type="text"
-                    name="departamento"
-                    value={formData.departamento}
-                    onChange={handleChange}
-                    className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Línea
-                  </label>
-                  <input
-                    type="text"
-                    name="linea"
-                    value={formData.linea}
-                    onChange={handleChange}
-                    className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Categoría
-                  </label>
-                  <input
-                    type="text"
-                    name="categoria"
-                    value={formData.categoria}
-                    onChange={handleChange}
-                    className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
+                {CAMPOS_CLASIFICACION.map(({ name, label, fuente }) => (
+                  <div key={name}>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      {label}
+                    </label>
+                    <SearchableSelect
+                      options={opcionesClasificacion[fuente]}
+                      value={formData[name]}
+                      onChange={(valor) => handleClasificacionChange(name, valor)}
+                      onBlur={() => handleClasificacionBlur(name)}
+                      placeholder={`Elige o escribe ${label.toLowerCase()}`}
+                      error={Boolean(errors[name])}
+                      creatable
+                      crearMensaje="Crear"
+                      maxLength={LONGITUD_MAXIMA_CLASIFICACION[name]}
+                      noOptionsMessage={`Aún no hay ${label.toLowerCase()}: escribe para crear uno.`}
+                    />
+                    {errors[name] && (
+                      <p className="text-xs text-red-600 mt-1">{errors[name]}</p>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 

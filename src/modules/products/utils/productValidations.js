@@ -2,8 +2,27 @@
  * Diccionario de reglas de validación para el módulo de Productos.
  * Adaptado para sincronización externa (el tipo y categoría no bloquean la creación).
  */
+// Largo máximo de cada campo de clasificación: el de su columna en
+// `productos` (tipo VARCHAR(50), el resto VARCHAR(100)). Opcionales.
+export const LONGITUD_MAXIMA_CLASIFICACION = {
+  tipo: 50,
+  departamento: 100,
+  linea: 100,
+  categoria: 100,
+};
+
+const validarClasificacion = (campo) => (value) => {
+  const maximo = LONGITUD_MAXIMA_CLASIFICACION[campo];
+  return (value ?? "").trim().length > maximo ? `Máximo ${maximo} caracteres.` : "";
+};
+
 const validators = {
   codigo: (value) => (!value.trim() ? "El código es obligatorio." : ""),
+
+  tipo: validarClasificacion("tipo"),
+  departamento: validarClasificacion("departamento"),
+  linea: validarClasificacion("linea"),
+  categoria: validarClasificacion("categoria"),
   nombre: (value) => (!value.trim() ? "El nombre es obligatorio." : ""),
 
   // La categoría pasa a ser opcional para no bloquear la sincronización

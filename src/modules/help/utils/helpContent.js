@@ -337,6 +337,10 @@ export const SECCIONES_AYUDA = [
           "Presiona «Nuevo Producto», completa código, nombre, categoría, condición fiscal (gravado, exento o excluido) y precio.",
           "Presiona «Guardar Ficha».",
         ],
+        notas: [
+          "Tipo, departamento, línea y categoría se eligen de la lista de los ya usados en otros productos. Si no está el que necesitas, escríbelo y elige «Crear» para agregarlo: queda disponible para los siguientes productos.",
+          "Si escribes uno que ya existe (aunque cambie mayúsculas o tildes), el sistema usa el existente para no duplicarlo. Los cuatro campos son opcionales.",
+        ],
       },
       {
         titulo: "Editar un producto",
