@@ -518,11 +518,12 @@ export const SECCIONES_AYUDA = [
     icono: ClipboardCheck,
     ruta: "/bodega/inventario",
     roles: ROLES_MODULO.TOMA_FISICA,
-    resumen: "Informes de inventario y toma física para ajustar el stock.",
+    resumen: "En el menú Bodega: Inv. por Rango, Inv. Actual y Toma Física (informes de inventario y ajuste del stock).",
     bloques: [
       {
         titulo: "Inventario por Rango",
         pasos: [
+          "Entra a Bodega → Inv. por Rango.",
           "Elige las fechas «Desde» y «Hasta» y presiona «Generar informe».",
           "Verás por producto el inventario inicial, las compras, las ventas (pedidos entregados), la preventa (pedidos por entregar) y lo disponible al cierre.",
           "Con el selector «Precio de costo / Precio de venta» cambias la valoración del inventario. Expórtalo a Excel.",
@@ -535,15 +536,16 @@ export const SECCIONES_AYUDA = [
       {
         titulo: "Inventario Actual",
         notas: [
+          "Está en Bodega → Inv. Actual.",
           "Muestra lo que hay físicamente hoy: mercancía disponible más la pendiente por entregar, con su valor a costo, a venta y la ganancia posible.",
           "Los productos marcados con ⚠ no tienen costo registrado y no entran en la ganancia posible.",
-          "Si hay productos sin costo, el aviso amarillo (en este informe y en Inventario por Rango) tiene el botón «Asignar costos»: digita el costo de los que quieras y guárdalos juntos. Los que dejes vacíos no cambian, y la próxima compra actualiza el costo.",
+          "Si hay productos sin costo, el aviso amarillo (en este informe y en Inv. por Rango) tiene el botón «Asignar costos»: digita el costo de los que quieras y guárdalos juntos. Los que dejes vacíos no cambian, y la próxima compra actualiza el costo.",
         ],
       },
       {
         titulo: "Hacer una toma física",
         pasos: [
-          "Presiona «Nueva toma física»: se guarda una foto de lo que dice el sistema (disponible más pendiente por entregar).",
+          "Entra a Bodega → Toma Física y presiona «Nueva toma física»: se guarda una foto de lo que dice el sistema (disponible más pendiente por entregar).",
           "Cuenta la bodega. Digita la cantidad contada de cada producto, o descarga la «Hoja de conteo», llénala y cárgala con «Importar conteo» (columnas codigo y contado).",
           "Presiona «Guardar conteo». Puedes salir y continuar después; solo hay una toma en curso a la vez.",
           "Revisa los faltantes y sobrantes, valorados a costo, y presiona «Aplicar toma» para confirmar.",
