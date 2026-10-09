@@ -19,6 +19,9 @@ import {
   Building2,
   BookOpen,
   FileText,
+  Boxes,
+  Warehouse,
+  ClipboardCheck,
 } from "lucide-react";
 import { ROLES_MODULO } from "../../config/roles";
 
@@ -112,6 +115,24 @@ export const MENU_ITEMS = [
         label: "Productos por Pedido",
         icon: PackageSearch,
         roles: ROLES_MODULO.INFORMES,
+      },
+      {
+        path: "/informes/inventario",
+        label: "Inventario por Rango",
+        icon: Boxes,
+        roles: ROLES_MODULO.INFORMES,
+      },
+      {
+        path: "/informes/bodega",
+        label: "Inventario de Bodega",
+        icon: Warehouse,
+        roles: ROLES_MODULO.INFORMES,
+      },
+      {
+        path: "/toma-fisica",
+        label: "Toma Física",
+        icon: ClipboardCheck,
+        roles: ROLES_MODULO.TOMA_FISICA,
       },
     ],
   },

@@ -114,6 +114,26 @@ const ProductsReportPage = lazy(() =>
     default: m.ProductsReportPage,
   })),
 );
+const InventoryReportPage = lazy(() =>
+  import("../modules/reports/pages/InventoryReportPage").then((m) => ({
+    default: m.InventoryReportPage,
+  })),
+);
+const WarehouseInventoryPage = lazy(() =>
+  import("../modules/reports/pages/WarehouseInventoryPage").then((m) => ({
+    default: m.WarehouseInventoryPage,
+  })),
+);
+const PhysicalCountsPage = lazy(() =>
+  import("../modules/inventory/pages/PhysicalCountsPage").then((m) => ({
+    default: m.PhysicalCountsPage,
+  })),
+);
+const PhysicalCountPage = lazy(() =>
+  import("../modules/inventory/pages/PhysicalCountPage").then((m) => ({
+    default: m.PhysicalCountPage,
+  })),
+);
 const PriceTypesPage = lazy(() =>
   import("../modules/priceTypes/pages/PriceTypesPage").then((m) => ({
     default: m.PriceTypesPage,
@@ -266,6 +286,12 @@ export const AppRouter = () => {
               <Route path="/informes/ventas" element={<SalesReportPage />} />
               <Route path="/informes/utilidad" element={<ProfitReportPage />} />
               <Route path="/informes/productos" element={<ProductsReportPage />} />
+              <Route path="/informes/inventario" element={<InventoryReportPage />} />
+              <Route path="/informes/bodega" element={<WarehouseInventoryPage />} />
+            </Route>
+            <Route element={<RoleGuard roles={ROLES_MODULO.TOMA_FISICA} />}>
+              <Route path="/toma-fisica" element={<PhysicalCountsPage />} />
+              <Route path="/toma-fisica/:id" element={<PhysicalCountPage />} />
             </Route>
 
             {/* Instructivo */}
