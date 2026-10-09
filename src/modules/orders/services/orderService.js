@@ -27,6 +27,21 @@ function aplicarFiltrosPedidos(query, filtros = {}) {
 // del exceso abonado cuando el nuevo total baja de lo pagado.
 const CODIGO_REQUIERE_CONFIRMACION_DEVOLUCION = "PD001";
 
+/**
+ * Línea del carrito -> línea que reciben crear/editar_pedido_transaccional.
+ * El precio solo viaja en las líneas de tipo "manual" (el servidor lo acepta
+ * únicamente de los perfiles autorizados); en las demás lo resuelve él.
+ */
+const armarDetalleRpc = (item) => ({
+  producto_id: item.producto_id,
+  cantidad: Number(item.cantidad),
+  tipo_precio: item.tipo_precio || "normal",
+  tipo_precio_id: item.tipo_precio_id ?? null,
+  ...(item.tipo_precio === "manual" && {
+    precio_manual: Number(item.precio_unitario),
+  }),
+});
+
 export const orderService = {
   async getPedidosPaginados(page = 1, limit = 10, searchTerm = "", filtros = {}) {
     const from = (page - 1) * limit;
@@ -70,12 +85,7 @@ export const orderService = {
    *   la venta directa (cajera) nace entregada y cobra el total al crearse.
    */
   async crearPedido(cabeceraData, detallesData, pagos = null) {
-    const detallesParaRpc = detallesData.map((item) => ({
-      producto_id: item.producto_id,
-      cantidad: Number(item.cantidad),
-      tipo_precio: item.tipo_precio || "normal",
-      tipo_precio_id: item.tipo_precio_id ?? null,
-    }));
+    const detallesParaRpc = detallesData.map(armarDetalleRpc);
 
     const { data, error } = await supabase.rpc("crear_pedido_transaccional", {
       p_cliente_id: cabeceraData.cliente_id,
@@ -112,12 +122,7 @@ export const orderService = {
     pedidoId,
     { notas, detalles, confirmarDevolucion = false },
   ) {
-    const detallesParaRpc = detalles.map((item) => ({
-      producto_id: item.producto_id,
-      cantidad: Number(item.cantidad),
-      tipo_precio: item.tipo_precio || "normal",
-      tipo_precio_id: item.tipo_precio_id ?? null,
-    }));
+    const detallesParaRpc = detalles.map(armarDetalleRpc);
 
     const { data, error } = await supabase.rpc("editar_pedido_transaccional", {
       p_pedido_id: pedidoId,

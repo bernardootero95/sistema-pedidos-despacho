@@ -366,3 +366,56 @@ describe("useCarritoPedido: precios personalizados (manuales, no dependen de la 
     expect(result.current.carrito[0].precio_unitario).toBe(1000);
   });
 });
+
+describe("useCarritoPedido: precio manual (lo escribe quien tiene permiso)", () => {
+  const productosMayorista = [
+    {
+      id: "p1",
+      nombre: "Producto 1",
+      codigo: "P001",
+      precio_venta: 1000,
+      iva: 19,
+      inc: 0,
+      disponible: 20,
+      tiersMayoristas: [{ cantidad_minima: 10, precio: 800 }],
+    },
+  ];
+
+  it("fija el precio de la línea y recalcula el subtotal", () => {
+    const { result } = renderHook(() => useCarritoPedido(productosMayorista));
+    act(() => result.current.agregarAlCarrito("p1"));
+    act(() => result.current.modificarCantidad(0, 1)); // 1.25 -> ya hay cantidad > 1
+
+    act(() => result.current.cambiarPrecioManual(0, 900));
+
+    const linea = result.current.carrito[0];
+    expect(linea.tipo_precio).toBe("manual");
+    expect(linea.tipo_precio_id).toBeNull();
+    expect(linea.precio_unitario).toBe(900);
+    expect(linea.subtotal_linea).toBe(linea.cantidad * 900);
+  });
+
+  it("mantiene el precio manual al cambiar la cantidad, incluso al pasar el umbral mayorista", () => {
+    const { result } = renderHook(() => useCarritoPedido(productosMayorista));
+    act(() => result.current.agregarAlCarrito("p1"));
+    act(() => result.current.cambiarPrecioManual(0, 900));
+
+    act(() => result.current.actualizarCantidadInput(0, "12"));
+
+    const linea = result.current.carrito[0];
+    expect(linea.tipo_precio).toBe("manual");
+    expect(linea.precio_unitario).toBe(900);
+    expect(linea.subtotal_linea).toBe(12 * 900);
+  });
+
+  it("permite volver al precio normal con cambiarTipoPrecio", () => {
+    const { result } = renderHook(() => useCarritoPedido(productosMayorista));
+    act(() => result.current.agregarAlCarrito("p1"));
+    act(() => result.current.cambiarPrecioManual(0, 900));
+
+    act(() => result.current.cambiarTipoPrecio(0, "normal"));
+
+    expect(result.current.carrito[0].tipo_precio).toBe("normal");
+    expect(result.current.carrito[0].precio_unitario).toBe(1000);
+  });
+});

@@ -4,6 +4,7 @@ import {
   redondearACantidadValida,
   puedeAnularPedido,
   puedeEntregarSinDespacho,
+  parsePrecioManual,
   validators,
 } from "./orderValidations";
 
@@ -122,4 +123,26 @@ describe("puedeEntregarSinDespacho", () => {
       expect(puedeEntregarSinDespacho({ estado }, { rol: "soporte" })).toBe(false);
     },
   );
+});
+
+describe("precio manual", () => {
+  it("acepta enteros, 0 y hasta 2 decimales con punto o coma", () => {
+    expect(validators.precioManual("1500")).toBe("");
+    expect(validators.precioManual("0")).toBe("");
+    expect(validators.precioManual("1500,5")).toBe("");
+    expect(validators.precioManual("1500.25")).toBe("");
+  });
+
+  it("rechaza vacío, texto, negativos, más de 2 decimales y valores enormes", () => {
+    expect(validators.precioManual("")).not.toBe("");
+    expect(validators.precioManual("abc")).not.toBe("");
+    expect(validators.precioManual("-5")).not.toBe("");
+    expect(validators.precioManual("1.234")).not.toBe("");
+    expect(validators.precioManual("99999999999")).not.toBe("");
+  });
+
+  it("parsePrecioManual convierte la coma decimal y devuelve NaN si no es válido", () => {
+    expect(parsePrecioManual("1500,5")).toBe(1500.5);
+    expect(parsePrecioManual("x")).toBeNaN();
+  });
 });

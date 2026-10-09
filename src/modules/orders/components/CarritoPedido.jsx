@@ -1,4 +1,5 @@
 import { Plus, Minus, Trash2, Layers, Tag } from "lucide-react";
+import { PrecioManualEditor } from "./PrecioManualEditor";
 
 /**
  * Opciones de tipo de precio que se le ofrecen a quien arma el pedido para
@@ -49,16 +50,23 @@ const obtenerOpcionesLinea = (item, { puedeMayorista, rolActual }) => {
  * autenticado) Y que el producto de esa línea tiene configuradas — el
  * servidor vuelve a validar todo esto igual, esto es solo para no
  * mostrar un control que de todas formas el backend va a rechazar.
+ *
+ * `puedeEditarPrecio` (activo en Pagos y Facturación y perfil autorizado,
+ * lo resuelve el padre) habilita cambiar a mano el precio unitario de cada
+ * línea (tipo "manual"); para los demás, una línea con precio manual ya
+ * puesto por otro perfil solo se muestra con su etiqueta.
  */
 export const CarritoPedido = ({
   carrito,
   onModificarCantidad,
   onActualizarCantidadInput,
   onCambiarTipoPrecio,
+  onCambiarPrecioManual,
   onEliminar,
   formatCurrency,
   error,
   puedeMayorista = false,
+  puedeEditarPrecio = false,
   rolActual = "",
   titulo = "Productos en el Pedido",
   mostrarStock = true,
@@ -106,9 +114,24 @@ export const CarritoPedido = ({
                       </>
                     )}
                   </p>
-                  <p className="text-xs font-semibold text-blue-600 mt-1">
-                    {formatCurrency(item.precio_unitario)} c/u
-                  </p>
+                  {puedeEditarPrecio ? (
+                    <PrecioManualEditor
+                      precio={item.precio_unitario}
+                      precioLista={item.precio_venta}
+                      esManual={item.tipo_precio === "manual"}
+                      formatCurrency={formatCurrency}
+                      onGuardar={(precio) => onCambiarPrecioManual(index, precio)}
+                    />
+                  ) : (
+                    <p className="text-xs font-semibold text-blue-600 mt-1">
+                      {formatCurrency(item.precio_unitario)} c/u
+                      {item.tipo_precio === "manual" && (
+                        <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                          Precio manual
+                        </span>
+                      )}
+                    </p>
+                  )}
 
                   {mostrarSelectorPrecio && (
                     <div className="flex flex-wrap items-center gap-1 mt-2">

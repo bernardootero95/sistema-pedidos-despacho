@@ -6,6 +6,7 @@
  */
 export const etiquetaTipoPrecio = (detalle) => {
   if (detalle?.tipo_precio === "mayorista") return "Mayorista";
+  if (detalle?.tipo_precio === "manual") return "Precio manual";
   if (detalle?.tipo_precio === "personalizado") {
     return detalle.tipo?.nombre || "Precio especial";
   }
