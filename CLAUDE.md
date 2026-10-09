@@ -123,6 +123,19 @@ npm run preview   # preview del build
   distintas en un mismo commit.
 - No hagas commit de código que no compile o que rompa el `lint`.
 
+### Cierre del trabajo (obligatorio)
+
+- **Todo trabajo realizado se guarda en memoria.** Al cerrar una
+  funcionalidad, corrección o migración, crear o actualizar la memoria del
+  tema: qué se hizo, decisiones y límites conocidos, PRs y fechas, y en qué
+  proyectos de Supabase quedó aplicada la migración. No esperar a que se pida.
+- **Después de terminar y hacer el merge, se limpia.** Cuando el PR esté
+  fusionado (confirmar que su estado es `MERGED`): actualizar `main`
+  (`git pull --ff-only`), borrar la rama local (`git branch -d`) y la remota
+  (`git push origin --delete <rama>`), quitar los worktrees del trabajo y
+  ejecutar `git fetch --prune`. No borrar ramas con commits sin fusionar sin
+  preguntar.
+
 ## Qué evitar
 
 - No dejar código muerto o componentes huérfanos sin usar (revisar
