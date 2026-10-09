@@ -386,6 +386,14 @@ export const SECCIONES_AYUDA = [
         ],
       },
       {
+        titulo: "Cambiar el precio al cotizar",
+        opcion: "precioManualActivo",
+        notas: [
+          "Si tu perfil tiene el permiso, usa el lápiz junto al precio de la línea para ofrecer un precio distinto al del catálogo (funciona igual que en Toma de Pedidos).",
+          "Al convertir la cotización en pedido, ese precio se conserva tal como lo cotizaste.",
+        ],
+      },
+      {
         titulo: "Imprimir o enviar al cliente",
         notas: [
           "En el detalle usa «Imprimir PDF»: se genera en tamaño carta con los datos de la empresa y la fecha de validez.",
@@ -398,7 +406,7 @@ export const SECCIONES_AYUDA = [
           "El sistema crea el pedido con los precios vigentes del catálogo y descuenta el stock.",
         ],
         notas: [
-          "Si algún precio cambió desde que cotizaste, el total del pedido puede diferir; el sistema te lo avisa.",
+          "Si algún precio del catálogo cambió desde que cotizaste, el total del pedido puede diferir; el sistema te lo avisa. Los precios que cambiaste a mano se mantienen.",
           "Una cotización vencida o anulada no se puede convertir: crea una nueva.",
         ],
       },
