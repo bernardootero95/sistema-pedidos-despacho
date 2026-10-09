@@ -84,7 +84,7 @@ export const WarehouseInventoryPage = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            to="/toma-fisica"
+            to="/bodega/toma-fisica"
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
           >
             <ClipboardCheck className="h-4 w-4" />

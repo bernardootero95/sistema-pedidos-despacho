@@ -22,6 +22,7 @@ import {
   Boxes,
   Warehouse,
   ClipboardCheck,
+  PackageCheck,
 } from "lucide-react";
 import { ROLES_MODULO } from "../../config/roles";
 
@@ -75,6 +76,31 @@ export const MENU_ITEMS = [
     roles: ROLES_MODULO.COMPRAS,
   },
   {
+    key: "bodega",
+    label: "Bodega",
+    icon: Warehouse,
+    children: [
+      {
+        path: "/bodega/inventario",
+        label: "Inv. por Rango",
+        icon: Boxes,
+        roles: ROLES_MODULO.INFORMES,
+      },
+      {
+        path: "/bodega/inventario-actual",
+        label: "Inv. Actual",
+        icon: PackageCheck,
+        roles: ROLES_MODULO.INFORMES,
+      },
+      {
+        path: "/bodega/toma-fisica",
+        label: "Toma Física",
+        icon: ClipboardCheck,
+        roles: ROLES_MODULO.TOMA_FISICA,
+      },
+    ],
+  },
+  {
     key: "terceros",
     label: "Terceros",
     icon: Contact,
@@ -115,24 +141,6 @@ export const MENU_ITEMS = [
         label: "Productos por Pedido",
         icon: PackageSearch,
         roles: ROLES_MODULO.INFORMES,
-      },
-      {
-        path: "/informes/inventario",
-        label: "Inventario por Rango",
-        icon: Boxes,
-        roles: ROLES_MODULO.INFORMES,
-      },
-      {
-        path: "/informes/bodega",
-        label: "Inventario de Bodega",
-        icon: Warehouse,
-        roles: ROLES_MODULO.INFORMES,
-      },
-      {
-        path: "/toma-fisica",
-        label: "Toma Física",
-        icon: ClipboardCheck,
-        roles: ROLES_MODULO.TOMA_FISICA,
       },
     ],
   },

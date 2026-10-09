@@ -23,6 +23,22 @@ describe("getMenuVisible", () => {
     ]);
   });
 
+  it("soporte y gerencia ven el grupo Bodega con los informes de inventario y la toma física", () => {
+    ["soporte", "gerencia"].forEach((rol) => {
+      expect(hijos(getMenuVisible(MENU_ITEMS, rol), "bodega")).toEqual([
+        "Inv. por Rango",
+        "Inv. Actual",
+        "Toma Física",
+      ]);
+    });
+  });
+
+  it("despachador y vendedor no ven el grupo Bodega", () => {
+    ["despachador", "vendedor"].forEach((rol) => {
+      expect(etiquetas(getMenuVisible(MENU_ITEMS, rol))).not.toContain("Bodega");
+    });
+  });
+
   it("despachador ve Proveedores dentro de Terceros y no ve Configuración", () => {
     const menu = getMenuVisible(MENU_ITEMS, "despachador");
 

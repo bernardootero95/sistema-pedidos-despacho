@@ -464,7 +464,7 @@ export const SECCIONES_AYUDA = [
     icono: FileBarChart,
     ruta: "/informes/ventas",
     roles: ROLES_MODULO.INFORMES,
-    resumen: "Ventas, cierre de mes, utilidad, productos vendidos e inventario.",
+    resumen: "Ventas, cierre de mes, utilidad y productos vendidos.",
     bloques: [
       {
         titulo: "Ventas y Cierre",
@@ -486,6 +486,16 @@ export const SECCIONES_AYUDA = [
           "Lista los productos vendidos filtrando por fechas, estado, vendedor o cliente. Se puede exportar a Excel o PDF.",
         ],
       },
+    ],
+  },
+  {
+    id: "bodega",
+    titulo: "Bodega",
+    icono: ClipboardCheck,
+    ruta: "/bodega/inventario",
+    roles: ROLES_MODULO.TOMA_FISICA,
+    resumen: "Informes de inventario y toma física para ajustar el stock.",
+    bloques: [
       {
         titulo: "Inventario por Rango",
         pasos: [
@@ -499,23 +509,13 @@ export const SECCIONES_AYUDA = [
         ],
       },
       {
-        titulo: "Inventario de Bodega",
+        titulo: "Inventario Actual",
         notas: [
           "Muestra lo que hay físicamente hoy: mercancía disponible más la pendiente por entregar, con su valor a costo, a venta y la ganancia posible.",
           "Los productos marcados con ⚠ no tienen costo registrado y no entran en la ganancia posible.",
           "Si hay productos sin costo, el aviso amarillo (en este informe y en Inventario por Rango) tiene el botón «Asignar costos»: digita el costo de los que quieras y guárdalos juntos. Los que dejes vacíos no cambian, y la próxima compra actualiza el costo.",
         ],
       },
-    ],
-  },
-  {
-    id: "toma-fisica",
-    titulo: "Toma Física",
-    icono: ClipboardCheck,
-    ruta: "/toma-fisica",
-    roles: ROLES_MODULO.TOMA_FISICA,
-    resumen: "Cuenta la bodega y ajusta el inventario con las diferencias.",
-    bloques: [
       {
         titulo: "Hacer una toma física",
         pasos: [

@@ -286,12 +286,16 @@ export const AppRouter = () => {
               <Route path="/informes/ventas" element={<SalesReportPage />} />
               <Route path="/informes/utilidad" element={<ProfitReportPage />} />
               <Route path="/informes/productos" element={<ProductsReportPage />} />
-              <Route path="/informes/inventario" element={<InventoryReportPage />} />
-              <Route path="/informes/bodega" element={<WarehouseInventoryPage />} />
+            </Route>
+
+            {/* Bodega: informes de inventario y toma física */}
+            <Route element={<RoleGuard roles={ROLES_MODULO.INFORMES} />}>
+              <Route path="/bodega/inventario" element={<InventoryReportPage />} />
+              <Route path="/bodega/inventario-actual" element={<WarehouseInventoryPage />} />
             </Route>
             <Route element={<RoleGuard roles={ROLES_MODULO.TOMA_FISICA} />}>
-              <Route path="/toma-fisica" element={<PhysicalCountsPage />} />
-              <Route path="/toma-fisica/:id" element={<PhysicalCountPage />} />
+              <Route path="/bodega/toma-fisica" element={<PhysicalCountsPage />} />
+              <Route path="/bodega/toma-fisica/:id" element={<PhysicalCountPage />} />
             </Route>
 
             {/* Instructivo */}

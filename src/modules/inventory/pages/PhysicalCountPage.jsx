@@ -113,7 +113,7 @@ export const PhysicalCountPage = () => {
   return (
     <div className="flex flex-col h-full bg-slate-50">
       <div className="flex flex-col gap-4 p-4 sm:p-6 bg-white border-b border-slate-200">
-        <Link to="/toma-fisica" className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 w-fit">
+        <Link to="/bodega/toma-fisica" className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 w-fit">
           <ArrowLeft className="h-4 w-4" />
           Tomas físicas
         </Link>
