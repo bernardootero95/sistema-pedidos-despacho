@@ -1,8 +1,28 @@
 import { describe, it, expect } from "vitest";
 import {
+  LONGITUD_MAXIMA_CLASIFICACION,
   validatePrecioPersonalizado,
+  validateProductField,
   validateTierMayorista,
 } from "./productValidations";
+
+describe("clasificación del producto (tipo, departamento, línea, categoría)", () => {
+  it("son opcionales: vacío es válido", () => {
+    Object.keys(LONGITUD_MAXIMA_CLASIFICACION).forEach((campo) => {
+      expect(validateProductField(campo, "", {})).toBe("");
+    });
+  });
+
+  it("rechazan lo que no cabe en la columna (50 para tipo, 100 para el resto)", () => {
+    expect(validateProductField("tipo", "x".repeat(50), {})).toBe("");
+    expect(validateProductField("tipo", "x".repeat(51), {})).toBe("Máximo 50 caracteres.");
+    expect(validateProductField("categoria", "x".repeat(101), {})).toBe("Máximo 100 caracteres.");
+  });
+
+  it("no cuentan los espacios de los extremos", () => {
+    expect(validateProductField("linea", `  ${"x".repeat(100)}  `, {})).toBe("");
+  });
+});
 
 describe("validatePrecioPersonalizado", () => {
   it("es opcional", () => {

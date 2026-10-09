@@ -312,6 +312,27 @@ export const productService = {
   },
 
   /**
+   * Valores ya usados de tipo, departamento, línea y categoría, para que el
+   * formulario deje escoger uno existente o agregar uno nuevo. Los calcula
+   * obtener_clasificaciones_productos en el servidor (una consulta agregada,
+   * no el catálogo completo).
+   *
+   * @returns {Promise<{ tipos: string[], departamentos: string[], lineas: string[], categorias: string[] }>}
+   */
+  async getClasificaciones() {
+    const { data, error } = await supabase.rpc("obtener_clasificaciones_productos");
+
+    if (error) throw new Error("Error al cargar las clasificaciones: " + error.message);
+
+    return {
+      tipos: data?.tipos ?? [],
+      departamentos: data?.departamentos ?? [],
+      lineas: data?.lineas ?? [],
+      categorias: data?.categorias ?? [],
+    };
+  },
+
+  /**
    * Fija el costo de varios productos en una sola transacción (todos o
    * ninguno). `costos` es un array de { productoId, costo }.
    */
