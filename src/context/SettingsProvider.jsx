@@ -13,6 +13,7 @@ const CONFIG_INICIAL = {
   imprimirLogoActivo: false,
   precioManualActivo: false,
   precioManualRoles: [],
+  creditoRoles: [],
 };
 
 /**
@@ -53,10 +54,15 @@ export const SettingsProvider = ({ children }) => {
     if (hayUsuario) recargar();
   }, [hayUsuario, recargar]);
 
+  // 'Crédito' no es un medio de pago real: va aparte para que abonos y pagos
+  // de compras nunca lo ofrezcan; solo el cobro al entregar lo suma.
   const value = useMemo(
     () => ({
       ...(hayUsuario ? config : CONFIG_INICIAL),
-      metodosPago: hayUsuario ? metodosPago : [],
+      metodosPago: hayUsuario ? metodosPago.filter((m) => !m.es_credito) : [],
+      metodoCredito: hayUsuario
+        ? metodosPago.find((m) => m.es_credito) || null
+        : null,
       recargar,
     }),
     [hayUsuario, config, metodosPago, recargar],

@@ -156,6 +156,11 @@ export const PaymentMethodsSection = () => {
                         Por defecto
                       </span>
                     )}
+                    {metodo.es_credito && (
+                      <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider">
+                        Entrega a crédito
+                      </span>
+                    )}
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 tracking-wider ${
                         metodo.estado
@@ -172,7 +177,9 @@ export const PaymentMethodsSection = () => {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">
-                    DIAN: {etiquetaDian(metodo.codigo_dian)}
+                    {metodo.es_credito
+                      ? "No es un pago real: deja el saldo por cobrar con abonos. Solo lo usan los usuarios con permiso de crédito."
+                      : `DIAN: ${etiquetaDian(metodo.codigo_dian)}`}
                   </p>
                 </div>
 
@@ -197,15 +204,17 @@ export const PaymentMethodsSection = () => {
                       )}
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => handleOpenForm(metodo)}
-                    title="Editar"
-                    className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  {!metodo.es_efectivo && (
+                  {!metodo.es_credito && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenForm(metodo)}
+                      title="Editar"
+                      className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  )}
+                  {!metodo.es_efectivo && !metodo.es_credito && (
                     <button
                       type="button"
                       onClick={() => handleEliminar(metodo.id, metodo.nombre)}

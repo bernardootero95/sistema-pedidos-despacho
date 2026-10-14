@@ -232,6 +232,8 @@ export const SECCIONES_AYUDA = [
         opcion: "abonosPedidosActivo",
         notas: [
           "En el detalle de un pedido pendiente puedes registrar abonos. El resto se cobra al entregarlo.",
+          "Entrega a crédito: en Pagos y Facturación, sección «Permisos por perfil», elige qué perfiles pueden entregar a crédito (soporte y gerencia siempre pueden). Esos perfiles verán el método «Crédito» al cobrar una entrega: el monto que pongas en Crédito queda como saldo por cobrar y el pedido se entrega igual.",
+          "Un pedido entregado a crédito se cobra después con abonos desde su detalle.",
           "En Pedidos, marca «Solo con saldo pendiente» para ver únicamente los pedidos que aún no se han pagado por completo.",
         ],
       },

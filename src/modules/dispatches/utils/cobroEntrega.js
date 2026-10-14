@@ -19,13 +19,6 @@ export const requiereCobroAlEntregar = (
 ) => calcularSaldo(pedido) > 0 && (metodosPagoActivo || abonosPedidosActivo);
 
 /**
- * Tras entregar, el pedido queda pagado por completo (el servidor lo exige):
- * se refleja en la copia local sin volver a consultar.
- */
-export const marcarPedidoPagado = (pedido) =>
-  pedido ? { ...pedido, total_pagado: pedido.total } : pedido;
-
-/**
  * De los pedidos de un despacho (filas de despachos_pedidos con su `pedido`
  * embebido), los que siguen pendientes de entrega y aún tienen saldo: son los
  * que hay que cobrar al completar la ruta.

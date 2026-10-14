@@ -1,6 +1,6 @@
 import { supabase } from "../../../config/supabase";
 
-const COLUMNAS = "id, nombre, codigo_dian, es_efectivo, estado";
+const COLUMNAS = "id, nombre, codigo_dian, es_efectivo, es_credito, estado";
 
 export const paymentMethodService = {
   /**

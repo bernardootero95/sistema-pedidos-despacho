@@ -1,6 +1,7 @@
 import { FeatureToggleCard } from "../components/FeatureToggleCard";
 import { PaymentMethodsSection } from "../components/PaymentMethodsSection";
-import { PrecioManualRolesSelector } from "../components/PrecioManualRolesSelector";
+import { RolesPermisoSelector } from "../components/RolesPermisoSelector";
+import { ROLES_CREDITO, ROLES_PRECIO_MANUAL } from "../utils/permisosRoles";
 import { useGuardarOpcion } from "../hooks/useGuardarOpcion";
 import { CreditCard, Wallet, ShoppingBag, Receipt, PencilLine } from "lucide-react";
 
@@ -44,6 +45,9 @@ const OPCIONES = [
 
 export const SettingsPage = () => {
   const { settings, guardando, guardarOpcion } = useGuardarOpcion();
+  // El crédito necesita métodos de pago (para elegirlo) y abonos (para cobrar
+  // después el saldo): sin ambos no hay nada que autorizar.
+  const mostrarCredito = settings.metodosPagoActivo && settings.abonosPedidosActivo;
 
   return (
     <div className="space-y-6 relative">
@@ -69,12 +73,38 @@ export const SettingsPage = () => {
         ))}
       </div>
 
-      {settings.precioManualActivo && (
-        <PrecioManualRolesSelector
-          roles={settings.precioManualRoles}
-          guardando={guardando === "precioManualRoles"}
-          onChange={(roles) => guardarOpcion("precioManualRoles", roles)}
-        />
+      {(settings.precioManualActivo || mostrarCredito) && (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Permisos por perfil</h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Aquí se define qué perfiles pueden usar cada función. Soporte y
+              gerencia siempre tienen todos los permisos.
+            </p>
+          </div>
+
+          {settings.precioManualActivo && (
+            <RolesPermisoSelector
+              titulo="Cambiar el precio al vender"
+              descripcion="Solo estos perfiles verán el lápiz junto al precio al tomar o editar un pedido."
+              catalogo={ROLES_PRECIO_MANUAL}
+              roles={settings.precioManualRoles}
+              guardando={guardando === "precioManualRoles"}
+              onChange={(roles) => guardarOpcion("precioManualRoles", roles)}
+            />
+          )}
+
+          {mostrarCredito && (
+            <RolesPermisoSelector
+              titulo="Entregar pedidos a crédito"
+              descripcion="Solo estos perfiles verán el método «Crédito» al cobrar una entrega: lo que quede a crédito es saldo por cobrar con abonos."
+              catalogo={ROLES_CREDITO}
+              roles={settings.creditoRoles}
+              guardando={guardando === "creditoRoles"}
+              onChange={(roles) => guardarOpcion("creditoRoles", roles)}
+            />
+          )}
+        </section>
       )}
 
       {settings.metodosPagoActivo && <PaymentMethodsSection />}

@@ -2,6 +2,7 @@ import { useRef, useState, useImperativeHandle } from "react";
 import { X, ShieldAlert, Loader2, Wallet, Check } from "lucide-react";
 import { useSettings } from "../../../context/useSettings";
 import { usePaymentLines } from "../../payments/hooks/usePaymentLines";
+import { useMetodosCobro } from "../../payments/hooks/useMetodosCobro";
 import { PaymentLinesEditor } from "../../payments/components/PaymentLinesEditor";
 import { MODOS_PAGO, formatearMoneda } from "../../payments/utils/paymentLines";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
@@ -13,7 +14,8 @@ import { calcularSaldo } from "../utils/cobroEntrega";
  * (vía ref) cómo validarse y qué pagos entregar.
  */
 const PedidoCobroSeccion = ({ ref, pedido, disabled }) => {
-  const { metodosPagoActivo, metodosPago } = useSettings();
+  const { metodosPagoActivo } = useSettings();
+  const metodos = useMetodosCobro();
   const saldo = calcularSaldo(pedido);
   const pago = usePaymentLines({
     objetivo: saldo,
@@ -49,7 +51,7 @@ const PedidoCobroSeccion = ({ ref, pedido, disabled }) => {
         lineas={pago.lineas}
         errores={pago.errores}
         errorGeneral={pago.errorGeneral}
-        metodos={metodosPago}
+        metodos={metodos}
         mostrarMetodos={metodosPagoActivo}
         objetivo={saldo}
         total={pago.total}

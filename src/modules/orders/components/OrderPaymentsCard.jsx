@@ -6,7 +6,8 @@ import { useToast } from "../../../context/useToast";
 
 // Mismos roles que valida registrar_abono_pedido en el servidor.
 const ROLES_ABONO = ["soporte", "gerencia"];
-const ESTADOS_ABONABLES = ["pendiente", "despachado"];
+// "entregado" solo puede tener saldo si se entregó a crédito.
+const ESTADOS_ABONABLES = ["pendiente", "despachado", "entregado"];
 
 /**
  * Pagos de un pedido en su detalle. Decide cuándo mostrar la tarjeta y quién

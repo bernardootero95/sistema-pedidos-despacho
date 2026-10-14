@@ -122,3 +122,24 @@ export const lineasAPayload = (lineas) =>
       metodo_pago_id: linea.metodo_pago_id || null,
       monto: parseMonto(linea.monto),
     }));
+
+/**
+ * Métodos que se ofrecen al cobrar un pedido al entregarlo: los de pago real
+ * y, solo si el usuario tiene el permiso y la empresa usa métodos de pago y
+ * abonos (para cobrar luego el saldo), el método 'Crédito'. Espejo de la
+ * regla de cobrar_saldo_pedido en el servidor, que es la que manda.
+ */
+export const metodosParaCobro = ({
+  metodosPago,
+  metodoCredito,
+  metodosPagoActivo,
+  abonosPedidosActivo,
+  puedeDarCredito,
+}) => {
+  const ofreceCredito =
+    !!metodoCredito &&
+    metodosPagoActivo &&
+    abonosPedidosActivo &&
+    puedeDarCredito === true;
+  return ofreceCredito ? [...metodosPago, metodoCredito] : metodosPago;
+};

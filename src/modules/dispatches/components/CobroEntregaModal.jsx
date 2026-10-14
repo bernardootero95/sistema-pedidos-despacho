@@ -18,6 +18,7 @@ export const CobroEntregaModal = ({ pedido, onConfirm, onCancel }) => {
       objetivo={calcularSaldo(pedido)}
       modo={MODOS_PAGO.EXACTO}
       etiquetaConfirmar="Cobrar y entregar"
+      permitirCredito
       onConfirm={onConfirm}
       onCancel={onCancel}
     >

@@ -20,7 +20,6 @@ import {
   Printer,
 } from "lucide-react";
 import { ETIQUETAS_ESTADO_DESPACHO } from "../utils/dispatchStatus";
-import { marcarPedidoPagado } from "../utils/cobroEntrega";
 
 export const DispatchDetailsPage = () => {
   const { id } = useParams();
@@ -91,21 +90,10 @@ export const DispatchDetailsPage = () => {
     cargarDatos();
   };
 
-  const handleEntregaActualizada = (despachoPedidoId, resultado) => {
-    setPedidosAsignados((prev) =>
-      prev.map((p) =>
-        p.id === despachoPedidoId
-          ? {
-              ...p,
-              estado_entrega: resultado.estado_entrega,
-              pedido:
-                resultado.estado_entrega === "entregado"
-                  ? marcarPedidoPagado(p.pedido)
-                  : p.pedido,
-            }
-          : p,
-      ),
-    );
+  // Al entregar, el cobro puede dejar saldo a crédito y la factura cambia en
+  // el servidor: se recarga en vez de adivinar el estado de pago en el cliente.
+  const handleEntregaActualizada = () => {
+    cargarDatos();
   };
 
   const handleImprimirTiqueteYFacturas = async () => {
