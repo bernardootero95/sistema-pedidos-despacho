@@ -13,11 +13,14 @@ import { armarDetalleRpc } from "../utils/detalleRpc";
  * pedido o por cuándo se entregó sin duplicar los controles de filtro.
  */
 function aplicarFiltrosPedidos(query, filtros = {}) {
-  const { estado, fechaDesde, fechaHasta, vendedorId, campoFecha } = filtros;
+  const { estado, fechaDesde, fechaHasta, vendedorId, campoFecha, conSaldo } =
+    filtros;
   const columnaFecha = campoFecha === "fecha_entrega" ? "fecha_entrega" : "fecha_pedido";
 
   if (estado) query = query.eq("estado", estado);
   if (vendedorId) query = query.eq("vendedor_id", vendedorId);
+  // Pedidos vigentes que aún no se han pagado por completo (cartera).
+  if (conSaldo) query = query.gt("saldo_pendiente", 0).neq("estado", "anulado");
   if (fechaDesde) query = query.gte(columnaFecha, `${fechaDesde}T00:00:00`);
   if (fechaHasta) query = query.lte(columnaFecha, `${fechaHasta}T23:59:59.999`);
 

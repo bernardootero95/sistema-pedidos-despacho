@@ -84,6 +84,7 @@ export const OrderDetailsPage = () => {
     fechaHasta: searchParams.get("hasta") || "",
     campoFecha: searchParams.get("campoFecha") || "",
     vendedorId: searchParams.get("vendedor") || "",
+    conSaldo: searchParams.get("conSaldo") === "1",
   };
 
   useEffect(() => {
