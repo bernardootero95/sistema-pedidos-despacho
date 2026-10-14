@@ -232,6 +232,7 @@ export const SECCIONES_AYUDA = [
         opcion: "abonosPedidosActivo",
         notas: [
           "En el detalle de un pedido pendiente puedes registrar abonos. El resto se cobra al entregarlo.",
+          "En Pedidos, marca «Solo con saldo pendiente» para ver únicamente los pedidos que aún no se han pagado por completo.",
         ],
       },
       {
