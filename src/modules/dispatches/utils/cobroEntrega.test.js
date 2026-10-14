@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   calcularSaldo,
-  marcarPedidoPagado,
   pedidosPorCobrar,
   requiereCobroAlEntregar,
 } from "./cobroEntrega";
@@ -32,14 +31,6 @@ describe("requiereCobroAlEntregar", () => {
   it("no pide cobro si el pedido ya está pagado", () => {
     const pagado = { total: 1000, total_pagado: 1000 };
     expect(requiereCobroAlEntregar(pagado, { metodosPagoActivo: true, abonosPedidosActivo: true })).toBe(false);
-  });
-});
-
-describe("marcarPedidoPagado", () => {
-  it("iguala total_pagado al total sin mutar el original", () => {
-    const original = { total: 500, total_pagado: 100 };
-    expect(marcarPedidoPagado(original)).toEqual({ total: 500, total_pagado: 500 });
-    expect(original.total_pagado).toBe(100);
   });
 });
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, ShieldAlert, Loader2, Wallet, Check } from "lucide-react";
 import { useSettings } from "../../../context/useSettings";
 import { usePaymentLines } from "../hooks/usePaymentLines";
+import { useMetodosCobro } from "../hooks/useMetodosCobro";
 import { PaymentLinesEditor } from "./PaymentLinesEditor";
 import { MODOS_PAGO, formatearMoneda } from "../utils/paymentLines";
 
@@ -18,6 +19,10 @@ import { MODOS_PAGO, formatearMoneda } from "../utils/paymentLines";
  * diálogo solo confirma el cobro en efectivo (onConfirm recibe `null` y el
  * servidor lo resuelve a Efectivo).
  *
+ * Con `permitirCredito` (solo el cobro al entregar un pedido) se ofrece
+ * además el método 'Crédito' a quien tenga ese permiso; abonos y pagos de
+ * compras nunca lo ofrecen.
+ *
  * No usa <form> a propósito: se monta dentro de páginas que ya tienen su
  * propio formulario, y un submit dentro de un portal/anidado dispararía el
  * del padre.
@@ -32,11 +37,14 @@ export const PaymentModal = ({
   etiquetaObjetivo = "Saldo",
   modo = MODOS_PAGO.EXACTO,
   etiquetaConfirmar = "Confirmar",
+  permitirCredito = false,
   onConfirm,
   onCancel,
   children,
 }) => {
   const { metodosPagoActivo, metodosPago } = useSettings();
+  const metodosCobro = useMetodosCobro();
+  const metodos = permitirCredito ? metodosCobro : metodosPago;
   const soloConfirmar = !metodosPagoActivo && modo === MODOS_PAGO.EXACTO;
 
   const pago = usePaymentLines({
@@ -116,7 +124,7 @@ export const PaymentModal = ({
               lineas={pago.lineas}
               errores={pago.errores}
               errorGeneral={pago.errorGeneral}
-              metodos={metodosPago}
+              metodos={metodos}
               mostrarMetodos={metodosPagoActivo}
               objetivo={objetivo}
               etiquetaObjetivo={etiquetaObjetivo}

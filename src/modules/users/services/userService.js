@@ -17,7 +17,8 @@ export const userService = {
         roles (
           id,
           nombre
-        )
+        ),
+        permisos_usuario ( puede_dar_credito )
       `,
       )
       .is("eliminado", null)
@@ -154,6 +155,23 @@ export const userService = {
       throw new Error("Error al actualizar el rol: " + error.message);
 
     return data;
+  },
+
+  /**
+   * Concede o quita a un usuario el permiso de entregar pedidos a crédito
+   * (permiso por usuario, no por rol). Solo soporte/gerencia: el RPC lo
+   * valida en el servidor.
+   */
+  async actualizarPermisoCredito(userId, puedeDarCredito) {
+    const { error } = await supabase.rpc("actualizar_permiso_credito_usuario", {
+      p_user_id: userId,
+      p_puede_dar_credito: puedeDarCredito,
+    });
+
+    if (error)
+      throw new Error("Error al actualizar el permiso de crédito: " + error.message);
+
+    return true;
   },
 
   /**

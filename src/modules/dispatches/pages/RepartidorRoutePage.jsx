@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../../context/useAuth";
 import { dispatchService } from "../services/dispatchService";
 import { EntregaPedidoCard } from "../components/EntregaPedidoCard";
-import { marcarPedidoPagado } from "../utils/cobroEntrega";
 import { useRealtimeSubscription } from "../../../hooks/useRealtimeSubscription";
 import { Truck, Loader2, PackageOpen, Calendar } from "lucide-react";
 
@@ -53,21 +52,10 @@ export const RepartidorRoutePage = () => {
     enabled: Boolean(despacho),
   });
 
-  const handleActualizado = (despachoPedidoId, nuevoEstado) => {
-    setPedidos((prev) =>
-      prev.map((p) =>
-        p.id === despachoPedidoId
-          ? {
-              ...p,
-              estado_entrega: nuevoEstado,
-              pedido:
-                nuevoEstado === "entregado"
-                  ? marcarPedidoPagado(p.pedido)
-                  : p.pedido,
-            }
-          : p,
-      ),
-    );
+  // Al entregar, el cobro puede dejar saldo a crédito: se recarga la ruta en
+  // vez de adivinar el estado de pago en el cliente.
+  const handleActualizado = () => {
+    cargarRuta();
   };
 
   if (loading) {

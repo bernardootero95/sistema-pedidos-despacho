@@ -3,6 +3,7 @@ import {
   MODOS_PAGO,
   crearLinea,
   lineasAPayload,
+  metodosParaCobro,
   parseMonto,
   sumarLineas,
   validarCampoLinea,
@@ -99,5 +100,30 @@ describe("lineasAPayload", () => {
       { metodo_pago_id: "m1", monto: 1000 },
       { metodo_pago_id: null, monto: 500 },
     ]);
+  });
+});
+
+describe("metodosParaCobro", () => {
+  const efectivo = { id: "e", nombre: "Efectivo" };
+  const credito = { id: "c", nombre: "Crédito", es_credito: true };
+  const base = {
+    metodosPago: [efectivo],
+    metodoCredito: credito,
+    metodosPagoActivo: true,
+    abonosPedidosActivo: true,
+    puedeDarCredito: true,
+  };
+
+  it("suma el crédito cuando el usuario tiene permiso y la empresa usa abonos", () => {
+    expect(metodosParaCobro(base)).toEqual([efectivo, credito]);
+  });
+
+  it.each([
+    ["sin permiso", { puedeDarCredito: false }],
+    ["sin abonos a pedidos", { abonosPedidosActivo: false }],
+    ["sin métodos de pago", { metodosPagoActivo: false }],
+    ["con el crédito desactivado", { metodoCredito: null }],
+  ])("no ofrece crédito %s", (_caso, cambio) => {
+    expect(metodosParaCobro({ ...base, ...cambio })).toEqual([efectivo]);
   });
 });
