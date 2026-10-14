@@ -22,7 +22,7 @@ import { useCarritoPedido } from "../../orders/hooks/useCarritoPedido";
 import { ProductSearchBar } from "../../orders/components/ProductSearchBar";
 import { CarritoPedido } from "../../orders/components/CarritoPedido";
 import { ClientForm } from "../../clients/components/ClientForm";
-import { getNombreCliente } from "../../clients/utils/clienteDisplay";
+import { ClientSelect } from "../../clients/components/ClientSelect";
 import { useAuth } from "../../../context/useAuth";
 import { useSettings } from "../../../context/useSettings";
 
@@ -215,19 +215,13 @@ export const QuoteCreatePage = () => {
                 Cliente nuevo
               </button>
             </div>
-            <select
+            <ClientSelect
+              clientes={clientes}
               value={clienteId}
-              onChange={(e) => handleClienteChange(e.target.value)}
+              onChange={handleClienteChange}
               onBlur={() => validarCampo("cliente_id", clienteId)}
-              className={`w-full p-3 border rounded-xl outline-none bg-white text-base transition-all ${errors.cliente_id ? "border-red-500 ring-2 ring-red-100" : "border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
-            >
-              <option value="">-- Elige el cliente --</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.numero_identificacion} - {getNombreCliente(c)}
-                </option>
-              ))}
-            </select>
+              error={!!errors.cliente_id}
+            />
             {errors.cliente_id && (
               <p className="text-red-500 text-xs mt-1 font-medium">
                 {errors.cliente_id}
