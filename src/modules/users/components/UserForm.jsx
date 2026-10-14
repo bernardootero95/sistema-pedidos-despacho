@@ -24,11 +24,6 @@ export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
     correo: userToEdit?.correo || "",
   });
 
-  // Permiso por usuario (no por rol); solo se edita sobre un usuario ya creado.
-  const permisoCreditoOriginal =
-    userToEdit?.permisos_usuario?.puede_dar_credito === true;
-  const [puedeDarCredito, setPuedeDarCredito] = useState(permisoCreditoOriginal);
-
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,13 +64,6 @@ export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
     try {
       if (editMode) {
         await userService.actualizarCorreo(userToEdit.id, formData.correo.trim());
-
-        if (puedeDarCredito !== permisoCreditoOriginal) {
-          await userService.actualizarPermisoCredito(
-            userToEdit.id,
-            puedeDarCredito,
-          );
-        }
 
         const rolOriginal = userToEdit.roles?.id ? String(userToEdit.roles.id) : "";
         if (formData.rol_id !== rolOriginal) {
@@ -239,27 +227,6 @@ export const UserForm = ({ roles, userToEdit = null, onSuccess, onCancel }) => {
                 )
               )}
             </div>
-
-            {editMode && (
-              <label className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-300 rounded-lg cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={puedeDarCredito}
-                  onChange={(e) => setPuedeDarCredito(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                />
-                <span className="text-sm text-slate-700">
-                  <span className="font-bold block">
-                    Puede entregar pedidos a crédito
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    Al cobrar una entrega podrá dejar el saldo por cobrar con
-                    el método Crédito. Requiere métodos de pago y abonos a
-                    pedidos activos.
-                  </span>
-                </span>
-              </label>
-            )}
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">

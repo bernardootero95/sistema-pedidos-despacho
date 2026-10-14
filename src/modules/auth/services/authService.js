@@ -65,21 +65,12 @@ export const authService = {
     if (!perfil.estado)
       throw new Error("Este usuario se encuentra inactivo en el sistema.");
 
-    // Permiso por usuario (no por rol). Si falla la lectura se asume sin
-    // permiso: el servidor es quien lo exige de todos modos.
-    const { data: permisos } = await supabase
-      .from("permisos_usuario")
-      .select("puede_dar_credito")
-      .eq("usuario_id", userId)
-      .maybeSingle();
-
     return {
       id: perfil.id,
       nombre_usuario: perfil.nombre_usuario,
       nombre_completo: perfil.nombre_completo,
       rol: perfil.roles.nombre,
       permisos: perfil.roles.permisos,
-      puedeDarCredito: permisos?.puede_dar_credito === true,
     };
   },
 

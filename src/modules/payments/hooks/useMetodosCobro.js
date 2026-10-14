@@ -9,9 +9,15 @@ import { metodosParaCobro } from "../utils/paymentLines";
  */
 export const useMetodosCobro = () => {
   const { user } = useAuth();
-  const { metodosPago, metodoCredito, metodosPagoActivo, abonosPedidosActivo } =
-    useSettings();
-  const puedeDarCredito = user?.puedeDarCredito === true;
+  const {
+    metodosPago,
+    metodoCredito,
+    metodosPagoActivo,
+    abonosPedidosActivo,
+    creditoRoles,
+  } = useSettings();
+  // Permiso por perfil, configurado en Pagos y Facturación.
+  const puedeDarCredito = creditoRoles.includes(user?.rol);
 
   return useMemo(
     () =>

@@ -12,6 +12,8 @@ const COLUMNAS_POR_CAMPO = {
   // Lista de perfiles (TEXT[]): se guarda con actualizarInterruptor igual que
   // los booleanos, solo cambia el tipo del valor.
   precioManualRoles: "precio_manual_roles",
+  // Perfiles que pueden entregar pedidos a crédito (TEXT[], como el anterior).
+  creditoRoles: "credito_roles",
 };
 
 const COLUMNAS = Object.values(COLUMNAS_POR_CAMPO).join(", ");

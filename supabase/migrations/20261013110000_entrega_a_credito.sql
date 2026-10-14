@@ -10,10 +10,10 @@
 --   * pedidos_cabecera.monto_credito: cuánto quedó a crédito en la entrega
 --     (para la factura y la trazabilidad; el saldo vigente sigue siendo
 --     total - total_pagado).
---   * permisos_usuario.puede_dar_credito: permiso POR USUARIO (no por rol).
---     Tabla satélite en vez de columna de `perfiles`, porque el propio usuario
---     puede editar su fila de perfiles (correo) y se autoasignaría el permiso.
---     Solo se escribe con la RPC de soporte/gerencia.
+--   * configuracion_sistema.credito_roles: perfiles que pueden entregar a
+--     crédito, configurados en Pagos y Facturación junto con el resto de
+--     permisos por perfil (precio_manual_roles). Soporte y gerencia SIEMPRE
+--     tienen todos los permisos: un CHECK exige que estén en ambas listas.
 --   * Requiere métodos de pago y abonos a pedidos activos: el crédito se
 --     elige como método y se cobra después con abonos.
 -- ============================================================================
@@ -95,67 +95,35 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
--- 3. Permiso por usuario: permisos_usuario
+-- 3. Permisos por perfil: credito_roles (y soporte/gerencia siempre)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS permisos_usuario (
-  usuario_id UUID PRIMARY KEY REFERENCES perfiles(id) ON DELETE CASCADE,
-  puede_dar_credito BOOLEAN NOT NULL DEFAULT false,
-  creado TIMESTAMPTZ DEFAULT timezone('utc', now()) NOT NULL,
-  actualizado TIMESTAMPTZ DEFAULT timezone('utc', now()) NOT NULL
-);
+ALTER TABLE configuracion_sistema
+  ADD COLUMN IF NOT EXISTS credito_roles TEXT[] NOT NULL DEFAULT ARRAY['soporte', 'gerencia'];
 
-ALTER TABLE permisos_usuario ENABLE ROW LEVEL SECURITY;
-
--- Solo lectura desde el cliente (la escritura va por RPC): RLS no cubre
--- TRUNCATE, así que además se revocan los privilegios de escritura.
-REVOKE ALL ON TABLE permisos_usuario FROM anon, authenticated;
-GRANT SELECT ON TABLE permisos_usuario TO authenticated;
-
-DROP POLICY IF EXISTS "permisos_usuario_select" ON permisos_usuario;
-CREATE POLICY "permisos_usuario_select" ON permisos_usuario
-  FOR SELECT TO authenticated
-  USING (
-    usuario_id = auth.uid()
-    OR obtener_rol_actual() IN ('soporte', 'gerencia')
+-- Soporte y gerencia siempre incluidos, también en el permiso que ya existía.
+UPDATE configuracion_sistema
+  SET precio_manual_roles = ARRAY(
+    SELECT DISTINCT r FROM unnest(precio_manual_roles || ARRAY['soporte', 'gerencia']) AS r
   );
 
-DROP TRIGGER IF EXISTS set_timestamp_permisos_usuario ON permisos_usuario;
-CREATE TRIGGER set_timestamp_permisos_usuario
-  BEFORE UPDATE ON permisos_usuario
-  FOR EACH ROW EXECUTE FUNCTION actualizar_timestamp();
+ALTER TABLE configuracion_sistema
+  DROP CONSTRAINT IF EXISTS configuracion_sistema_credito_roles_check,
+  ADD CONSTRAINT configuracion_sistema_credito_roles_check
+    CHECK (
+      credito_roles <@ ARRAY['soporte', 'gerencia', 'despachador', 'repartidor', 'cajera']::TEXT[]
+      AND credito_roles @> ARRAY['soporte', 'gerencia']::TEXT[]
+    );
 
-CREATE OR REPLACE FUNCTION actualizar_permiso_credito_usuario(
-  p_user_id UUID,
-  p_puede_dar_credito BOOLEAN
-)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF obtener_rol_actual() NOT IN ('soporte', 'gerencia') THEN
-    RAISE EXCEPTION 'No tienes permiso para asignar permisos de crédito.';
-  END IF;
+ALTER TABLE configuracion_sistema
+  DROP CONSTRAINT IF EXISTS configuracion_sistema_precio_manual_roles_siempre_check,
+  ADD CONSTRAINT configuracion_sistema_precio_manual_roles_siempre_check
+    CHECK (precio_manual_roles @> ARRAY['soporte', 'gerencia']::TEXT[]);
 
-  IF p_puede_dar_credito IS NULL THEN
-    RAISE EXCEPTION 'Indica si el usuario puede dar crédito.';
-  END IF;
+-- La actualiza soporte/gerencia con la política de UPDATE ya existente de
+-- configuracion_sistema (mismo mecanismo que precio_manual_roles).
 
-  IF NOT EXISTS (SELECT 1 FROM perfiles WHERE id = p_user_id AND eliminado IS NULL) THEN
-    RAISE EXCEPTION 'El usuario no existe.';
-  END IF;
-
-  INSERT INTO permisos_usuario (usuario_id, puede_dar_credito)
-  VALUES (p_user_id, p_puede_dar_credito)
-  ON CONFLICT (usuario_id) DO UPDATE SET puede_dar_credito = EXCLUDED.puede_dar_credito;
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION actualizar_permiso_credito_usuario(UUID, BOOLEAN) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION actualizar_permiso_credito_usuario(UUID, BOOLEAN) TO authenticated;
-
--- ¿El usuario autenticado puede dar crédito? (usuario activo con el permiso)
+-- ¿El perfil del usuario autenticado puede entregar a crédito? Uso interno de
+-- las RPC de cobro; no se expone por la API.
 CREATE OR REPLACE FUNCTION usuario_puede_dar_credito()
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -163,18 +131,13 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT COALESCE((
-    SELECT pu.puede_dar_credito
-      FROM permisos_usuario pu
-      JOIN perfiles p ON p.id = pu.usuario_id
-      WHERE pu.usuario_id = auth.uid()
-        AND p.estado = true
-        AND p.eliminado IS NULL
-  ), false);
+  SELECT COALESCE(
+    (SELECT obtener_rol_actual() = ANY (c.credito_roles) FROM configuracion_sistema c),
+    false
+  );
 $$;
 
-REVOKE EXECUTE ON FUNCTION usuario_puede_dar_credito() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION usuario_puede_dar_credito() TO authenticated;
+REVOKE ALL ON FUNCTION usuario_puede_dar_credito() FROM PUBLIC, anon, authenticated;
 
 -- ----------------------------------------------------------------------------
 -- 4. registrar_pagos: el crédito no es dinero, nunca entra al libro de pagos

@@ -13,6 +13,7 @@ const CONFIG_INICIAL = {
   imprimirLogoActivo: false,
   precioManualActivo: false,
   precioManualRoles: [],
+  creditoRoles: [],
 };
 
 /**
