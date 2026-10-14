@@ -101,6 +101,7 @@ export const OrdersPage = () => {
     if (filtros.fechaHasta) params.set("hasta", filtros.fechaHasta);
     if (filtros.campoFecha) params.set("campoFecha", filtros.campoFecha);
     if (filtros.vendedorId) params.set("vendedor", filtros.vendedorId);
+    if (filtros.conSaldo) params.set("conSaldo", "1");
     return params.toString();
   };
 
@@ -393,6 +394,20 @@ export const OrdersPage = () => {
                 </option>
               ))}
             </select>
+
+            {abonosPedidosActivo && (
+              <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none shrink-0">
+                <input
+                  type="checkbox"
+                  checked={!!filtros.conSaldo}
+                  onChange={(e) =>
+                    handleFilterChange("conSaldo", e.target.checked)
+                  }
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                Solo con saldo pendiente
+              </label>
+            )}
 
             {hayFiltrosActivos && (
               <button
