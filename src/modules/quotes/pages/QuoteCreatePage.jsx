@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Save,
@@ -15,6 +15,7 @@ import { productService } from "../../products/services/productService";
 import { validateQuoteForm, validateQuoteField } from "../utils/quoteValidations";
 import {
   DIAS_VIGENCIA_POR_DEFECTO,
+  puedeEditarse,
   hoyIso,
   sumarDiasIso,
 } from "../utils/quoteStatus";
@@ -37,8 +38,14 @@ const formatCurrency = (amount) =>
 // precio mayorista (mismos roles que valida resolver_precio_pedido).
 const PUEDE_MAYORISTA = true;
 
+/**
+ * Crea una cotización o, si la ruta trae `:id`, edita una que aún no se ha
+ * convertido en pedido (mismo formulario y carrito en ambos casos).
+ */
 export const QuoteCreatePage = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const esEdicion = Boolean(id);
   const { user } = useAuth();
   // Cambiar el precio al cotizar es opcional por empresa y por perfil (Pagos y
   // Facturación); el servidor valida lo mismo al guardar.
@@ -59,6 +66,7 @@ export const QuoteCreatePage = () => {
 
   const {
     carrito,
+    setCarrito,
     errorStock: errorCarrito,
     agregarAlCarrito,
     modificarCantidad,
@@ -71,28 +79,75 @@ export const QuoteCreatePage = () => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bloqueada, setBloqueada] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [clientesData, productosData, mayoristas, personalizados] =
-          await Promise.all([
-            clientService.getClientesActivos(),
-            productService.getProductosActivos(),
-            productService.getTodosPreciosMayoristas(),
-            productService.getTodosPreciosPersonalizados(),
-          ]);
+        const [
+          clientesData,
+          productosData,
+          mayoristas,
+          personalizados,
+          cotizacion,
+          lineas,
+        ] = await Promise.all([
+          clientService.getClientesActivos(),
+          productService.getProductosActivos(),
+          productService.getTodosPreciosMayoristas(),
+          productService.getTodosPreciosPersonalizados(),
+          esEdicion ? quoteService.getCotizacionCompleta(id) : null,
+          esEdicion ? quoteService.obtenerDetallesCotizacion(id) : [],
+        ]);
+
+        const productosConPrecios = productosData.map((p) => ({
+          ...p,
+          tiersMayoristas: mayoristas.filter((t) => t.producto_id === p.id),
+          preciosPersonalizados: personalizados.filter(
+            (t) => t.producto_id === p.id,
+          ),
+        }));
 
         setClientes(clientesData);
-        setProductos(
-          productosData.map((p) => ({
-            ...p,
-            tiersMayoristas: mayoristas.filter((t) => t.producto_id === p.id),
-            preciosPersonalizados: personalizados.filter(
-              (t) => t.producto_id === p.id,
-            ),
-          })),
-        );
+        setProductos(productosConPrecios);
+
+        if (cotizacion) {
+          if (!puedeEditarse(cotizacion)) {
+            setErrors({
+              global: `Esta cotización ya no se puede editar (estado: ${cotizacion.estado}).`,
+            });
+            setBloqueada(true);
+            return;
+          }
+          setClienteId(cotizacion.cliente_id);
+          setFechaVencimiento(cotizacion.fecha_vencimiento);
+          setNotas(cotizacion.notas || "");
+          setCarrito(
+            lineas.map((d) => {
+              const producto = productosConPrecios.find(
+                (p) => p.id === d.producto_id,
+              );
+              return {
+                producto_id: d.producto_id,
+                nombre: d.producto?.nombre || "Producto",
+                codigo: d.producto?.codigo || "",
+                cantidad: Number(d.cantidad),
+                precio_unitario: Number(d.precio_unitario),
+                iva_porcentaje: Number(d.iva_porcentaje),
+                inc_porcentaje: Number(d.inc_porcentaje),
+                subtotal_linea: Number(d.subtotal_linea),
+                disponible: producto?.disponible ?? 0,
+                tipo_precio: d.tipo_precio || "normal",
+                tipo_precio_id: d.tipo_precio_id ?? null,
+                precio_venta:
+                  producto?.precio_venta ?? Number(d.precio_unitario),
+                preciosPersonalizados: producto?.preciosPersonalizados || [],
+                tiersMayoristas: producto?.tiersMayoristas || [],
+                mayoristaForzado: false,
+              };
+            }),
+          );
+        }
       } catch (error) {
         console.error("Error cargando datos base:", error);
         setErrors({ global: "No se pudieron cargar clientes y productos." });
@@ -101,7 +156,9 @@ export const QuoteCreatePage = () => {
       }
     };
     fetchData();
-  }, []);
+    // setCarrito es estable (useState); la carga solo depende de la ruta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const validarCampo = (campo, valor) =>
     setErrors((prev) => ({
@@ -151,7 +208,9 @@ export const QuoteCreatePage = () => {
 
     try {
       setIsSubmitting(true);
-      const resultado = await quoteService.crearCotizacion(cabecera, carrito);
+      const resultado = esEdicion
+        ? await quoteService.editarCotizacion(id, cabecera, carrito)
+        : await quoteService.crearCotizacion(cabecera, carrito);
       navigate(`/cotizaciones/${resultado.id}`);
     } catch (error) {
       console.error(error);
@@ -177,14 +236,16 @@ export const QuoteCreatePage = () => {
       <div className="flex items-center justify-between p-4 bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate("/cotizaciones")}
+            onClick={() =>
+              navigate(esEdicion ? `/cotizaciones/${id}` : "/cotizaciones")
+            }
             className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
           <h1 className="text-lg font-bold text-slate-800 flex items-center gap-1.5">
             <FileText className="h-5 w-5 text-blue-600" />
-            Nueva Cotización
+            {esEdicion ? "Editar Cotización" : "Nueva Cotización"}
           </h1>
         </div>
       </div>
@@ -192,6 +253,7 @@ export const QuoteCreatePage = () => {
       <form
         onSubmit={handleSubmit}
         className="p-4 flex flex-col gap-4 max-w-3xl mx-auto w-full"
+        inert={bloqueada}
       >
         {errors.global && (
           <div className="bg-red-50 text-red-700 p-3 rounded-xl flex items-center gap-2 text-sm border border-red-200">
@@ -307,7 +369,7 @@ export const QuoteCreatePage = () => {
             ) : (
               <Save className="h-5 w-5" />
             )}
-            Guardar Cotización
+            {esEdicion ? "Guardar Cambios" : "Guardar Cotización"}
           </button>
         </div>
       </form>
