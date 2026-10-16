@@ -7,10 +7,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  Pencil,
 } from "lucide-react";
 import { quoteService } from "../services/quoteService";
 import { usePaginatedList } from "../../../hooks/usePaginatedList";
 import { QuoteStatusBadge } from "../components/QuoteStatusBadge";
+import { puedeEditarse } from "../utils/quoteStatus";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
 const formatCurrency = (amount) =>
@@ -161,13 +163,26 @@ export const QuotesPage = () => {
                           <QuoteStatusBadge cotizacion={cotizacion} />
                         </td>
                         <td className="py-4 px-6 text-right">
-                          <button
-                            onClick={() => navigate(`/cotizaciones/${cotizacion.id}`)}
-                            title="Ver detalle"
-                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => navigate(`/cotizaciones/${cotizacion.id}`)}
+                              title="Ver detalle"
+                              className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {puedeEditarse(cotizacion) && (
+                              <button
+                                onClick={() =>
+                                  navigate(`/cotizaciones/${cotizacion.id}/editar`)
+                                }
+                                title="Editar cotización"
+                                className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
