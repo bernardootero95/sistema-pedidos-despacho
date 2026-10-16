@@ -231,12 +231,14 @@ export function useCarritoPedido(
     // Acepta decimales (media caja, etc.): se admite "," como separador
     // además de "." porque el input es type="number" con locale variable.
     const texto = valorTexto.toString().trim().replace(",", ".");
-    const cantidadEscrita = texto === "" ? 1 : Number(texto);
+    if (texto === "") return;
+    const cantidadEscrita = Number(texto);
     if (Number.isNaN(cantidadEscrita)) return;
 
     // Solo se manejan cuartos de unidad: lo que se escriba se ajusta al
     // múltiplo de .25 más cercano (ej. "1.3" -> 1.25).
     const cantidad = redondearACantidadValida(cantidadEscrita);
+    if (cantidad <= 0) return;
     const item = carrito[index];
 
     const stockError = validarStock

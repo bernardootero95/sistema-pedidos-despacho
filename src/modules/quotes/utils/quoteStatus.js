@@ -45,3 +45,7 @@ export const puedeConvertirse = (cotizacion, hoy = hoyIso()) =>
 /** Anular aplica a vigentes y vencidas; una convertida se gestiona desde su pedido. */
 export const puedeAnularse = (cotizacion) =>
   cotizacion.estado === "vigente";
+
+/** Editar aplica solo a cotizaciones vigentes (o vencidas, a las que se fija nueva vigencia); no a convertidas ni anuladas. */
+export const puedeEditarse = (cotizacion) =>
+  cotizacion.estado === "vigente";

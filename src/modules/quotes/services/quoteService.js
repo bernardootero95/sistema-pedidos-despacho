@@ -100,6 +100,25 @@ export const quoteService = {
     return data;
   },
 
+  /**
+   * Reemplaza cliente, vigencia, notas y líneas de una cotización que aún no
+   * se ha convertido en pedido (`editar_cotizacion_transaccional`).
+   */
+  async editarCotizacion(cotizacionId, cabeceraData, detalles) {
+    const { data, error } = await supabase.rpc("editar_cotizacion_transaccional", {
+      p_cotizacion_id: cotizacionId,
+      p_cliente_id: cabeceraData.cliente_id,
+      p_fecha_vencimiento: cabeceraData.fecha_vencimiento,
+      p_notas: cabeceraData.notas || null,
+      p_detalles: detalles.map(armarDetalleRpc),
+    });
+
+    if (error) {
+      throw new Error(error.message || "Error al editar la cotización.");
+    }
+    return data;
+  },
+
   async anularCotizacion(cotizacionId, motivo) {
     const { data, error } = await supabase.rpc("anular_cotizacion_transaccional", {
       p_cotizacion_id: cotizacionId,

@@ -1,6 +1,7 @@
 import { Plus, Minus, Trash2, Layers, Tag } from "lucide-react";
 import { PrecioManualEditor } from "./PrecioManualEditor";
 
+import { QuantityInput } from "../../../components/ui/QuantityInput";
 /**
  * Opciones de tipo de precio que se le ofrecen a quien arma el pedido para
  * una línea: Normal siempre; Mayorista si su rol puede y el producto tiene
@@ -177,14 +178,12 @@ export const CarritoPedido = ({
                     >
                       <Minus className="h-4 w-4" />
                     </button>
-                    <input
-                      type="number"
-                      inputMode="decimal"
+                    <QuantityInput
                       step="0.25"
                       min="0"
                       value={item.cantidad}
-                      onChange={(e) =>
-                        onActualizarCantidadInput(index, e.target.value)
+                      onCommit={(cantidad) =>
+                        onActualizarCantidadInput(index, cantidad)
                       }
                       className="w-16 text-center font-bold text-slate-800 outline-none text-sm bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />

@@ -258,6 +258,7 @@ export const AppRouter = () => {
             <Route element={<RoleGuard roles={ROLES_MODULO.COTIZACIONES} />}>
               <Route path="/cotizaciones" element={<QuotesPage />} />
               <Route path="/cotizaciones/nueva" element={<QuoteCreatePage />} />
+              <Route path="/cotizaciones/:id/editar" element={<QuoteCreatePage />} />
               <Route path="/cotizaciones/:id" element={<QuoteDetailsPage />} />
             </Route>
             <Route element={<RoleGuard roles={ROLES_MODULO.DESPACHOS} />}>

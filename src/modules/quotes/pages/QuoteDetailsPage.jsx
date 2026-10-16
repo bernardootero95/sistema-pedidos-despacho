@@ -10,13 +10,14 @@ import {
   StickyNote,
   Printer,
   ShoppingCart,
+  Pencil,
 } from "lucide-react";
 import { quoteService } from "../services/quoteService";
 import { QuoteStatusBadge } from "../components/QuoteStatusBadge";
 import { QuoteAnularControl } from "../components/QuoteAnularControl";
 import { QuoteConvertControl } from "../components/QuoteConvertControl";
 import { imprimirCotizacionPdf } from "../utils/quotePrintUtils";
-import { puedeAnularse, puedeConvertirse } from "../utils/quoteStatus";
+import { puedeAnularse, puedeConvertirse, puedeEditarse } from "../utils/quoteStatus";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 
 const formatCurrency = (amount) =>
@@ -161,6 +162,15 @@ export const QuoteDetailsPage = () => {
             )}
             Imprimir PDF
           </button>
+          {puedeEditarse(cotizacion) && (
+            <Link
+              to={`/cotizaciones/${cotizacion.id}/editar`}
+              className="px-4 py-2.5 rounded-xl font-medium text-sm border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-2"
+            >
+              <Pencil className="h-4 w-4" />
+              Editar
+            </Link>
+          )}
           {puedeConvertirse(cotizacion) && (
             <QuoteConvertControl
               cotizacionId={cotizacion.id}

@@ -401,6 +401,14 @@ export const SECCIONES_AYUDA = [
         ],
       },
       {
+        titulo: "Editar una cotización",
+        notas: [
+          "Mientras no esté convertida en pedido ni anulada, abre la cotización y presiona «Editar» para cambiar cliente, fecha de validez, notas o productos.",
+          "Al guardar, los precios se recalculan con el catálogo vigente (los que fijaste a mano se mantienen).",
+          "Una cotización vencida también se puede editar: asígnale una nueva fecha de validez.",
+        ],
+      },
+      {
         titulo: "Imprimir o enviar al cliente",
         notas: [
           "En el detalle usa «Imprimir PDF»: se genera en tamaño carta con los datos de la empresa y la fecha de validez.",

@@ -1,4 +1,5 @@
 import { Trash2, PackageSearch } from "lucide-react";
+import { QuantityInput } from "../../../components/ui/QuantityInput";
 
 /**
  * Tabla de líneas agregadas a la compra en curso, con cantidad y costo
@@ -46,16 +47,12 @@ export const PurchaseCart = ({
                 <label className="text-[10px] text-slate-400 font-bold uppercase">
                   Cantidad
                 </label>
-                <input
-                  type="number"
+                <QuantityInput
                   min="0"
                   step="0.01"
                   value={linea.cantidad}
-                  onChange={(e) =>
-                    onActualizarCantidad(
-                      linea.producto_id,
-                      Number(e.target.value),
-                    )
+                  onCommit={(cantidad) =>
+                    onActualizarCantidad(linea.producto_id, cantidad)
                   }
                   className="w-20 p-1.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
                 />
