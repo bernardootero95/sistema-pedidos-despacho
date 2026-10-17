@@ -9,6 +9,8 @@ const CONFIG_INICIAL = {
   abonosPedidosActivo: false,
   abonosComprasActivo: false,
   facturacionAutomaticaActivo: false,
+  facturacionLimiteTipo: "ilimitada",
+  facturacionLimiteValor: null,
   impresionCartaActivo: false,
   imprimirLogoActivo: false,
   precioManualActivo: false,

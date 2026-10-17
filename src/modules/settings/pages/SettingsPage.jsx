@@ -1,4 +1,5 @@
 import { FeatureToggleCard } from "../components/FeatureToggleCard";
+import { FacturacionLimiteCard } from "../components/FacturacionLimiteCard";
 import { PaymentMethodsSection } from "../components/PaymentMethodsSection";
 import { RolesPermisoSelector } from "../components/RolesPermisoSelector";
 import { ROLES_CREDITO, ROLES_PRECIO_MANUAL } from "../utils/permisosRoles";
@@ -72,6 +73,12 @@ export const SettingsPage = () => {
           />
         ))}
       </div>
+
+      {settings.facturacionAutomaticaActivo && (
+        <FacturacionLimiteCard
+          key={`${settings.facturacionLimiteTipo}-${settings.facturacionLimiteValor}`}
+        />
+      )}
 
       {(settings.precioManualActivo || mostrarCredito) && (
         <section className="space-y-3">
