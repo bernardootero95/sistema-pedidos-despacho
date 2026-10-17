@@ -185,13 +185,11 @@ GRANT EXECUTE ON FUNCTION obtener_consumo_limite_facturacion() TO authenticated;
 -- ----------------------------------------------------------------------------
 -- 5. iniciar_operacion_ingefact: evalúa el límite en la emisión automática
 -- ----------------------------------------------------------------------------
-DROP FUNCTION IF EXISTS iniciar_operacion_ingefact(UUID, TEXT, BOOLEAN);
-
 CREATE FUNCTION iniciar_operacion_ingefact(
   p_pedido_id UUID,
   p_accion TEXT,
   p_forzar BOOLEAN DEFAULT false,
-  p_automatico BOOLEAN DEFAULT false
+  p_automatico BOOLEAN
 )
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -295,3 +293,22 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION iniciar_operacion_ingefact(UUID, TEXT, BOOLEAN, BOOLEAN) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION iniciar_operacion_ingefact(UUID, TEXT, BOOLEAN, BOOLEAN) TO service_role;
+
+-- Compatibilidad: la Edge Function anterior llama con 3 argumentos. Se
+-- conserva esa firma (sin límite, como antes) para que desplegar la función
+-- nueva no tenga que coincidir al segundo con esta migración.
+CREATE OR REPLACE FUNCTION iniciar_operacion_ingefact(
+  p_pedido_id UUID,
+  p_accion TEXT,
+  p_forzar BOOLEAN DEFAULT false
+)
+RETURNS TEXT
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT iniciar_operacion_ingefact(p_pedido_id, p_accion, p_forzar, false);
+$$;
+
+REVOKE EXECUTE ON FUNCTION iniciar_operacion_ingefact(UUID, TEXT, BOOLEAN) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION iniciar_operacion_ingefact(UUID, TEXT, BOOLEAN) TO service_role;
