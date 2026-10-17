@@ -184,6 +184,7 @@ async function facturar(supabaseAdmin: SupabaseClient, pedidoId: string) {
     .from('pedidos_cabecera')
     .select(`
       id,
+      total,
       clientes ( id, tipo_identificacion, numero_identificacion, digito_verificacion, primer_nombre, primer_apellido, razon_social, correo, telefono, ingefact_cliente_id ),
       detalles:pedidos_detalle ( cantidad, precio_unitario, iva_porcentaje, inc_porcentaje, producto_id, producto:productos ( codigo, nombre ) )
     `)
@@ -229,6 +230,8 @@ async function facturar(supabaseAdmin: SupabaseClient, pedidoId: string) {
       // Para el QR de consulta DIAN en la factura impresa.
       ingefact_cufe: enviada.cufe ?? null,
       ingefact_enviado_en: new Date().toISOString(),
+      // Valor facturado: suma contra el límite de facturación del periodo.
+      ingefact_total: Number(enviada.total) || Number(pedido.total) || 0,
       ingefact_nota_credito_id: null,
       ingefact_numero_nota_credito: null,
       ingefact_anulado_en: null,
@@ -297,11 +300,22 @@ async function anular(supabaseAdmin: SupabaseClient, pedidoId: string) {
 
 // Ejecuta la acción con el candado del pedido tomado y deja el error en el
 // pedido si falla, para que soporte lo vea y pueda reintentar.
-async function ejecutar(supabaseAdmin: SupabaseClient, pedidoId: string, accion: Accion, forzar: boolean) {
+//
+// `automatico` = origen sin persona (trigger o reconciliación): ahí aplica el
+// límite de facturación (ver iniciar_operacion_ingefact). El botón manual no
+// lo respeta.
+async function ejecutar(
+  supabaseAdmin: SupabaseClient,
+  pedidoId: string,
+  accion: Accion,
+  forzar: boolean,
+  automatico: boolean,
+) {
   const { data: motivo, error: candadoError } = await supabaseAdmin.rpc('iniciar_operacion_ingefact', {
     p_pedido_id: pedidoId,
     p_accion: accion,
     p_forzar: forzar,
+    p_automatico: automatico,
   })
   if (candadoError) throw new IngefactError(500, candadoError.message)
   if (motivo) throw new IngefactError(409, motivo)
@@ -336,7 +350,7 @@ async function reconciliar(supabaseAdmin: SupabaseClient, pedidoId: string, ulti
   if (!pedido) return
 
   if (ultimaAccion === 'facturar' && pedido.estado !== 'entregado') {
-    await ejecutar(supabaseAdmin, pedidoId, 'anular', false)
+    await ejecutar(supabaseAdmin, pedidoId, 'anular', false, true)
     return
   }
 
@@ -346,7 +360,7 @@ async function reconciliar(supabaseAdmin: SupabaseClient, pedidoId: string, ulti
       .select('facturacion_automatica_activo')
       .single()
     if (config?.facturacion_automatica_activo) {
-      await ejecutar(supabaseAdmin, pedidoId, 'facturar', false)
+      await ejecutar(supabaseAdmin, pedidoId, 'facturar', false, true)
     }
   }
 }
@@ -423,7 +437,7 @@ serve(async (req) => {
 
     // Solo una persona puede forzar un candado abandonado (ver
     // iniciar_operacion_ingefact).
-    const resultado = await ejecutar(supabaseAdmin, pedido_id, accion, !esAutomatico)
+    const resultado = await ejecutar(supabaseAdmin, pedido_id, accion, !esAutomatico, esAutomatico)
     await reconciliar(supabaseAdmin, pedido_id, accion).catch((error) => {
       console.error('No se pudo reconciliar la facturación del pedido', pedido_id, error)
     })
