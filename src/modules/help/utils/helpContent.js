@@ -250,6 +250,7 @@ export const SECCIONES_AYUDA = [
         roles: ["soporte", "gerencia"],
         notas: [
           "La factura se habilita cuando el pedido está entregado. Si la facturación automática está apagada, o si un envío falló, usa «Enviar Factura» / «Reintentar factura» y confirma con un segundo clic.",
+          "Si hay un límite de facturación y se alcanzó, el pedido muestra «Factura no enviada automáticamente» con el motivo: puedes emitirla igual con «Enviar Factura», que no tiene límite.",
           "Al anular o devolver un pedido facturado, la factura se anula con una nota crédito.",
           "Emitir o anular una factura ante la DIAN no se puede deshacer.",
         ],
@@ -614,6 +615,7 @@ export const SECCIONES_AYUDA = [
           "Abonos a pedidos y abonos a compras: permiten pagos parciales.",
           "Cambiar el precio al vender: permite modificar a mano el precio de una línea al tomar o editar un pedido. Al activarla eliges qué perfiles pueden hacerlo (por defecto soporte y gerencia).",
           "Facturación electrónica automática: emite la factura ante la DIAN en cuanto un pedido queda entregado.",
+          "Límite de facturación (con la facturación automática encendida): elige Ilimitada, mensual o diaria (hora de Colombia) y un valor en pesos. Se envían facturas hasta que el total facturado del periodo llegue al valor; las anuladas no cuentan. Si una factura pasa el límite por menos del 10 %, se envía y las siguientes ya no; si lo pasaría por más del 10 %, no se envía y se evalúa la siguiente. Las que no se envían quedan pendientes y se emiten a mano con «Enviar Factura» (el botón manual no tiene límite, pero sus facturas sí suman).",
         ],
       },
     ],

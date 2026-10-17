@@ -6,6 +6,9 @@ const COLUMNAS_POR_CAMPO = {
   abonosPedidosActivo: "abonos_pedidos_activo",
   abonosComprasActivo: "abonos_compras_activo",
   facturacionAutomaticaActivo: "facturacion_automatica_activo",
+  // Límite de la facturación automática (ver actualizarLimiteFacturacion).
+  facturacionLimiteTipo: "facturacion_limite_tipo",
+  facturacionLimiteValor: "facturacion_limite_valor",
   impresionCartaActivo: "impresion_carta_activo",
   imprimirLogoActivo: "imprimir_logo_activo",
   precioManualActivo: "precio_manual_activo",
@@ -59,5 +62,34 @@ export const settingsService = {
 
     if (error)
       throw new Error("Error al guardar la opción: " + error.message);
+  },
+
+  /**
+   * Guarda el límite de facturación. Tipo y valor van en un solo UPDATE
+   * porque la base exige que sean coherentes (con límite, valor > 0).
+   * `valor` se ignora si es ilimitada.
+   */
+  async actualizarLimiteFacturacion(tipo, valor) {
+    const { error } = await supabase
+      .from("configuracion_sistema")
+      .update({
+        facturacion_limite_tipo: tipo,
+        facturacion_limite_valor: tipo === "ilimitada" ? null : Number(valor),
+      })
+      .eq("id", true);
+
+    if (error)
+      throw new Error("Error al guardar el límite de facturación: " + error.message);
+  },
+
+  /**
+   * Cuánto se ha facturado en el periodo actual frente al límite (solo
+   * soporte/gerencia). Devuelve { tipo, limite?, facturado? }.
+   */
+  async getConsumoLimiteFacturacion() {
+    const { data, error } = await supabase.rpc("obtener_consumo_limite_facturacion");
+    if (error)
+      throw new Error("Error al consultar el consumo del límite: " + error.message);
+    return data;
   },
 };

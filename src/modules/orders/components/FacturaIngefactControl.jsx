@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Loader2, CheckCircle2, AlertTriangle, Ban, RotateCcw } from "lucide-react";
+import { FileText, Loader2, CheckCircle2, AlertTriangle, Ban, RotateCcw, Gauge } from "lucide-react";
 import { orderService } from "../services/orderService";
 import { getEstadoFacturaIngefact } from "../utils/facturaIngefactEstado";
 
@@ -72,6 +72,12 @@ export const FacturaIngefactControl = ({ pedido, onActualizado }) => {
         {pedido.ingefact_numero_nota_credito
           ? ` (nota crédito ${pedido.ingefact_numero_nota_credito})`
           : ""}
+      </Aviso>
+    ),
+    limite: (
+      <Aviso tono="neutro" icon={Gauge}>
+        Factura no enviada automáticamente
+        {pedido.ingefact_error ? `: ${pedido.ingefact_error}` : " por el límite de facturación."}
       </Aviso>
     ),
     error: (

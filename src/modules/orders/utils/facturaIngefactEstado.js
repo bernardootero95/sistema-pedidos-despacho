@@ -10,7 +10,7 @@ export const MINUTOS_OPERACION_ABANDONADA = 10;
  *
  * @param {Object} pedido
  * @param {number} [ahora] epoch ms, inyectable para pruebas
- * @returns {{ aviso: "en_curso"|"vigente"|"anulada"|"error"|null, accion: "facturar"|"anular"|null }}
+ * @returns {{ aviso: "en_curso"|"vigente"|"anulada"|"error"|"limite"|null, accion: "facturar"|"anular"|null }}
  */
 export function getEstadoFacturaIngefact(pedido, ahora = Date.now()) {
   const facturaVigente = !!pedido.ingefact_factura_id && !pedido.ingefact_anulado_en;
@@ -31,12 +31,17 @@ export function getEstadoFacturaIngefact(pedido, ahora = Date.now()) {
     return { aviso: "vigente", accion: null };
   }
 
+  // "limite": la emisión automática se saltó este pedido por el límite de
+  // facturación; solo es relevante mientras siga entregado y se puede emitir
+  // a mano (el botón manual no tiene límite).
   const aviso =
     pedido.ingefact_estado === "error_facturacion"
       ? "error"
-      : pedido.ingefact_anulado_en
-        ? "anulada"
-        : null;
+      : pedido.ingefact_estado === "limite_alcanzado" && entregado
+        ? "limite"
+        : pedido.ingefact_anulado_en
+          ? "anulada"
+          : null;
 
   return { aviso, accion: entregado ? "facturar" : null };
 }

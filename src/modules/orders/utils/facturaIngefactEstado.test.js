@@ -60,4 +60,14 @@ describe("getEstadoFacturaIngefact", () => {
       accion: "facturar",
     });
   });
+
+  it("avisa del límite de facturación y deja emitir a mano un pedido entregado", () => {
+    const pedido = { estado: "entregado", ingefact_estado: "limite_alcanzado" };
+    expect(getEstadoFacturaIngefact(pedido, AHORA)).toEqual({ aviso: "limite", accion: "facturar" });
+  });
+
+  it("ignora el aviso de límite si el pedido ya no está entregado", () => {
+    const pedido = { estado: "anulado", ingefact_estado: "limite_alcanzado" };
+    expect(getEstadoFacturaIngefact(pedido, AHORA)).toEqual({ aviso: null, accion: null });
+  });
 });
