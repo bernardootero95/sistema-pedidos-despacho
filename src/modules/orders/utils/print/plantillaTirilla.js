@@ -7,6 +7,7 @@ import {
   datosEmisor,
   calcularTotales,
   mediosDePago,
+  mensajesPie,
 } from "./comprobanteDatos";
 
 const SEPARADOR = "padding-bottom: 8px; border-bottom: 1px dashed #000000;";
@@ -40,6 +41,16 @@ const pieElectronico = (pedido, emisor, qrDataUrl) => `
     <p style="margin: 0;">Representación gráfica de la factura electrónica</p>
   </div>
 `;
+
+const piePersonalizado = (pies) => {
+  const mensajes = mensajesPie(pies);
+  if (!mensajes.length) return "";
+  return `
+  <div style="${SEPARADOR} font-size: 10px; font-weight: 600; text-align: center; display: flex; flex-direction: column; gap: 4px;">
+    ${mensajes.map((m) => `<p style="margin: 0;">${m}</p>`).join("")}
+  </div>
+`;
+};
 
 /**
  * Comprobante térmico 80mm de un pedido: tirilla de pedido o tirilla POS de
@@ -128,6 +139,8 @@ export const construirTirillaHtml = (pedido, contexto = {}) => {
       }
 
       ${electronica ? pieElectronico(pedido, emisor, contexto.qrDataUrl) : ""}
+
+      ${piePersonalizado(contexto.pies)}
 
       <div style="text-align: center; font-size: 9px; font-weight: 600; display: flex; flex-direction: column; gap: 2px;">
         <p style="font-weight: bold; margin: 0;">¡Gracias por su compra!</p>

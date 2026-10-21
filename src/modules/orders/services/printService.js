@@ -1,5 +1,6 @@
 import { settingsService } from "../../settings/services/settingsService";
 import { companyService } from "../../settings/services/companyService";
+import { invoiceFooterService } from "../../settings/services/invoiceFooterService";
 import { urlQrDian } from "../utils/print/comprobanteDatos";
 
 /**
@@ -32,9 +33,11 @@ export const printService = {
    * por lote) para no imprimir con datos viejos.
    */
   async obtenerContexto() {
-    const [config, empresa] = await Promise.all([
+    // Los pies son un adorno: si fallan, el comprobante sale sin ellos.
+    const [config, empresa, pies] = await Promise.all([
       settingsService.getConfiguracion(),
       companyService.getDatosEmpresa(),
+      invoiceFooterService.getPies({ soloActivos: true }).catch(() => []),
     ]);
 
     const logoDataUrl =
@@ -42,7 +45,12 @@ export const printService = {
         ? await imagenComoDataUrl(empresa.logoUrl)
         : null;
 
-    return { formatoCarta: config.impresionCartaActivo, empresa, logoDataUrl };
+    return {
+      formatoCarta: config.impresionCartaActivo,
+      empresa,
+      logoDataUrl,
+      pies,
+    };
   },
 
   /** QR de consulta DIAN del pedido, o null si no tiene CUFE. */

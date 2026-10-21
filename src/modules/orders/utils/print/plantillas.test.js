@@ -131,3 +131,26 @@ describe.each([
     expect(html).toContain("Producto &lt;A&gt;");
   });
 });
+
+describe("pie de factura personalizado", () => {
+  const pies = [
+    { mensaje: "Promo <20%>\nSolo hoy" },
+    { mensaje: "   " },
+    { mensaje: "Síguenos en redes" },
+  ];
+
+  it("imprime los mensajes escapados en tirilla y carta", () => {
+    for (const html of [
+      construirTirillaHtml(pedido, { empresa, pies }),
+      construirCartaHtml(pedido, { empresa, pies }),
+    ]) {
+      expect(html).toContain("Promo &lt;20%&gt;<br/>Solo hoy");
+      expect(html).toContain("Síguenos en redes");
+    }
+  });
+
+  it("no agrega bloque si no hay mensajes", () => {
+    expect(construirCartaHtml(pedido, { empresa })).not.toContain("Síguenos");
+    expect(construirTirillaHtml(pedido, { empresa, pies: [] })).not.toContain("Promo");
+  });
+});

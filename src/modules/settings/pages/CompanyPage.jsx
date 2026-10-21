@@ -1,5 +1,6 @@
 import { CompanyDataSection } from "../components/CompanyDataSection";
 import { PrintSettingsSection } from "../components/PrintSettingsSection";
+import { InvoiceFooterSection } from "../components/InvoiceFooterSection";
 import { Building2 } from "lucide-react";
 
 /**
@@ -20,5 +21,6 @@ export const CompanyPage = () => (
 
     <CompanyDataSection />
     <PrintSettingsSection />
+    <InvoiceFooterSection />
   </div>
 );
