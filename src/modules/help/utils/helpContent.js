@@ -583,6 +583,7 @@ export const SECCIONES_AYUDA = [
         notas: [
           "Razón social, datos del emisor y logo que salen en pedidos y facturas.",
           "Tamaño de impresión: «Tirilla POS 80 mm» para impresora térmica u «Hoja carta» para impresora convencional.",
+          "Pie de factura: presiona «Nuevo Mensaje» para agregar un texto (promociones, avisos) que se imprime al final de pedidos y facturas. Puedes tener varios; desactiva uno para dejar de imprimirlo sin perderlo.",
         ],
       },
       {

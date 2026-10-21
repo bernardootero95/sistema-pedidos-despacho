@@ -7,6 +7,7 @@ import {
   datosEmisor,
   calcularTotales,
   mediosDePago,
+  mensajesPie,
 } from "./comprobanteDatos";
 
 // Ancho útil de una hoja carta (215.9mm) con 10mm de margen por lado.
@@ -167,6 +168,16 @@ const bloqueElectronico = (pedido, emisor, qrDataUrl) => `
   </table>
 `;
 
+const piePersonalizado = (pies) => {
+  const mensajes = mensajesPie(pies);
+  if (!mensajes.length) return "";
+  return `
+  <div class="evitar-corte" style="text-align: center; font-size: 10px; font-weight: 600; border: ${BORDE}; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px;">
+    ${mensajes.map((m) => `<div style="margin-top: 2px;">${m}</div>`).join("")}
+  </div>
+`;
+};
+
 /**
  * Pedido o factura electrónica en hoja carta, según el pedido tenga una
  * factura vigente. Mismo `contexto` que construirTirillaHtml.
@@ -182,6 +193,7 @@ export const construirCartaHtml = (pedido, contexto = {}) => {
       ${tablaDetalle(pedido.detalles)}
       ${bloqueTotales(pedido, electronica)}
       ${electronica ? bloqueElectronico(pedido, emisor, contexto.qrDataUrl) : ""}
+      ${piePersonalizado(contexto.pies)}
       <div class="evitar-corte" style="text-align: center; font-size: 9px; color: #475569; border-top: ${BORDE}; padding-top: 6px;">
         <div style="font-weight: 700; color: #0f172a;">¡Gracias por su compra!</div>
         <div>Sistema de pedidos y despacho desarrollado por TecnoIngenieria B.O.</div>

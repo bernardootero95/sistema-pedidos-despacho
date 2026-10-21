@@ -79,6 +79,16 @@ export const datosEmisor = (empresa) => {
 };
 
 /**
+ * Mensajes del pie de factura listos para imprimir: sin vacíos y escapados.
+ * Cada mensaje conserva sus saltos de línea como <br/>.
+ */
+export const mensajesPie = (pies = []) =>
+  pies
+    .map((pie) => pie?.mensaje?.trim())
+    .filter(Boolean)
+    .map((mensaje) => esc(mensaje).replace(/\r?\n/g, "<br/>"));
+
+/**
  * Base gravable e impuestos del pedido, agrupados por tarifa. El precio de
  * cada línea ya incluye impuestos (ver crear_pedido_transaccional), así que
  * se descuentan: base = subtotal / (1 + (iva + inc) / 100). Solo devuelve
