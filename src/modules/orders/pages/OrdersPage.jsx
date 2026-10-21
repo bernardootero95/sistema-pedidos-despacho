@@ -5,7 +5,7 @@ import { userService } from "../../users/services/userService";
 import { imprimirPedidoPdf } from "../utils/printUtils";
 import { puedeAnularPedido, puedeEntregarSinDespacho } from "../utils/orderValidations";
 import { CobroEntregaModal } from "../../dispatches/components/CobroEntregaModal";
-import { requiereCobroAlEntregar } from "../../dispatches/utils/cobroEntrega";
+import { cobroEntregaService } from "../../dispatches/services/cobroEntregaService";
 import {
   ESTADOS_PEDIDO,
   CAMPOS_FECHA,
@@ -184,8 +184,9 @@ export const OrdersPage = () => {
   };
 
   const handleEntregar = async (pedido) => {
-    if (requiereCobroAlEntregar(pedido, settings)) {
-      setPedidoACobrar(pedido);
+    const porCobrar = await cobroEntregaService.pedidoPorCobrar(pedido, settings);
+    if (porCobrar) {
+      setPedidoACobrar(porCobrar);
       return;
     }
     if (

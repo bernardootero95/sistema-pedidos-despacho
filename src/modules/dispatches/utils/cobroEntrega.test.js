@@ -28,6 +28,14 @@ describe("requiereCobroAlEntregar", () => {
     expect(requiereCobroAlEntregar(pedido, { ...apagado, abonosPedidosActivo: true })).toBe(true);
   });
 
+  it("no pide cobro si solo quedan centavos de saldo", () => {
+    const centavos = { total: "5800000.20", total_pagado: "5800000.00" };
+    const activo = { metodosPagoActivo: true, abonosPedidosActivo: true };
+    expect(requiereCobroAlEntregar(centavos, activo)).toBe(false);
+    expect(requiereCobroAlEntregar({ total: 1000.99, total_pagado: 0 }, activo)).toBe(true);
+    expect(requiereCobroAlEntregar({ total: "1000.00", total_pagado: "999.00" }, activo)).toBe(true);
+  });
+
   it("no pide cobro si el pedido ya está pagado", () => {
     const pagado = { total: 1000, total_pagado: 1000 };
     expect(requiereCobroAlEntregar(pagado, { metodosPagoActivo: true, abonosPedidosActivo: true })).toBe(false);

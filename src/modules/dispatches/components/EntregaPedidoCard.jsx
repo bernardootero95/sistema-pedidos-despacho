@@ -4,7 +4,7 @@ import { dispatchService } from "../services/dispatchService";
 import { getNombreCliente } from "../../clients/utils/clienteDisplay";
 import { useSettings } from "../../../context/useSettings";
 import { CobroEntregaModal } from "./CobroEntregaModal";
-import { requiereCobroAlEntregar } from "../utils/cobroEntrega";
+import { cobroEntregaService } from "../services/cobroEntregaService";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("es-CO", {
@@ -24,7 +24,7 @@ const formatCurrency = (amount) =>
 export const EntregaPedidoCard = ({ item, onActualizado }) => {
   const settings = useSettings();
   const [cargando, setCargando] = useState(false);
-  const [cobrando, setCobrando] = useState(false);
+  const [pedidoACobrar, setPedidoACobrar] = useState(null);
   const [error, setError] = useState("");
 
   const estadoEntrega = item.estado_entrega;
@@ -49,11 +49,18 @@ export const EntregaPedidoCard = ({ item, onActualizado }) => {
 
   // Al entregar con saldo por cobrar se abre primero el diálogo de cobro; el
   // servidor exige el pago completo antes de dejar pasar el pedido.
-  const handleEntregado = () => {
+  const handleEntregado = async () => {
     if (cargando || estadoEntrega === "entregado") return;
-    if (requiereCobroAlEntregar(item.pedido, settings)) {
-      setCobrando(true);
-      return;
+    setCargando(true);
+    setError("");
+    try {
+      const porCobrar = await cobroEntregaService.pedidoPorCobrar(item.pedido, settings);
+      if (porCobrar) {
+        setPedidoACobrar(porCobrar);
+        return;
+      }
+    } finally {
+      setCargando(false);
     }
     handleActualizar("entregado");
   };
@@ -65,7 +72,7 @@ export const EntregaPedidoCard = ({ item, onActualizado }) => {
       null,
       pagos,
     );
-    setCobrando(false);
+    setPedidoACobrar(null);
     onActualizado(item.id, "entregado");
   };
 
@@ -141,11 +148,11 @@ export const EntregaPedidoCard = ({ item, onActualizado }) => {
         </button>
       </div>
 
-      {cobrando && (
+      {pedidoACobrar && (
         <CobroEntregaModal
-          pedido={item.pedido}
+          pedido={pedidoACobrar}
           onConfirm={handleCobrar}
-          onCancel={() => setCobrando(false)}
+          onCancel={() => setPedidoACobrar(null)}
         />
       )}
     </div>

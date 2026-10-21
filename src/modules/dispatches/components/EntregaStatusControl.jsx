@@ -4,7 +4,7 @@ import { dispatchService } from "../services/dispatchService";
 import { ETIQUETAS_ESTADO_ENTREGA } from "../utils/dispatchStatus";
 import { useSettings } from "../../../context/useSettings";
 import { CobroEntregaModal } from "./CobroEntregaModal";
-import { requiereCobroAlEntregar } from "../utils/cobroEntrega";
+import { cobroEntregaService } from "../services/cobroEntregaService";
 
 const OPCIONES = [
   { value: "pendiente", Icon: Clock, activo: "bg-slate-600 text-white" },
@@ -35,7 +35,7 @@ export const EntregaStatusControl = ({
 }) => {
   const settings = useSettings();
   const [cargando, setCargando] = useState(false);
-  const [cobrando, setCobrando] = useState(false);
+  const [pedidoACobrar, setPedidoACobrar] = useState(null);
   const [error, setError] = useState("");
 
   const actualizar = async (nuevoEstado, pagos = null) => {
@@ -51,14 +51,16 @@ export const EntregaStatusControl = ({
   const handleClick = async (nuevoEstado) => {
     if (nuevoEstado === estadoEntrega || disabled || cargando) return;
 
-    if (nuevoEstado === "entregado" && requiereCobroAlEntregar(pedido, settings)) {
-      setCobrando(true);
-      return;
-    }
-
     setCargando(true);
     setError("");
     try {
+      if (nuevoEstado === "entregado") {
+        const porCobrar = await cobroEntregaService.pedidoPorCobrar(pedido, settings);
+        if (porCobrar) {
+          setPedidoACobrar(porCobrar);
+          return;
+        }
+      }
       await actualizar(nuevoEstado);
     } catch (err) {
       setError(err.message || "No se pudo actualizar.");
@@ -69,7 +71,7 @@ export const EntregaStatusControl = ({
 
   const handleCobrar = async (pagos) => {
     await actualizar("entregado", pagos);
-    setCobrando(false);
+    setPedidoACobrar(null);
   };
 
   return (
@@ -105,11 +107,11 @@ export const EntregaStatusControl = ({
         </p>
       )}
 
-      {cobrando && (
+      {pedidoACobrar && (
         <CobroEntregaModal
-          pedido={pedido}
+          pedido={pedidoACobrar}
           onConfirm={handleCobrar}
-          onCancel={() => setCobrando(false)}
+          onCancel={() => setPedidoACobrar(null)}
         />
       )}
     </div>
