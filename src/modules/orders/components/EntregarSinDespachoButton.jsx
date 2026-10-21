@@ -3,7 +3,7 @@ import { PackageCheck, Loader2 } from "lucide-react";
 import { orderService } from "../services/orderService";
 import { useSettings } from "../../../context/useSettings";
 import { CobroEntregaModal } from "../../dispatches/components/CobroEntregaModal";
-import { requiereCobroAlEntregar } from "../../dispatches/utils/cobroEntrega";
+import { cobroEntregaService } from "../../dispatches/services/cobroEntregaService";
 
 /**
  * Marca un pedido pendiente como entregado sin agregarlo a un despacho
@@ -20,7 +20,7 @@ import { requiereCobroAlEntregar } from "../../dispatches/utils/cobroEntrega";
 export const EntregarSinDespachoButton = ({ pedido, onEntregado }) => {
   const settings = useSettings();
   const [confirmando, setConfirmando] = useState(false);
-  const [cobrando, setCobrando] = useState(false);
+  const [pedidoACobrar, setPedidoACobrar] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
 
@@ -30,11 +30,18 @@ export const EntregarSinDespachoButton = ({ pedido, onEntregado }) => {
   };
 
   const handleClick = async () => {
-    if (requiereCobroAlEntregar(pedido, settings)) {
-      setCobrando(true);
-      return;
-    }
     if (!confirmando) {
+      setCargando(true);
+      setError("");
+      try {
+        const porCobrar = await cobroEntregaService.pedidoPorCobrar(pedido, settings);
+        if (porCobrar) {
+          setPedidoACobrar(porCobrar);
+          return;
+        }
+      } finally {
+        setCargando(false);
+      }
       setConfirmando(true);
       return;
     }
@@ -54,7 +61,7 @@ export const EntregarSinDespachoButton = ({ pedido, onEntregado }) => {
   // PaymentModal muestra el error del servidor dentro del diálogo.
   const handleCobrar = async (pagos) => {
     await entregar(pagos);
-    setCobrando(false);
+    setPedidoACobrar(null);
   };
 
   return (
@@ -89,11 +96,11 @@ export const EntregarSinDespachoButton = ({ pedido, onEntregado }) => {
       </div>
       {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
 
-      {cobrando && (
+      {pedidoACobrar && (
         <CobroEntregaModal
-          pedido={pedido}
+          pedido={pedidoACobrar}
           onConfirm={handleCobrar}
-          onCancel={() => setCobrando(false)}
+          onCancel={() => setPedidoACobrar(null)}
         />
       )}
     </div>
