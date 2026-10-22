@@ -60,13 +60,39 @@ npm run preview   # preview del build
    (`SECURITY DEFINER`, con bloqueo de filas si aplica), no resueltas solo
    en el frontend. El frontend puede replicar la validación para dar
    feedback inmediato, pero la fuente de verdad vive en el backend.
-7. **Soft delete y auditoría.** Las tablas existentes usan `estado`,
-   `creado`, `actualizado`, `eliminado` (soft delete) y triggers de
-   auditoría. Sigue ese patrón en tablas nuevas en vez de introducir uno
-   distinto.
+7. **Soft delete y auditoría (obligatorio en toda tabla nueva).** Ver la
+   sección "Auditoría y soft delete" más abajo.
 8. **Acciones destructivas piden confirmación explícita** (ver
    `DispatchStatusControl.jsx` como referencia: segundo click para
    confirmar anular).
+
+## Auditoría y soft delete
+
+Fijado en `20261022100000_auditoria_y_soft_delete_global.sql`. Toda
+migración que cree una tabla debe cumplirlo en la misma migración:
+
+- **Auditoría en toda tabla de negocio:** trigger
+  `audit_<tabla> AFTER INSERT OR UPDATE OR DELETE ... EXECUTE FUNCTION
+  registrar_auditoria()`. Si la tabla no tiene columna `id`, pasar la
+  columna que identifica la fila como argumento:
+  `registrar_auditoria('producto_id')`.
+- **Soft delete en toda entidad con ciclo de vida propio** (catálogos,
+  cabeceras, movimientos como `pagos`): columnas `creado`, `actualizado`,
+  `eliminado` (y `estado` si se puede activar/desactivar), más el trigger
+  `impedir_borrado_<tabla> BEFORE DELETE ... EXECUTE FUNCTION
+  impedir_borrado_fisico()`. Nunca `.delete()` sobre estas tablas: se
+  marca `eliminado` y toda lectura filtra `eliminado IS NULL` (frontend,
+  RPC, Edge Functions e informes). Las unicidades van como índice parcial
+  `WHERE eliminado IS NULL`.
+- **Sin soft delete, pero auditadas:** filas de detalle que viven y mueren
+  con su cabecera (`*_detalle`, `despachos_pedidos`), tablas satélite 1:1
+  (`productos_costos`, `pedidos_detalle_costos`) y tablas de fila única
+  (`configuracion_sistema`, `datos_empresa`). Su borrado físico queda en
+  `auditoria` con la fila completa.
+- **Excepciones:** `auditoria` y `auth_intentos_fallidos` (técnicas), y
+  `perfiles` sin bloqueo de DELETE (cascada desde `auth.users`).
+- Al revisar o tocar una tabla existente que no cumpla, corregirla en una
+  migración en vez de dejar la excepción.
 
 ## Convenciones ya establecidas en el proyecto
 
