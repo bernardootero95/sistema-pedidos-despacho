@@ -23,6 +23,7 @@ export const paymentService = {
       .from("pagos")
       .select(COLUMNAS_PAGO)
       .eq("pedido_id", pedidoId)
+      .is("eliminado", null)
       .order("creado", { ascending: true });
 
     if (error)
@@ -35,6 +36,7 @@ export const paymentService = {
       .from("pagos")
       .select(COLUMNAS_PAGO)
       .eq("compra_id", compraId)
+      .is("eliminado", null)
       .order("creado", { ascending: true });
 
     if (error)

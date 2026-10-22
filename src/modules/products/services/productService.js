@@ -130,7 +130,8 @@ export const productService = {
 
   /**
    * Reemplaza el set completo de franjas de precio al por mayor de un
-   * producto: borra las que ya no vienen en `tiers` e inserta el resto.
+   * producto: marca como eliminadas las vigentes (soft delete; la tabla no
+   * admite borrado físico) e inserta las que vienen en `tiers`.
    * No es una operación crítica (rule 6 de CLAUDE.md aplica a dinero en
    * vuelo de un pedido, no a la configuración del catálogo — igual que
    * crearProducto/actualizarProducto, es un CRUD directo bajo RLS).
@@ -138,8 +139,9 @@ export const productService = {
   async reemplazarPreciosMayoristas(productoId, tiers) {
     const { error: deleteError } = await supabase
       .from("productos_precios_mayoristas")
-      .delete()
-      .eq("producto_id", productoId);
+      .update({ eliminado: new Date().toISOString() })
+      .eq("producto_id", productoId)
+      .is("eliminado", null);
 
     if (deleteError)
       throw new Error(
@@ -224,8 +226,8 @@ export const productService = {
 
   /**
    * Reemplaza los precios diferenciados de un producto para los tipos que el
-   * formulario administró (`tiposGestionadosIds`): borra los de esos tipos e
-   * inserta los que traen valor en `precios`. Los tipos que el formulario no
+   * formulario administró (`tiposGestionadosIds`): marca como eliminados los
+   * de esos tipos (soft delete) e inserta los que traen valor en `precios`. Los tipos que el formulario no
    * mostró (ej. uno desactivado después) no se tocan. CRUD directo bajo RLS,
    * igual que reemplazarPreciosMayoristas.
    */
@@ -237,9 +239,10 @@ export const productService = {
     if (tiposGestionadosIds.length > 0) {
       const { error: deleteError } = await supabase
         .from("productos_precios")
-        .delete()
+        .update({ eliminado: new Date().toISOString() })
         .eq("producto_id", productoId)
-        .in("tipo_precio_id", tiposGestionadosIds);
+        .in("tipo_precio_id", tiposGestionadosIds)
+        .is("eliminado", null);
 
       if (deleteError)
         throw new Error(

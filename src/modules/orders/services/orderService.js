@@ -179,6 +179,7 @@ export const orderService = {
       `,
       )
       .eq("id", id)
+      .is("pagos.eliminado", null)
       .single();
 
     if (error) throw error;

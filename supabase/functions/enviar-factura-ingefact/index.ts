@@ -197,6 +197,7 @@ async function facturar(supabaseAdmin: SupabaseClient, pedidoId: string) {
     .from('pagos')
     .select('tipo, monto, metodo:metodos_pago ( codigo_dian )')
     .eq('pedido_id', pedidoId)
+    .is('eliminado', null)
 
   if (pagosError) throw new IngefactError(500, 'No se pudieron consultar los pagos del pedido.')
 
