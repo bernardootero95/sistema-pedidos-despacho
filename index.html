@@ -1,7 +1,13 @@
 <!doctype html>
-<html lang="en">
+<!--
+  lang="es" + translate="no": con lang="en" Chrome ofrecía/autotraducía la
+  app a usuarios en español, y el traductor envuelve los textos en <font>,
+  rompiendo la reconciliación de React (NotFoundError en removeChild).
+-->
+<html lang="es" translate="no">
   <head>
     <meta charset="UTF-8" />
+    <meta name="google" content="notranslate" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>sistema-pedidos-despacho</title>
