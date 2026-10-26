@@ -512,7 +512,7 @@ export const ProductForm = ({ onSuccess, onCancel, productToEdit = null }) => {
                     </p>
                   ) : (
                     <p className="mt-1 text-xs text-slate-400">
-                      Las compras registradas lo actualizan.
+                      Cada compra lo recalcula como costo promedio.
                     </p>
                   )}
                 </div>

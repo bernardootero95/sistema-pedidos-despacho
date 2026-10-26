@@ -94,7 +94,7 @@ export const MissingCostModal = ({ productos, onGuardado, onCancel }) => {
             <h2 className="text-lg font-bold text-slate-800">Asignar costos faltantes</h2>
             <p className="text-sm text-slate-500 mt-1">
               {productos.length} {productos.length === 1 ? "producto no tiene" : "productos no tienen"} costo. Digita el
-              costo unitario de compra; los que dejes vacíos no se modifican. La próxima compra lo actualiza.
+              costo unitario de compra; los que dejes vacíos no se modifican. La próxima compra lo promedia.
             </p>
           </div>
           <button

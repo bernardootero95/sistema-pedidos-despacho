@@ -450,6 +450,9 @@ export const SECCIONES_AYUDA = [
           "Agrega cada producto con su cantidad y costo unitario.",
           "Registra el pago de la compra y presiona «Registrar compra». El inventario aumenta en ese momento.",
         ],
+        notas: [
+          "El costo del producto se recalcula como costo promedio: si tenías 10 unidades a $90.000 y compras 10 a $80.000, el costo queda en $85.000. Anular la compra deshace ese cálculo.",
+        ],
       },
       {
         titulo: "Pagos parciales al proveedor",
@@ -513,7 +516,7 @@ export const SECCIONES_AYUDA = [
       {
         titulo: "Utilidad del Mes",
         notas: [
-          "Muestra ventas menos el costo de lo vendido, con el margen por producto. El costo es el de compra vigente al momento del pedido.",
+          "Muestra ventas menos el costo de lo vendido, con el margen por producto. El costo es el costo promedio vigente al momento del pedido.",
         ],
       },
       {
@@ -542,7 +545,7 @@ export const SECCIONES_AYUDA = [
         ],
         notas: [
           "El inicial se calcula hacia atrás desde el inventario actual. Los cambios manuales de stock (carga de Excel o edición del producto) no quedan registrados y pueden desajustarlo; las tomas físicas sí cuentan.",
-          "El costo es el último costo conocido de cada producto, no el de la fecha.",
+          "El costo es el costo promedio vigente de cada producto, no el de la fecha.",
         ],
       },
       {
@@ -551,7 +554,7 @@ export const SECCIONES_AYUDA = [
           "Está en Bodega → Inv. Actual.",
           "Muestra lo que hay físicamente hoy: mercancía disponible más la pendiente por entregar, con su valor a costo, a venta y la ganancia posible.",
           "Los productos marcados con ⚠ no tienen costo registrado y no entran en la ganancia posible.",
-          "Si hay productos sin costo, el aviso amarillo (en este informe y en Inv. por Rango) tiene el botón «Asignar costos»: digita el costo de los que quieras y guárdalos juntos. Los que dejes vacíos no cambian, y la próxima compra actualiza el costo.",
+          "Si hay productos sin costo, el aviso amarillo (en este informe y en Inv. por Rango) tiene el botón «Asignar costos»: digita el costo de los que quieras y guárdalos juntos. Los que dejes vacíos no cambian, y la próxima compra lo promedia.",
         ],
       },
       {

@@ -200,7 +200,7 @@ export const InventoryReportPage = () => {
               <p>
                 Inicial, preventa y disponible se reconstruyen desde el inventario actual con compras, entregas y
                 tomas físicas; los cambios manuales de stock (carga de Excel, edición del producto) no quedan
-                registrados y pueden desajustar el inicial. El costo es el último costo conocido de cada producto, no
+                registrados y pueden desajustar el inicial. El costo es el costo promedio vigente de cada producto, no
                 el de la fecha.
               </p>
             </div>
