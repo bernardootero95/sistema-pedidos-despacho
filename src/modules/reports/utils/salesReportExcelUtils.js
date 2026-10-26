@@ -1,4 +1,5 @@
 // src/modules/reports/utils/salesReportExcelUtils.js
+import { exportarLibroExcel } from "../../../utils/excelExport";
 import { etiquetaEstado, formatFechaHora } from "./salesReportFormat";
 
 const encabezado = (value) => ({ value, fontWeight: "bold" });
@@ -6,13 +7,11 @@ const encabezado = (value) => ({ value, fontWeight: "bold" });
 /**
  * Exporta el informe de ventas a .xlsx con dos hojas: "Resumen" (período,
  * vendedor y totales por concepto) y "Detalle" (un pedido por fila con su
- * categoría). Mismo mecanismo que reportExcelUtils.js: write-excel-file v4,
- * build de navegador, import dinámico.
+ * categoría).
  *
  * @param {import("./salesReportPdfUtils").InformeVentasPdf} informe
  */
 export const exportarInformeVentasExcel = async (informe) => {
-  const { default: writeXlsxFile } = await import("write-excel-file/browser");
   const { resumen, categorias, detalle } = informe;
 
   const filasResumen = [
@@ -102,5 +101,5 @@ export const exportarInformeVentasExcel = async (informe) => {
     ],
   };
 
-  await writeXlsxFile([hojaResumen, hojaDetalle]).toFile(`${informe.nombreArchivo}.xlsx`);
+  await exportarLibroExcel([hojaResumen, hojaDetalle], `${informe.nombreArchivo}.xlsx`);
 };

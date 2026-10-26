@@ -1,5 +1,6 @@
 // src/modules/inventory/utils/physicalCountExcel.js
 import { readSheet } from "read-excel-file/browser";
+import { exportarLibroExcel } from "../../../utils/excelExport";
 import { cruzarConteosImportados } from "./physicalCountCalc";
 
 const normalizarEncabezado = (valor) => String(valor ?? "").trim().toLowerCase();
@@ -9,14 +10,12 @@ const encabezado = (value) => ({ value, fontWeight: "bold" });
 /**
  * Exporta la hoja de conteo: código, producto y lo que dice el sistema, con la
  * columna "contado" vacía (o con lo ya digitado) para llenarla en bodega e
- * importarla de vuelta. Mismo mecanismo que los demás Excel del proyecto.
+ * importarla de vuelta.
  *
  * @param {{ lineas: Array<Object>, contados: Record<string, number|null>, nombreArchivo: string }} datos
  */
 export const exportarHojaConteo = async ({ lineas, contados, nombreArchivo }) => {
-  const { default: writeXlsxFile } = await import("write-excel-file/browser");
-
-  await writeXlsxFile([
+  await exportarLibroExcel([
     {
       sheet: "Conteo",
       data: lineas,
@@ -36,7 +35,7 @@ export const exportarHojaConteo = async ({ lineas, contados, nombreArchivo }) =>
         },
       ],
     },
-  ]).toFile(`${nombreArchivo}.xlsx`);
+  ], `${nombreArchivo}.xlsx`);
 };
 
 /**
