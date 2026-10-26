@@ -33,6 +33,15 @@ describe("getMenuVisible", () => {
     });
   });
 
+  it("solo soporte y gerencia ven la Lista de Precios en Informes", () => {
+    ["soporte", "gerencia"].forEach((rol) => {
+      expect(hijos(getMenuVisible(MENU_ITEMS, rol), "informes")).toContain("Lista de Precios");
+    });
+    ["despachador", "vendedor", "repartidor", "cajera"].forEach((rol) => {
+      expect(etiquetas(getMenuVisible(MENU_ITEMS, rol))).not.toContain("Informes");
+    });
+  });
+
   it("despachador y vendedor no ven el grupo Bodega", () => {
     ["despachador", "vendedor"].forEach((rol) => {
       expect(etiquetas(getMenuVisible(MENU_ITEMS, rol))).not.toContain("Bodega");

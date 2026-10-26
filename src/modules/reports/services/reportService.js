@@ -1,5 +1,8 @@
 // src/modules/reports/services/reportService.js
 import { supabase } from "../../../config/supabase";
+import { obtenerTodasLasFilas } from "../../../utils/obtenerTodasLasFilas";
+import { productService } from "../../products/services/productService";
+import { priceTypeService } from "../../priceTypes/services/priceTypeService";
 import { normalizarResumenVentas } from "../utils/salesReportFormat";
 
 export const reportService = {
@@ -175,5 +178,34 @@ export const reportService = {
       costoUnitario: fila.costo_unitario == null ? null : Number(fila.costo_unitario),
       precioVenta: Number(fila.precio_venta) || 0,
     }));
+  },
+
+  /**
+   * Datos de la lista de precios: productos activos con su precio normal,
+   * tipos de precio activos, el precio de cada tipo por producto y las
+   * escalas al por mayor. Los precios por tipo y por mayor se reutilizan de
+   * productService (mismas consultas que arman el carrito de un pedido).
+   */
+  async obtenerListaPrecios() {
+    const [productosRes, tipos, preciosTipo, mayoristas] = await Promise.all([
+      obtenerTodasLasFilas(() =>
+        supabase
+          .from("productos")
+          .select("id, codigo, nombre, categoria, precio_venta")
+          .eq("estado", true)
+          .is("eliminado", null)
+          .order("nombre", { ascending: true })
+          .order("id", { ascending: true }),
+      ),
+      priceTypeService.getTiposPrecio({ soloActivos: true }),
+      productService.getTodosPreciosPersonalizados(),
+      productService.getTodosPreciosMayoristas(),
+    ]);
+
+    if (productosRes.error) {
+      throw new Error("Error al cargar los productos: " + productosRes.error.message);
+    }
+
+    return { productos: productosRes.data, tipos, preciosTipo, mayoristas };
   },
 };

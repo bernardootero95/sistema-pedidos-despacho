@@ -23,6 +23,7 @@ import {
   Warehouse,
   ClipboardCheck,
   PackageCheck,
+  Tags,
 } from "lucide-react";
 import { ROLES_MODULO } from "../../config/roles";
 
@@ -140,6 +141,12 @@ export const MENU_ITEMS = [
         path: "/informes/productos",
         label: "Productos por Pedido",
         icon: PackageSearch,
+        roles: ROLES_MODULO.INFORMES,
+      },
+      {
+        path: "/informes/lista-precios",
+        label: "Lista de Precios",
+        icon: Tags,
         roles: ROLES_MODULO.INFORMES,
       },
     ],

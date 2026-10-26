@@ -115,6 +115,11 @@ const ProductsReportPage = lazyPagina(() =>
     default: m.ProductsReportPage,
   })),
 );
+const PriceListPage = lazyPagina(() =>
+  import("../modules/reports/pages/PriceListPage").then((m) => ({
+    default: m.PriceListPage,
+  })),
+);
 const InventoryReportPage = lazyPagina(() =>
   import("../modules/reports/pages/InventoryReportPage").then((m) => ({
     default: m.InventoryReportPage,
@@ -288,6 +293,7 @@ export const AppRouter = () => {
               <Route path="/informes/ventas" element={<SalesReportPage />} />
               <Route path="/informes/utilidad" element={<ProfitReportPage />} />
               <Route path="/informes/productos" element={<ProductsReportPage />} />
+              <Route path="/informes/lista-precios" element={<PriceListPage />} />
             </Route>
 
             {/* Bodega: informes de inventario y toma física */}
