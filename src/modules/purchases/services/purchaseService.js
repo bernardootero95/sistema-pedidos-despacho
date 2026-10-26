@@ -112,7 +112,7 @@ export const purchaseService = {
   /**
    * Registra una compra de forma atómica mediante la función RPC
    * `crear_compra_transaccional`: valida cada producto, suma el stock y
-   * actualiza el último costo conocido, todo en una única transacción.
+   * recalcula el costo promedio ponderado, todo en una única transacción.
    *
    * @param {Object} cabeceraData - { proveedor_id, notas, fecha_compra }
    * @param {Array<{producto_id: string, cantidad: number, costo_unitario: number}>} detalles
@@ -139,7 +139,7 @@ export const purchaseService = {
 
   /**
    * Anula una compra de forma atómica mediante `anular_compra_transaccional`:
-   * revierte el stock sumado y recalcula el último costo de cada producto.
+   * revierte el stock sumado y deshace su aporte al costo promedio.
    */
   async anularCompraTransaccional(compraId, motivo) {
     const { data, error } = await supabase.rpc(

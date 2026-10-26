@@ -39,7 +39,7 @@ export const ProfitReportSummary = ({ resumen }) => {
           icon={Wallet}
           color="bg-amber-50 text-amber-600"
           titulo="Costo de lo vendido"
-          nota="Costo de compra al momento del pedido"
+          nota="Costo promedio al momento del pedido"
           valor={formatMoneda(costo)}
         />
         <Tarjeta

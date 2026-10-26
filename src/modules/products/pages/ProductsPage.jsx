@@ -204,7 +204,7 @@ const ProductDetailsModal = ({
               <div className="pt-2 border-t border-emerald-200/50 mt-2 flex items-center justify-between gap-2">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">
-                    Último Costo de Compra
+                    Costo Promedio
                   </p>
                   <p className="text-base font-black text-slate-800">
                     {product.ultimo_costo != null

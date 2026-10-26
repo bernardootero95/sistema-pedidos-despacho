@@ -300,7 +300,7 @@ export const productService = {
   /**
    * Fija el costo de compra de un producto en `productos_costos` (tabla con
    * RLS propia, sin escritura directa). La próxima compra registrada lo
-   * sobrescribe, igual que cualquier "último costo".
+   * promedia con su costo.
    */
   async asignarCostoProducto(productoId, costo) {
     const { error } = await supabase.rpc("asignar_costo_producto", {
