@@ -76,6 +76,57 @@ export const generarPdfBlobUrl = async (html, filename, optsOverride = {}, { alt
   }
 };
 
+/**
+ * Como generarPdfBlobUrl, pero para listados largos: recibe una página HTML
+ * por hoja del PDF y rasteriza cada una por separado. html2canvas pinta todo
+ * el elemento en un solo canvas y el navegador lo deja en blanco cuando pasa
+ * su alto máximo (~32.000 px), lo que ocurre con unos cientos de filas.
+ *
+ * @param {string[]} paginasHtml una hoja cada una, ya con su tamaño fijo
+ * @param {string} filename
+ * @param {object} optsOverride opciones de html2pdf (formato, orientación…)
+ */
+export const generarPdfPaginasBlobUrl = async (paginasHtml, filename, optsOverride = {}) => {
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "0";
+  container.style.top = "0";
+  container.style.opacity = "0";
+  container.style.pointerEvents = "none";
+  container.style.zIndex = "-1000";
+  container.innerHTML = paginasHtml.join("");
+
+  document.body.appendChild(container);
+
+  const opt = {
+    margin: 0,
+    filename,
+    image: { type: "jpeg", quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    ...optsOverride,
+  };
+
+  try {
+    const { default: html2pdf } = await import("html2pdf.js/dist/html2pdf.min.js");
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    const [primera, ...resto] = container.children;
+    let worker = html2pdf().set(opt).from(primera).toPdf();
+    for (const pagina of resto) {
+      worker = worker
+        .get("pdf")
+        .then((pdf) => pdf.addPage())
+        .from(pagina)
+        .toContainer()
+        .toCanvas()
+        .toPdf();
+    }
+    return await worker.output("bloburl");
+  } finally {
+    document.body.removeChild(container);
+  }
+};
+
 // Hoja carta: márgenes en mm [arriba, izquierda, abajo, derecha]; el ancho
 // útil coincide con ANCHO_CARTA_MM de la plantilla.
 export const OPCIONES_PDF_CARTA = {

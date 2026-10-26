@@ -503,7 +503,7 @@ export const SECCIONES_AYUDA = [
     icono: FileBarChart,
     ruta: "/informes/ventas",
     roles: ROLES_MODULO.INFORMES,
-    resumen: "Ventas, cierre de mes, utilidad y productos vendidos.",
+    resumen: "Ventas, cierre de mes, utilidad, productos vendidos y lista de precios.",
     bloques: [
       {
         titulo: "Ventas y Cierre",
@@ -523,6 +523,13 @@ export const SECCIONES_AYUDA = [
         titulo: "Productos por Pedido",
         notas: [
           "Lista los productos vendidos filtrando por fechas, estado, vendedor o cliente. Se puede exportar a Excel o PDF.",
+        ],
+      },
+      {
+        titulo: "Lista de Precios",
+        notas: [
+          "Muestra el precio de venta de cada producto activo, una columna por cada tipo de precio activo y los precios al por mayor.",
+          "Busca por código o nombre y filtra por categoría. Excel y PDF exportan lo que ves filtrado, para enviar la lista completa o solo una categoría.",
         ],
       },
     ],
