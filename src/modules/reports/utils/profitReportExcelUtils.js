@@ -1,4 +1,5 @@
 // src/modules/reports/utils/profitReportExcelUtils.js
+import { exportarLibroExcel } from "../../../utils/excelExport";
 import { calcularMargen } from "./profitReportFormat";
 
 const encabezado = (value) => ({ value, fontWeight: "bold" });
@@ -11,14 +12,11 @@ const margenFraccion = (utilidad, ventasConCosto) => {
 
 /**
  * Exporta el informe de utilidad a .xlsx con dos hojas: "Resumen" y
- * "Por producto". Mismo mecanismo que salesReportExcelUtils.js:
- * write-excel-file v4, build de navegador, import dinámico.
+ * "Por producto".
  *
  * @param {{ periodo: string, resumen: Object, detalle: Array<Object>, nombreArchivo: string }} informe
  */
 export const exportarInformeUtilidadExcel = async ({ periodo, resumen, detalle, nombreArchivo }) => {
-  const { default: writeXlsxFile } = await import("write-excel-file/browser");
-
   const hojaResumen = {
     sheet: "Resumen",
     data: [
@@ -83,5 +81,5 @@ export const exportarInformeUtilidadExcel = async ({ periodo, resumen, detalle, 
     ],
   };
 
-  await writeXlsxFile([hojaResumen, hojaDetalle]).toFile(`${nombreArchivo}.xlsx`);
+  await exportarLibroExcel([hojaResumen, hojaDetalle], `${nombreArchivo}.xlsx`);
 };

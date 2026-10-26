@@ -1,4 +1,5 @@
 // src/modules/reports/utils/inventoryReportExcelUtils.js
+import { exportarLibroExcel } from "../../../utils/excelExport";
 import { COLUMNAS_RANGO, resumirBodega, valorColumnaRango, valoresBodega } from "./inventoryValuation";
 
 const encabezado = (value) => ({ value, fontWeight: "bold" });
@@ -30,12 +31,11 @@ const hojaDosColumnas = (nombre, filas) => ({
 
 /**
  * Exporta el informe de inventario por rango a .xlsx ("Resumen" y "Por
- * producto"). Mismo mecanismo que profitReportExcelUtils.js.
+ * producto").
  *
  * @param {{ periodo: string, base: "costo"|"venta", filas: Array<Object>, totales: Object, nombreArchivo: string }} informe
  */
 export const exportarInventarioRangoExcel = async ({ periodo, base, filas, totales, nombreArchivo }) => {
-  const { default: writeXlsxFile } = await import("write-excel-file/browser");
   const etiquetaBase = base === "costo" ? "precio de costo" : "precio de venta";
 
   const resumen = hojaDosColumnas("Resumen", [
@@ -65,7 +65,7 @@ export const exportarInventarioRangoExcel = async ({ periodo, base, filas, total
     ],
   };
 
-  await writeXlsxFile([resumen, detalle]).toFile(`${nombreArchivo}.xlsx`);
+  await exportarLibroExcel([resumen, detalle], `${nombreArchivo}.xlsx`);
 };
 
 /**
@@ -76,7 +76,6 @@ export const exportarInventarioRangoExcel = async ({ periodo, base, filas, total
  * @param {{ fecha: string, filas: Array<Object>, nombreArchivo: string }} informe
  */
 export const exportarBodegaExcel = async ({ fecha, filas, nombreArchivo }) => {
-  const { default: writeXlsxFile } = await import("write-excel-file/browser");
   const resumen = resumirBodega(filas);
 
   const hojaResumen = hojaDosColumnas("Resumen", [
@@ -112,5 +111,5 @@ export const exportarBodegaExcel = async ({ fecha, filas, nombreArchivo }) => {
     ],
   };
 
-  await writeXlsxFile([hojaResumen, hojaDetalle]).toFile(`${nombreArchivo}.xlsx`);
+  await exportarLibroExcel([hojaResumen, hojaDetalle], `${nombreArchivo}.xlsx`);
 };
