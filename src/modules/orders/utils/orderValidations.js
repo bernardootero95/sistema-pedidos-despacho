@@ -69,6 +69,27 @@ export const puedeEntregarSinDespacho = (pedido, user) =>
   pedido.estado === "pendiente" &&
   ROLES_ENTREGAR_SIN_DESPACHO.includes(user.rol);
 
+const ROLES_FECHA_PEDIDO_ANTERIOR = ["soporte", "gerencia"];
+
+/**
+ * Replica la regla de `crear_pedido_transaccional` (fuente de verdad): solo
+ * soporte/gerencia pueden registrar un pedido con fecha de un día anterior.
+ *
+ * @param {{ rol: string }} user
+ */
+export const puedeCambiarFechaPedido = (user) =>
+  !!user && ROLES_FECHA_PEDIDO_ANTERIOR.includes(user.rol);
+
+/**
+ * Fecha de hoy en hora local como "YYYY-MM-DD" (el formato de
+ * <input type="date">). No usa toISOString(), que da el día en UTC y en la
+ * noche de Colombia ya sería mañana.
+ */
+export const fechaHoyLocal = (ahora = new Date()) => {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${ahora.getFullYear()}-${pad(ahora.getMonth() + 1)}-${pad(ahora.getDate())}`;
+};
+
 /**
  * Convierte lo escrito en el campo de precio manual a número: acepta coma
  * decimal (como se escribe en Colombia). Devuelve NaN si no es un precio válido.
@@ -103,6 +124,17 @@ export const validators = {
 
   vendedor_id: (value) => {
     if (!value) return "El vendedor no está asignado.";
+    return "";
+  },
+
+  // Días anteriores sin límite; nunca futura (el servidor valida igual).
+  // Las fechas "YYYY-MM-DD" se comparan bien como texto.
+  fecha_pedido: (value) => {
+    if (!value) return "Selecciona la fecha del pedido.";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
+      return "La fecha no es válida.";
+    }
+    if (value > fechaHoyLocal()) return "La fecha del pedido no puede ser posterior a hoy.";
     return "";
   },
 
@@ -144,7 +176,8 @@ export const validateOrderField = (name, value) => {
 
 /**
  * Función para validar todo el formulario de creación de pedidos antes de enviar
- * @param {Object} cabeceraData - Datos de la cabecera (cliente_id, vendedor_id, notas)
+ * @param {Object} cabeceraData - Datos de la cabecera (cliente_id, vendedor_id,
+ *   notas y, solo si quien crea puede cambiarla, fecha_pedido)
  * @param {Array} carritoData - Array de productos agregados al pedido
  * @returns {Object} Objeto con los errores encontrados. Si está vacío, no hay errores.
  */
@@ -157,6 +190,12 @@ export const validateOrderForm = (cabeceraData, carritoData) => {
 
   const vendedorError = validators.vendedor_id(cabeceraData.vendedor_id);
   if (vendedorError) errors.vendedor_id = vendedorError;
+
+  // Ausente = el perfil no elige fecha (el pedido queda con la de hoy).
+  if (cabeceraData.fecha_pedido !== undefined) {
+    const fechaError = validators.fecha_pedido(cabeceraData.fecha_pedido);
+    if (fechaError) errors.fecha_pedido = fechaError;
+  }
 
   // Validar carrito
   const carritoError = validators.carrito(carritoData);

@@ -77,6 +77,19 @@ describe("orderService.crearPedido", () => {
     expect(params.p_notas).toBeNull();
   });
 
+  it("envía p_fecha_pedido solo cuando la cabecera trae una fecha", async () => {
+    supabase.rpc.mockResolvedValue({ data: {}, error: null });
+
+    await orderService.crearPedido(
+      { cliente_id: "c1", vendedor_id: "v1", fecha_pedido: "2026-11-15" },
+      [],
+    );
+    expect(supabase.rpc.mock.calls[0][1].p_fecha_pedido).toBe("2026-11-15");
+
+    await orderService.crearPedido({ cliente_id: "c1", vendedor_id: "v1" }, []);
+    expect(supabase.rpc.mock.calls[1][1]).not.toHaveProperty("p_fecha_pedido");
+  });
+
   it("devuelve la data de la RPC cuando la operación es exitosa", async () => {
     const pedidoCreado = { id: "pedido-1", numero_pedido: "PED-0001" };
     supabase.rpc.mockResolvedValue({ data: pedidoCreado, error: null });
