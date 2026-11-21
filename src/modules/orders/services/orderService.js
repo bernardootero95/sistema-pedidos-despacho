@@ -68,7 +68,10 @@ export const orderService = {
    * única transacción, evitando condiciones de carrera entre vendedores
    * concurrentes y evitando confiar en precios enviados por el cliente.
    *
-   * @param {Object} cabeceraData - { cliente_id, vendedor_id, notas }
+   * @param {Object} cabeceraData - { cliente_id, vendedor_id, notas, fecha_pedido? }
+   *   `fecha_pedido` ("YYYY-MM-DD") solo para un día anterior; sin ella el
+   *   pedido queda con la fecha de hoy. El servidor solo la acepta a
+   *   soporte/gerencia y nunca futura.
    * @param {Array} detallesData - [{ producto_id, cantidad, tipo_precio, tipo_precio_id }, ...]
    * @param {Array<{metodo_pago_id: string|null, monto: number}>} [pagos] solo
    *   la venta directa (cajera) nace entregada y cobra el total al crearse.
@@ -82,6 +85,7 @@ export const orderService = {
       p_notas: cabeceraData.notas || null,
       p_detalles: detallesParaRpc,
       ...(pagos && { p_pagos: pagos }),
+      ...(cabeceraData.fecha_pedido && { p_fecha_pedido: cabeceraData.fecha_pedido }),
     });
 
     if (error) {

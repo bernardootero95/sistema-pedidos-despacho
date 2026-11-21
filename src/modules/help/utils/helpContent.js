@@ -152,6 +152,16 @@ export const SECCIONES_AYUDA = [
         ],
       },
       {
+        titulo: "Pedido con fecha de un día anterior",
+        roles: ["soporte", "gerencia"],
+        pasos: [
+          "Al crear el pedido, en «Fecha del pedido» viene el día de hoy. Cámbiala si el pedido es de un día anterior (por ejemplo, uno tomado en papel).",
+        ],
+        notas: [
+          "No se permiten fechas futuras. El pedido aparece en los informes y en el dashboard en el día que elegiste.",
+        ],
+      },
+      {
         titulo: "Venta directa en caja",
         roles: ["cajera"],
         notas: [

@@ -13,10 +13,16 @@ import { supabase } from "../../../config/supabase";
 import { orderService } from "../services/orderService";
 import { clientService } from "../../clients/services/clientService";
 import { productService } from "../../products/services/productService";
-import { validateOrderForm, validateOrderField } from "../utils/orderValidations";
+import {
+  validateOrderForm,
+  validateOrderField,
+  puedeCambiarFechaPedido,
+  fechaHoyLocal,
+} from "../utils/orderValidations";
 import { useCarritoPedido } from "../hooks/useCarritoPedido";
 import { ProductSearchBar } from "../components/ProductSearchBar";
 import { CarritoPedido } from "../components/CarritoPedido";
+import { OrderDateField } from "../components/OrderDateField";
 import { ClientForm } from "../../clients/components/ClientForm";
 import { ClientSelect } from "../../clients/components/ClientSelect";
 import { useAuth } from "../../../context/useAuth";
@@ -42,6 +48,9 @@ export const OrderCreatePage = () => {
   // acto, así que con métodos de pago activos se pide cómo se paga antes de
   // crearlo (los demás roles crean pedidos pendientes que se cobran al entregar).
   const cobraAlCrear = user?.rol === "cajera" && metodosPagoActivo;
+  // Soporte/gerencia pueden registrar pedidos de días anteriores (p. ej.
+  // tomados en papel); el resto siempre crea con la fecha de hoy.
+  const puedeCambiarFecha = puedeCambiarFechaPedido(user);
 
   // --- ESTADOS DE DATOS EXTERNOS ---
   const [clientes, setClientes] = useState([]);
@@ -53,6 +62,7 @@ export const OrderCreatePage = () => {
   const [vendedorId, setVendedorId] = useState("");
   const [vendedorNombre, setVendedorNombre] = useState("");
   const [notas, setNotas] = useState("");
+  const [fechaPedido, setFechaPedido] = useState(fechaHoyLocal);
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
   const [isClientFormOpen, setIsClientFormOpen] = useState(false);
 
@@ -162,6 +172,33 @@ export const OrderCreatePage = () => {
     }));
   };
 
+  const handleFechaChange = (value) => {
+    setFechaPedido(value);
+    if (touched.fecha_pedido) {
+      setErrors((prev) => ({
+        ...prev,
+        fecha_pedido: validateOrderField("fecha_pedido", value),
+      }));
+    }
+  };
+
+  const handleFechaBlur = () => {
+    setTouched((prev) => ({ ...prev, fecha_pedido: true }));
+    setErrors((prev) => ({
+      ...prev,
+      fecha_pedido: validateOrderField("fecha_pedido", fechaPedido),
+    }));
+  };
+
+  // Solo se manda la fecha cuando es un día anterior: hoy es el valor por
+  // defecto del servidor y así los demás perfiles nunca la envían.
+  const cabeceraPedido = () => ({
+    cliente_id: clienteId,
+    vendedor_id: vendedorId,
+    notas,
+    ...(puedeCambiarFecha && { fecha_pedido: fechaPedido }),
+  });
+
   const agregarAlCarrito = () => {
     agregarProductoAlCarrito(productoSeleccionado);
     setProductoSeleccionado("");
@@ -173,8 +210,11 @@ export const OrderCreatePage = () => {
       ({ nombre, codigo, disponible, ...rest }) => rest,
     );
 
+    const { fecha_pedido, ...cabecera } = cabeceraPedido();
     await orderService.crearPedido(
-      { cliente_id: clienteId, vendedor_id: vendedorId, notas },
+      fecha_pedido && fecha_pedido < fechaHoyLocal()
+        ? { ...cabecera, fecha_pedido }
+        : cabecera,
       detallesParaGuardar,
       pagos,
     );
@@ -184,11 +224,8 @@ export const OrderCreatePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const validationErrors = validateOrderForm(
-      { cliente_id: clienteId, vendedor_id: vendedorId, notas },
-      carrito,
-    );
-    setTouched((prev) => ({ ...prev, cliente_id: true }));
+    const validationErrors = validateOrderForm(cabeceraPedido(), carrito);
+    setTouched((prev) => ({ ...prev, cliente_id: true, fecha_pedido: true }));
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
@@ -295,6 +332,15 @@ export const OrderCreatePage = () => {
             </p>
           )}
         </div>
+
+        {puedeCambiarFecha && (
+          <OrderDateField
+            value={fechaPedido}
+            onChange={handleFechaChange}
+            onBlur={handleFechaBlur}
+            error={errors.fecha_pedido}
+          />
+        )}
 
         {/* BUSCADOR DE PRODUCTOS CON STOCK VISIBLE */}
         <ProductSearchBar

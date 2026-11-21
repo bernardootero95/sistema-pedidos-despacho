@@ -6,7 +6,53 @@ import {
   puedeEntregarSinDespacho,
   parsePrecioManual,
   validators,
+  validateOrderForm,
+  puedeCambiarFechaPedido,
+  fechaHoyLocal,
 } from "./orderValidations";
+
+describe("fecha del pedido", () => {
+  const haceDias = (dias) => {
+    const d = new Date();
+    d.setDate(d.getDate() - dias);
+    return fechaHoyLocal(d);
+  };
+
+  it("fechaHoyLocal usa el día local, no el de UTC", () => {
+    expect(fechaHoyLocal(new Date(2026, 10, 20, 23, 30))).toBe("2026-11-20");
+    expect(fechaHoyLocal(new Date(2026, 0, 5))).toBe("2026-01-05");
+  });
+
+  it("acepta hoy y cualquier día anterior", () => {
+    expect(validators.fecha_pedido(fechaHoyLocal())).toBe("");
+    expect(validators.fecha_pedido(haceDias(1))).toBe("");
+    expect(validators.fecha_pedido("2020-01-01")).toBe("");
+  });
+
+  it("rechaza fechas futuras, vacías o inválidas", () => {
+    expect(validators.fecha_pedido(haceDias(-1))).toMatch(/posterior a hoy/);
+    expect(validators.fecha_pedido("")).toMatch(/Selecciona/);
+    expect(validators.fecha_pedido("20-11-2026")).toMatch(/no es válida/);
+  });
+
+  it("validateOrderForm solo valida la fecha cuando viene en la cabecera", () => {
+    const base = { cliente_id: "c1", vendedor_id: "v1" };
+    const carrito = [{ producto_id: "p1", cantidad: 1, precio_unitario: 100 }];
+    expect(validateOrderForm(base, carrito)).toEqual({});
+    expect(validateOrderForm({ ...base, fecha_pedido: haceDias(-1) }, carrito)).toHaveProperty(
+      "fecha_pedido",
+    );
+  });
+
+  it("solo soporte y gerencia pueden cambiar la fecha", () => {
+    expect(puedeCambiarFechaPedido({ rol: "soporte" })).toBe(true);
+    expect(puedeCambiarFechaPedido({ rol: "gerencia" })).toBe(true);
+    ["vendedor", "despachador", "cajera", "repartidor"].forEach((rol) =>
+      expect(puedeCambiarFechaPedido({ rol })).toBe(false),
+    );
+    expect(puedeCambiarFechaPedido(null)).toBe(false);
+  });
+});
 
 describe("esFraccionValida", () => {
   it("acepta enteros y cuartos de unidad", () => {
