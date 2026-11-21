@@ -13,10 +13,15 @@ import {
 import { purchaseService } from "../services/purchaseService";
 import { supplierService } from "../../suppliers/services/supplierService";
 import { productService } from "../../products/services/productService";
-import { validatePurchaseForm } from "../utils/purchaseValidations";
+import {
+  validatePurchaseForm,
+  validatePurchaseField,
+} from "../utils/purchaseValidations";
+import { ESTADOS_RECEPCION } from "../utils/purchaseReception";
 import { usePurchaseCart } from "../hooks/usePurchaseCart";
 import { PurchaseProductPicker } from "../components/PurchaseProductPicker";
 import { PurchaseCart } from "../components/PurchaseCart";
+import { PurchaseReceptionSelector } from "../components/PurchaseReceptionSelector";
 import { SupplierForm } from "../../suppliers/components/SupplierForm";
 import { ProductForm } from "../../products/components/ProductForm";
 import { useSettings } from "../../../context/useSettings";
@@ -39,6 +44,9 @@ export const PurchaseCreatePage = () => {
   const [proveedorId, setProveedorId] = useState("");
   const [fechaCompra, setFechaCompra] = useState(
     new Date().toISOString().split("T")[0],
+  );
+  const [estadoRecepcion, setEstadoRecepcion] = useState(
+    ESTADOS_RECEPCION.RECIBIDA,
   );
   const [notas, setNotas] = useState("");
   const [isSupplierFormOpen, setIsSupplierFormOpen] = useState(false);
@@ -95,7 +103,21 @@ export const PurchaseCreatePage = () => {
   const cabeceraData = {
     proveedor_id: proveedorId,
     fecha_compra: fechaCompra,
+    estado_recepcion: estadoRecepcion,
     notas,
+  };
+
+  // Validación inmediata por campo: los campos de cabecera son selects,
+  // fecha y opciones (no tecleo), así que validar al cambiar ya es "tocado".
+  const cambiarCampo = (campo, valor, setter) => {
+    setter(valor);
+    setErrors((prev) => {
+      const siguiente = { ...prev };
+      const error = validatePurchaseField(campo, valor);
+      if (error) siguiente[campo] = error;
+      else delete siguiente[campo];
+      return siguiente;
+    });
   };
 
   const guardarCompra = async (pagos = null) => {
@@ -202,7 +224,9 @@ export const PurchaseCreatePage = () => {
             </div>
             <select
               value={proveedorId}
-              onChange={(e) => setProveedorId(e.target.value)}
+              onChange={(e) =>
+                cambiarCampo("proveedor_id", e.target.value, setProveedorId)
+              }
               className={`w-full p-3 border rounded-xl outline-none bg-white text-base transition-all ${errors.proveedor_id ? "border-red-500 ring-2 ring-red-100" : "border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
             >
               <option value="">-- Selecciona un proveedor --</option>
@@ -235,7 +259,9 @@ export const PurchaseCreatePage = () => {
                 type="date"
                 value={fechaCompra}
                 max={new Date().toISOString().split("T")[0]}
-                onChange={(e) => setFechaCompra(e.target.value)}
+                onChange={(e) =>
+                  cambiarCampo("fecha_compra", e.target.value, setFechaCompra)
+                }
                 className={`w-full pl-9 p-3 border rounded-xl outline-none bg-white text-base transition-all ${errors.fecha_compra ? "border-red-500 ring-2 ring-red-100" : "border-slate-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
               />
             </div>
@@ -245,6 +271,14 @@ export const PurchaseCreatePage = () => {
               </p>
             )}
           </div>
+
+          <PurchaseReceptionSelector
+            value={estadoRecepcion}
+            onChange={(valor) =>
+              cambiarCampo("estado_recepcion", valor, setEstadoRecepcion)
+            }
+            error={errors.estado_recepcion}
+          />
         </div>
 
         <PurchaseProductPicker

@@ -457,11 +457,25 @@ export const SECCIONES_AYUDA = [
         titulo: "Registrar una compra",
         pasos: [
           "En Compras presiona «Nueva Compra» y selecciona el proveedor.",
+          "En «Estado de recepción» deja «Recibida» si la mercancía ya llegó, o elige «Pendiente» si aún no ha llegado.",
           "Agrega cada producto con su cantidad y costo unitario.",
-          "Registra el pago de la compra y presiona «Registrar compra». El inventario aumenta en ese momento.",
+          "Registra el pago de la compra y presiona «Registrar compra». Si es recibida, el inventario aumenta en ese momento.",
         ],
         notas: [
           "El costo del producto se recalcula como costo promedio: si tenías 10 unidades a $90.000 y compras 10 a $80.000, el costo queda en $85.000. Anular la compra deshace ese cálculo.",
+        ],
+      },
+      {
+        titulo: "Compras pendientes por recibir",
+        pasos: [
+          "Una compra «Pendiente» no suma al inventario ni cambia el costo hasta que la recibas.",
+          "En el listado de Compras (o en su detalle) presiona «Marcar como recibida».",
+          "Elige la fecha en que llegó la mercancía (no puede ser futura ni anterior a la compra) y presiona «Confirmar recepción».",
+        ],
+        notas: [
+          "Con el filtro «Pendientes por recibir» del listado ves solo las que faltan por llegar.",
+          "Recibirla es definitivo: si fue un error, anula la compra. Anular una pendiente no descuenta nada del inventario.",
+          "Los pagos y abonos al proveedor funcionan igual en una compra pendiente.",
         ],
       },
       {
@@ -558,6 +572,7 @@ export const SECCIONES_AYUDA = [
           "Entra a Bodega → Inv. por Rango.",
           "Elige las fechas «Desde» y «Hasta» y presiona «Generar informe».",
           "Verás por producto el inventario inicial, las compras, las ventas (pedidos entregados), la preventa (pedidos por entregar) y lo disponible al cierre.",
+          "Las compras cuentan en la fecha en que se recibieron; las pendientes por recibir no aparecen.",
           "Con el selector «Precio de costo / Precio de venta» cambias la valoración del inventario. Expórtalo a Excel.",
         ],
         notas: [
