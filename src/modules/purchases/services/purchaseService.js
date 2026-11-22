@@ -1,11 +1,19 @@
 import { supabase } from "../../../config/supabase";
 
+// compras_cabecera tiene dos FK a perfiles (usuario_id y recibido_por): el
+// embed necesita el nombre de la FK o PostgREST lo rechaza por ambiguo.
+const EMBED_USUARIO = "usuario:perfiles!compras_cabecera_usuario_id_fkey(nombre_completo)";
+const EMBED_RECEPTOR = "receptor:perfiles!compras_cabecera_recibido_por_fkey(nombre_completo)";
+
 export const purchaseService = {
   /**
    * Obtiene la lista de compras con paginación y búsqueda desde el
    * servidor (Server-Side). Incluye el proveedor y quien la registró.
+   *
+   * @param {{ estadoRecepcion?: string }} [filtros] estadoRecepcion filtra
+   *   compras vigentes (no anuladas) por 'pendiente' o 'recibida'.
    */
-  async getComprasPaginadas(page = 1, limit = 10, searchTerm = "") {
+  async getComprasPaginadas(page = 1, limit = 10, searchTerm = "", filtros = {}) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
@@ -15,7 +23,7 @@ export const purchaseService = {
         `
         *,
         proveedor:proveedores(nombre_comercial),
-        usuario:perfiles(nombre_completo)
+        ${EMBED_USUARIO}
       `,
         { count: "exact" },
       )
@@ -27,6 +35,12 @@ export const purchaseService = {
     // límite que ya asume dispatchService con codigo_despacho.
     if (searchTerm) {
       query = query.ilike("numero_compra", `%${searchTerm}%`);
+    }
+
+    if (filtros.estadoRecepcion) {
+      query = query
+        .eq("estado", "registrada")
+        .eq("estado_recepcion", filtros.estadoRecepcion);
     }
 
     const { data, error, count } = await query.range(from, to);
@@ -52,7 +66,8 @@ export const purchaseService = {
         `
         *,
         proveedor:proveedores(nombre_comercial, numero_identificacion, telefono),
-        usuario:perfiles(nombre_completo)
+        ${EMBED_USUARIO},
+        ${EMBED_RECEPTOR}
       `,
       )
       .eq("id", id)
@@ -86,7 +101,8 @@ export const purchaseService = {
 
   /**
    * Historial de costo de compra de un producto puntual (para ver cuándo
-   * subió o bajó de precio de costo), solo compras vigentes ('registrada').
+   * subió o bajó de precio de costo), solo compras vigentes ('registrada')
+   * y recibidas: una pendiente todavía no aportó su costo.
    */
   async getHistorialCostoProducto(productoId) {
     const { data, error } = await supabase
@@ -100,6 +116,7 @@ export const purchaseService = {
       )
       .eq("producto_id", productoId)
       .eq("compra.estado", "registrada")
+      .eq("compra.estado_recepcion", "recibida")
       .order("creado", { ascending: false });
 
     if (error)
@@ -111,10 +128,11 @@ export const purchaseService = {
 
   /**
    * Registra una compra de forma atómica mediante la función RPC
-   * `crear_compra_transaccional`: valida cada producto, suma el stock y
-   * recalcula el costo promedio ponderado, todo en una única transacción.
+   * `crear_compra_transaccional`: valida cada producto y, si la compra llega
+   * como recibida, suma el stock y recalcula el costo promedio ponderado,
+   * todo en una única transacción. Una pendiente no mueve stock ni costo.
    *
-   * @param {Object} cabeceraData - { proveedor_id, notas, fecha_compra }
+   * @param {Object} cabeceraData - { proveedor_id, notas, fecha_compra, estado_recepcion }
    * @param {Array<{producto_id: string, cantidad: number, costo_unitario: number}>} detalles
    * @param {Array<{metodo_pago_id: string|null, monto: number}>} [pagos] pago
    *   al registrar. Con abonos a compras activos puede ser parcial o vacío
@@ -127,11 +145,33 @@ export const purchaseService = {
       p_notas: cabeceraData.notas || null,
       p_detalles: detalles,
       p_fecha_compra: cabeceraData.fecha_compra || null,
+      p_estado_recepcion: cabeceraData.estado_recepcion || "recibida",
       ...(pagos && { p_pagos: pagos }),
     });
 
     if (error) {
       throw new Error(error.message || "Error al registrar la compra.");
+    }
+
+    return data;
+  },
+
+  /**
+   * Marca una compra pendiente como recibida mediante
+   * `recibir_compra_transaccional`: suma el stock y aplica el costo promedio
+   * ponderado en ese momento, bloqueando la compra y los productos.
+   *
+   * @param {string} compraId
+   * @param {string} fechaRecepcion YYYY-MM-DD (no futura ni anterior a la compra)
+   */
+  async recibirCompraTransaccional(compraId, fechaRecepcion) {
+    const { data, error } = await supabase.rpc("recibir_compra_transaccional", {
+      p_compra_id: compraId,
+      p_fecha_recepcion: fechaRecepcion,
+    });
+
+    if (error) {
+      throw new Error(error.message || "No se pudo marcar la compra como recibida.");
     }
 
     return data;

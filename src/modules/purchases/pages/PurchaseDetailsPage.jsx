@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { purchaseService } from "../services/purchaseService";
 import { PurchaseAnularControl } from "../components/PurchaseAnularControl";
 import { PurchasePaymentsCard } from "../components/PurchasePaymentsCard";
+import { PurchaseReceptionControl } from "../components/PurchaseReceptionControl";
+import { ESTADOS_RECEPCION } from "../utils/purchaseReception";
 import {
   ArrowLeft,
   Truck,
@@ -145,14 +147,35 @@ export const PurchaseDetailsPage = () => {
             <p className="text-[11px] text-slate-400 mt-0.5">
               Registrada el {formatDate(compra.creado)}
             </p>
+            {compra.estado_recepcion === ESTADOS_RECEPCION.RECIBIDA ? (
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Recibida el {formatFechaCompra(compra.fecha_recepcion)}
+                {compra.receptor?.nombre_completo &&
+                  ` por ${compra.receptor.nombre_completo}`}
+              </p>
+            ) : (
+              !compraAnulada && (
+                <p className="text-[11px] text-amber-700 mt-0.5">
+                  Pendiente de recibir: aún no suma al inventario.
+                </p>
+              )
+            )}
           </div>
         </div>
 
-        <PurchaseAnularControl
-          compraId={compra.id}
-          estado={compra.estado}
-          onAnulada={handleCompraAnulada}
-        />
+        <div className="flex flex-col items-end gap-3 w-full sm:w-auto">
+          {/* Recibir recarga la compra: el servidor fija fecha y receptor. */}
+          <PurchaseReceptionControl
+            compra={compra}
+            variant="buttons"
+            onRecibida={cargarDatos}
+          />
+          <PurchaseAnularControl
+            compraId={compra.id}
+            estado={compra.estado}
+            onAnulada={handleCompraAnulada}
+          />
+        </div>
       </div>
 
       {/* GRID DE INFORMACIÓN GENERAL */}
